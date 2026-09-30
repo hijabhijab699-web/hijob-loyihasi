@@ -1,0 +1,190 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Screen } from '../../src/components/Screen';
+import { Text } from '../../src/components/Text';
+import { useTheme } from '../../src/theme/ThemeProvider';
+import { api } from '../../src/api/client';
+
+interface OrderDetail {
+  id: string;
+  status: string;
+  paymentStatus: string;
+  paymentMethod: string;
+  deliveryType: string;
+  totalUsd: number;
+  subtotalUsd: number;
+  deliveryFeeUsd: number;
+  createdAt: string;
+  address: { city: string; district: string; street: string; building: string } | null;
+  items: Array<{
+    title: string;
+    color: string;
+    size: string;
+    quantity: number;
+    priceUsd: number;
+    image: string;
+  }>;
+  timeline: Array<{ key: string; label: string; reached: boolean; active: boolean }>;
+}
+
+export default function OrderDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors, theme } = useTheme();
+  const router = useRouter();
+
+  const { data } = useQuery<OrderDetail>({
+    queryKey: ['orders', id],
+    queryFn: async () => (await api.get(`/orders/${id}`)).data,
+    enabled: !!id,
+    refetchInterval: 15_000,
+  });
+
+  if (!data) return <Screen />;
+
+  return (
+    <Screen>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+        <View
+          style={{
+            paddingTop: 8,
+            paddingHorizontal: 20,
+            paddingBottom: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <Pressable onPress={() => router.back()} hitSlop={12}>
+            <Ionicons name="arrow-back" size={26} color={colors.ink} />
+          </Pressable>
+          <View>
+            <Text variant="caption" color="muted">Buyurtma #{data.id.slice(0, 8)}</Text>
+            <Text variant="displayMedium" color="oliveDeep">
+              ${data.totalUsd.toFixed(0)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Timeline */}
+        <View
+          style={{
+            marginHorizontal: 16,
+            padding: 20,
+            borderRadius: theme.radii.lg,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.rule,
+          }}
+        >
+          <Text variant="titleSmall" color="ink" style={{ marginBottom: 16 }}>
+            Yetkazish holati
+          </Text>
+          {data.timeline.map((step, idx) => (
+            <View key={step.key} style={{ flexDirection: 'row', gap: 12, marginBottom: 14 }}>
+              <View style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    backgroundColor: step.reached ? colors.gold : colors.rule,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {step.reached && <Ionicons name="checkmark" size={14} color={colors.surface} />}
+                </View>
+                {idx < data.timeline.length - 1 && (
+                  <View
+                    style={{
+                      width: 2,
+                      flex: 1,
+                      backgroundColor: step.reached ? colors.gold : colors.rule,
+                      minHeight: 20,
+                    }}
+                  />
+                )}
+              </View>
+              <View style={{ flex: 1, paddingBottom: 4 }}>
+                <Text
+                  variant="bodySmall"
+                  color={step.active ? 'oliveDeep' : step.reached ? 'ink' : 'muted'}
+                  style={{ fontWeight: step.active ? '700' : '500' }}
+                >
+                  {step.label}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Items */}
+        <View style={{ marginHorizontal: 16, marginTop: 12, gap: 12 }}>
+          <Text variant="titleSmall" color="ink" style={{ paddingHorizontal: 4 }}>
+            Tovarlar
+          </Text>
+          {data.items.map((it, i) => (
+            <View
+              key={i}
+              style={{
+                flexDirection: 'row',
+                gap: 12,
+                padding: 12,
+                borderRadius: theme.radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.rule,
+              }}
+            >
+              <Image
+                source={{ uri: it.image }}
+                style={{ width: 72, height: 96, borderRadius: theme.radii.md }}
+              />
+              <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                <View>
+                  <Text variant="titleSmall" color="ink">{it.title}</Text>
+                  <Text variant="caption" color="muted">
+                    {it.color} · {it.size} · ×{it.quantity}
+                  </Text>
+                </View>
+                <Text variant="titleMedium" color="gold">
+                  ${(it.priceUsd * it.quantity).toFixed(0)}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Address */}
+        {data.address && (
+          <View
+            style={{
+              marginHorizontal: 16,
+              marginTop: 12,
+              padding: 16,
+              borderRadius: theme.radii.lg,
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.rule,
+              flexDirection: 'row',
+              gap: 12,
+            }}
+          >
+            <Ionicons name="location-outline" size={22} color={colors.gold} />
+            <View style={{ flex: 1 }}>
+              <Text variant="caption" color="muted">Yetkazish manzili</Text>
+              <Text variant="body" color="ink" style={{ marginTop: 2 }}>
+                {data.address.city}, {data.address.district}
+              </Text>
+              <Text variant="bodySmall" color="ink2">
+                {data.address.street}, {data.address.building}
+              </Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </Screen>
+  );
+}

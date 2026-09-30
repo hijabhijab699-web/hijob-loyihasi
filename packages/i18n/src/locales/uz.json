@@ -1,0 +1,246 @@
+{
+  "common": {
+    "continue": "Davom etish",
+    "back": "Ortga",
+    "next": "Keyingi",
+    "cancel": "Bekor qilish",
+    "save": "Saqlash",
+    "delete": "O'chirish",
+    "confirm": "Tasdiqlash",
+    "loading": "Yuklanmoqda…",
+    "error": "Xatolik yuz berdi",
+    "retry": "Qayta urinish",
+    "seeAll": "Barchasini ko'rish",
+    "reset": "Tozalash",
+    "apply": "Qo'llash",
+    "search": "Qidiruv"
+  },
+  "language": {
+    "russian": "Русский",
+    "uzbek": "O'zbekcha",
+    "english": "English"
+  },
+  "auth": {
+    "register": {
+      "title": "Ro'yxatdan o'tish",
+      "subtitle": "Primerka va xarid qilish uchun akkaunt yarating",
+      "name": "Ismingiz",
+      "usernamePlaceholder": "@username",
+      "usernameHint": "Masalan: @diyor, @n2431",
+      "phone": "Telefon raqami",
+      "roleQuestion": "Kim bo'lasiz?",
+      "roleBuyer": "Xaridor",
+      "roleSeller": "Sotuvchi",
+      "password": "Parol",
+      "passwordConfirm": "Parolni takrorlang",
+      "submit": "Ro'yxatdan o'tish",
+      "or": "yoki",
+      "google": "Google",
+      "apple": "Apple",
+      "facebook": "Facebook",
+      "terms": "Ro'yxatdan o'tish orqali siz",
+      "termsLink": "Foydalanish shartlari",
+      "termsAnd": "va",
+      "privacyLink": "Maxfiylik siyosati ga rozilik bildirasiz",
+      "haveAccount": "Akkauntingiz bormi?",
+      "login": "Kirish"
+    },
+    "login": {
+      "title": "Kirish",
+      "subtitle": "Xush kelibsiz",
+      "identifier": "Telefon yoki @username",
+      "password": "Parol",
+      "forgotPassword": "Parolni unutdingizmi?",
+      "submit": "Kirish",
+      "noAccount": "Akkauntingiz yo'qmi?",
+      "signUp": "Ro'yxatdan o'tish"
+    },
+    "otp": {
+      "title": "Kodni kiriting",
+      "subtitle": "Kod yuborildi:",
+      "resend": "Qayta yuborish",
+      "resendIn": "{{seconds}} soniyadan keyin qayta yuborish"
+    }
+  },
+  "onboarding": {
+    "face": {
+      "title": "Yuzingizni ramkaga joylang",
+      "subtitle": "To'g'ridan-to'g'ri kameraga qarang",
+      "safe": "Xavfsiz",
+      "safeDesc": "Ma'lumotlaringiz himoyalangan",
+      "onlyApp": "Faqat ilovada",
+      "onlyAppDesc": "Foto qurilmangizda saqlanadi",
+      "private": "Maxfiy",
+      "privateDesc": "Fotoni uchinchi tomonlarga bermaymiz",
+      "capture": "Suratga olish",
+      "retake": "Qayta olish",
+      "step": "{{total}} dan {{step}}-qadam",
+      "front": "To'g'riga",
+      "left": "Chapga burilish",
+      "right": "O'ngga burilish"
+    },
+    "body": {
+      "title": "Parametrlaringizni kiriting",
+      "subtitle": "Bu ko'ylak, ro'mol va boshqa kiyimlarni aniqroq tanlashga yordam beradi",
+      "height": "Bo'yingiz",
+      "heightUnit": "sm",
+      "weight": "Vazningiz",
+      "weightUnit": "kg",
+      "age": "Yoshingiz",
+      "ageUnit": "yosh",
+      "preferredSize": "Kiyim o'lchamingiz"
+    }
+  },
+  "home": {
+    "stores": "Do'konlar",
+    "allStores": "Barcha do'konlar",
+    "categories": {
+      "scarves": "Ro'mollar",
+      "dresses": "Ko'ylaklar",
+      "bags": "Sumkalar",
+      "accessories": "Aksessuarlar"
+    },
+    "newArrivals": "Yangi kelganlar"
+  },
+  "catalog": {
+    "scarves": {
+      "title": "Ro'mollar",
+      "subtitle": "O'zingizga mos bo'lganini toping"
+    },
+    "dresses": {
+      "title": "Ko'ylaklar",
+      "subtitle": "Har bir detalda hijob"
+    },
+    "filters": "Filtrlar",
+    "sort": {
+      "popularity": "Ommaboplik bo'yicha",
+      "priceLow": "Avval arzoni",
+      "priceHigh": "Avval qimmati",
+      "new": "Avval yangilari"
+    },
+    "color": "Rang",
+    "scarfModel": "Ro'mol turi",
+    "dressCut": "Ko'ylak fasoni",
+    "size": "O'lcham",
+    "length": "Uzunligi",
+    "sleeve": "Yeng",
+    "all": "Barchasi",
+    "colors": {
+      "yellow": "Sariq",
+      "white": "Oq",
+      "beige": "Bej",
+      "pink": "Pushti",
+      "gray": "Kulrang",
+      "green": "Yashil",
+      "blue": "Ko'k",
+      "black": "Qora",
+      "brown": "Jigarrang",
+      "burgundy": "To'q qizil",
+      "multi": "Rang-barang",
+      "unusual": "G'ayrioddiy"
+    },
+    "scarfModels": {
+      "classical": "Klassik",
+      "withCap": "Shapkali (2 in 1)",
+      "withUnder": "Underhijob bilan",
+      "long": "Uzun",
+      "short": "Qisqa",
+      "cape": "Nakidka",
+      "turban": "Turban"
+    },
+    "dressCuts": {
+      "classical": "Klassik",
+      "loose": "Erkin (oversize)",
+      "belted": "Kamarli",
+      "buttons": "Tugmali",
+      "aLine": "A-siluet",
+      "straight": "To'g'ri",
+      "ruffled": "Volanli",
+      "abaya": "Abaya"
+    },
+    "lengths": {
+      "ankle": "Tovonigacha",
+      "midi": "Midi",
+      "maxi": "Maksi"
+    },
+    "sleeves": {
+      "long": "Uzun",
+      "threeQuarter": "3/4",
+      "sleeveless": "Yengsiz"
+    }
+  },
+  "tryon": {
+    "title": "Kiyib ko'rish",
+    "tyingStyle": "Bog'lash usuli",
+    "styles": {
+      "classical": "Klassik",
+      "loose": "Erkin",
+      "double": "Ikki qavatli"
+    },
+    "changeCamera": "Kamerani almashtirish",
+    "lighting": "Yoritish",
+    "reset": "Tozalash",
+    "addToCart": "Savatga qo'shish",
+    "outfit": "Primerka"
+  },
+  "cart": {
+    "title": "Savat",
+    "empty": "Savatingiz bo'sh",
+    "emptyAction": "Biror narsa toping",
+    "brand": "Brend",
+    "color": "Rang",
+    "size": "O'lcham",
+    "delivery": {
+      "title": "Olib olish usuli",
+      "details": "Batafsil",
+      "courier": "Yetkazib berish",
+      "courierDesc": "Kurier orqali manzilingizga",
+      "pickup": "O'zi olib ketish",
+      "pickupDesc": "Do'kondan olish",
+      "proba": "Proba",
+      "probaDesc": "Avval kiyib ko'ring",
+      "probaNote": "Faqat yetkazish uchun to'lov",
+      "today": "Bugun",
+      "tomorrow": "Ertaga",
+      "scheduled": "Belgilangan vaqtda",
+      "scheduledDesc": "Sana va vaqtni tanlash"
+    },
+    "address": {
+      "title": "Yetkazib berish manzili",
+      "change": "O'zgartirish"
+    },
+    "comment": "Buyurtmaga izoh (majburiy emas)",
+    "summary": {
+      "items": "Mahsulotlar ({{count}})",
+      "delivery": "Yetkazish ({{when}})",
+      "total": "Jami"
+    },
+    "payment": {
+      "title": "To'lov usuli"
+    },
+    "checkout": "To'lovga o'tish"
+  },
+  "wishlist": {
+    "title": "Sevimlilar",
+    "empty": "Bu yerda yoqtirgan mahsulotlaringiz ko'rinadi"
+  },
+  "profile": {
+    "title": "Profil",
+    "orders": "Buyurtmalarim",
+    "addresses": "Manzillar",
+    "measurements": "Parametrlarim",
+    "faceTemplate": "Yuz ma'lumotlari",
+    "notifications": "Bildirishnomalar",
+    "language": "Til",
+    "support": "Yordam",
+    "logout": "Chiqish"
+  },
+  "tabs": {
+    "home": "Asosiy",
+    "catalog": "Katalog",
+    "tryon": "Primerka",
+    "wishlist": "Sevimli",
+    "cart": "Savat",
+    "profile": "Profil"
+  }
+}

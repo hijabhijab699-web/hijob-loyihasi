@@ -1,0 +1,11 @@
+fastapi==0.115.4
+uvicorn[standard]==0.32.0
+python-multipart==0.0.12
+pydantic==2.9.2
+pydantic-settings==2.6.1
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
+mediapipe==0.10.20
+pillow==11.0.0
+rembg==2.0.60
+onnxruntime==1.19.2

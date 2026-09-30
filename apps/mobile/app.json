@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "N24:31",
+    "slug": "n2431",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "n2431",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#8A8D5B"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.n2431.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Kamera yuzingizni skanerdan o'tkazish va kiyimlarni kiyib ko'rish uchun kerak.",
+        "NSPhotoLibraryUsageDescription": "Kutubxonaga faqat sizning ruxsatingiz bilan kirish."
+      }
+    },
+    "android": {
+      "package": "app.n2431.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#8A8D5B"
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "N24:31 kamerani yuzingizni skanerlash uchun ishlatadi."
+        }
+      ],
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "N24:31 real-time try-on uchun kameraga ruxsat so'raydi.",
+          "enableFrameProcessors": true
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/PlayfairDisplay.ttf",
+            "./assets/fonts/Inter.ttf"
+          ]
+        }
+      ],
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,0 +1,246 @@
+{
+  "common": {
+    "continue": "Продолжить",
+    "back": "Назад",
+    "next": "Далее",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "delete": "Удалить",
+    "confirm": "Подтвердить",
+    "loading": "Загрузка…",
+    "error": "Что-то пошло не так",
+    "retry": "Повторить",
+    "seeAll": "Смотреть все",
+    "reset": "Сбросить",
+    "apply": "Применить",
+    "search": "Поиск"
+  },
+  "language": {
+    "russian": "Русский",
+    "uzbek": "O'zbekcha",
+    "english": "English"
+  },
+  "auth": {
+    "register": {
+      "title": "Регистрация",
+      "subtitle": "Создайте аккаунт, чтобы начать примерку и покупки",
+      "name": "Ваше имя",
+      "usernamePlaceholder": "@username",
+      "usernameHint": "Например: @diyor, @n2431",
+      "phone": "Номер телефона",
+      "roleQuestion": "Кем вы будете?",
+      "roleBuyer": "Покупатель",
+      "roleSeller": "Продавец",
+      "password": "Пароль",
+      "passwordConfirm": "Подтвердите пароль",
+      "submit": "Зарегистрироваться",
+      "or": "или",
+      "google": "Google",
+      "apple": "Apple",
+      "facebook": "Facebook",
+      "terms": "Регистрируясь, вы соглашаетесь с",
+      "termsLink": "Условиями использования",
+      "termsAnd": "и",
+      "privacyLink": "Политикой конфиденциальности",
+      "haveAccount": "Уже есть аккаунт?",
+      "login": "Войти"
+    },
+    "login": {
+      "title": "Вход",
+      "subtitle": "Добро пожаловать обратно",
+      "identifier": "Телефон или @username",
+      "password": "Пароль",
+      "forgotPassword": "Забыли пароль?",
+      "submit": "Войти",
+      "noAccount": "Нет аккаунта?",
+      "signUp": "Зарегистрироваться"
+    },
+    "otp": {
+      "title": "Введите код",
+      "subtitle": "Мы отправили код на",
+      "resend": "Отправить снова",
+      "resendIn": "Отправить снова через {{seconds}}с"
+    }
+  },
+  "onboarding": {
+    "face": {
+      "title": "Поместите лицо в рамку",
+      "subtitle": "Смотрите прямо в камеру",
+      "safe": "Безопасно",
+      "safeDesc": "Ваши данные защищены",
+      "onlyApp": "Используется только в приложении",
+      "onlyAppDesc": "Фото хранится на вашем устройстве",
+      "private": "Конфиденциально",
+      "privateDesc": "Мы не передаём фото третьим лицам",
+      "capture": "Сделать снимок",
+      "retake": "Переснять",
+      "step": "Шаг {{step}} из {{total}}",
+      "front": "Прямо",
+      "left": "Поворот налево",
+      "right": "Поворот направо"
+    },
+    "body": {
+      "title": "Укажите ваши параметры",
+      "subtitle": "Это поможет точнее подбирать платья, платки и другую одежду",
+      "height": "Ваш рост",
+      "heightUnit": "см",
+      "weight": "Ваш вес",
+      "weightUnit": "кг",
+      "age": "Ваш возраст",
+      "ageUnit": "лет",
+      "preferredSize": "Предпочитаемый размер одежды"
+    }
+  },
+  "home": {
+    "stores": "Магазины",
+    "allStores": "Все магазины",
+    "categories": {
+      "scarves": "Платки",
+      "dresses": "Платья",
+      "bags": "Сумки",
+      "accessories": "Аксессуары"
+    },
+    "newArrivals": "Новинки"
+  },
+  "catalog": {
+    "scarves": {
+      "title": "Платки",
+      "subtitle": "Найдите свой идеальный образ"
+    },
+    "dresses": {
+      "title": "Платья",
+      "subtitle": "Скромность в каждой детали"
+    },
+    "filters": "Фильтры",
+    "sort": {
+      "popularity": "По популярности",
+      "priceLow": "Сначала дешёвые",
+      "priceHigh": "Сначала дорогие",
+      "new": "Сначала новые"
+    },
+    "color": "Цвет",
+    "scarfModel": "Модель платка",
+    "dressCut": "Фасон платья",
+    "size": "Размер",
+    "length": "Длина",
+    "sleeve": "Рукав",
+    "all": "Все",
+    "colors": {
+      "yellow": "Жёлтый",
+      "white": "Белый",
+      "beige": "Бежевый",
+      "pink": "Розовый",
+      "gray": "Серый",
+      "green": "Зелёный",
+      "blue": "Синий",
+      "black": "Чёрный",
+      "brown": "Коричневый",
+      "burgundy": "Бордовый",
+      "multi": "Разноцветный",
+      "unusual": "Необычный"
+    },
+    "scarfModels": {
+      "classical": "Классический",
+      "withCap": "С шапкой (2 в 1)",
+      "withUnder": "С подхиджабником",
+      "long": "Длинный",
+      "short": "Короткий",
+      "cape": "Накидка",
+      "turban": "Платок-тюрбан"
+    },
+    "dressCuts": {
+      "classical": "Классический",
+      "loose": "Свободный (оверсайз)",
+      "belted": "С поясом",
+      "buttons": "С пуговицами",
+      "aLine": "А-силуэт",
+      "straight": "Прямой",
+      "ruffled": "С воланами",
+      "abaya": "Abaya"
+    },
+    "lengths": {
+      "ankle": "До щиколотки",
+      "midi": "Миди",
+      "maxi": "Макси"
+    },
+    "sleeves": {
+      "long": "Длинный",
+      "threeQuarter": "3/4",
+      "sleeveless": "Без рукава"
+    }
+  },
+  "tryon": {
+    "title": "Примерочная",
+    "tyingStyle": "Способ завязывания",
+    "styles": {
+      "classical": "Классический",
+      "loose": "С напуском",
+      "double": "Двойной"
+    },
+    "changeCamera": "Сменить камеру",
+    "lighting": "Освещение",
+    "reset": "Сбросить",
+    "addToCart": "Добавить в корзину",
+    "outfit": "Примерка"
+  },
+  "cart": {
+    "title": "Корзина",
+    "empty": "Ваша корзина пуста",
+    "emptyAction": "Найти что-то",
+    "brand": "Бренд",
+    "color": "Цвет",
+    "size": "Размер",
+    "delivery": {
+      "title": "Способ получения",
+      "details": "Подробнее",
+      "courier": "Доставка",
+      "courierDesc": "Курьером по вашему адресу",
+      "pickup": "Самовывоз",
+      "pickupDesc": "Забрать в магазине",
+      "proba": "Проба",
+      "probaDesc": "Сначала примерьте",
+      "probaNote": "Оплата только за доставку",
+      "today": "Сегодня",
+      "tomorrow": "Завтра",
+      "scheduled": "В указанное время",
+      "scheduledDesc": "Выбрать дату и время"
+    },
+    "address": {
+      "title": "Адрес доставки",
+      "change": "Изменить"
+    },
+    "comment": "Комментарий к заказу (необязательно)",
+    "summary": {
+      "items": "Товары ({{count}})",
+      "delivery": "Доставка ({{when}})",
+      "total": "Итого"
+    },
+    "payment": {
+      "title": "Способ оплаты"
+    },
+    "checkout": "Перейти к оплате"
+  },
+  "wishlist": {
+    "title": "Избранное",
+    "empty": "Здесь появятся товары, которые вам понравились"
+  },
+  "profile": {
+    "title": "Профиль",
+    "orders": "Мои заказы",
+    "addresses": "Адреса",
+    "measurements": "Мои параметры",
+    "faceTemplate": "Данные лица",
+    "notifications": "Уведомления",
+    "language": "Язык",
+    "support": "Помощь",
+    "logout": "Выйти"
+  },
+  "tabs": {
+    "home": "Главная",
+    "catalog": "Каталог",
+    "tryon": "Примерка",
+    "wishlist": "Избранное",
+    "cart": "Корзина",
+    "profile": "Профиль"
+  }
+}

@@ -1,0 +1,1 @@
+{"type": "scarf", "drape_left": {"x": 0.0476, "y": 0.7996}, "drape_right": {"x": 0.90444, "y": 0.7996}, "fabric_bbox": {"h": 0.9995, "w": 0.95204, "x": 0, "y": 0}, "detected_face": true, "face_opening_bbox": {"h": 0.28366, "w": 0.40839, "x": 0.28973, "y": 0.38172}, "hair_coverage_top": {"x": 0.50145, "y": 0.30172}, "face_opening_center": {"x": 0.49822, "y": 0.5235}}

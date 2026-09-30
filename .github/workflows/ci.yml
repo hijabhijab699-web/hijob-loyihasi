@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Python ML services ──────────────────────────────────────────────
+  ml-services:
+    name: pytest (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [ml-face, ml-compositor, ml-garment]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Fixture face + garment PNGs live under services/*/tests/fixtures
+          # so a shallow clone is enough.
+          fetch-depth: 1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: '0.5.x'
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Create venv
+        working-directory: services/${{ matrix.service }}
+        run: uv venv --python 3.12 .venv
+
+      - name: Install dependencies
+        working-directory: services/${{ matrix.service }}
+        run: |
+          uv pip install --python .venv/bin/python -r requirements.txt
+          uv pip install --python .venv/bin/python pytest
+
+      # rembg downloads its ONNX model on first run. Cache it so we don't spend
+      # 3 min re-downloading 176 MB on every workflow.
+      - name: Cache rembg model
+        if: matrix.service == 'ml-garment'
+        uses: actions/cache@v4
+        with:
+          path: ~/.u2net
+          key: u2net-v1
+
+      - name: Run tests
+        working-directory: services/${{ matrix.service }}
+        run: .venv/bin/python -m pytest tests/ -v --tb=short
+
+  # ─── NestJS + shared TS packages ─────────────────────────────────────
+  backend:
+    name: NestJS typecheck + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @n2431/api prisma:generate
+      - run: pnpm --filter @n2431/api typecheck
+      - run: pnpm --filter @n2431/api build
+
+  # ─── Next.js seller portal ───────────────────────────────────────────
+  seller-web:
+    name: Seller portal typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @n2431/seller-web typecheck
+
+  # ─── Mobile ───────────────────────────────────────────────────────────
+  mobile:
+    name: Mobile typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @n2431/mobile typecheck

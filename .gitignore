@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.turbo/
+.next/
+.expo/
+apps/mobile/ios/build/
+apps/mobile/ios/Pods/
+apps/mobile/android/build/
+apps/mobile/android/.gradle/
+apps/mobile/android/app/build/
+
+# Native codegen output (regenerated on pod install)
+apps/mobile/ios/build/generated/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+services/*/data/
+services/*/uploads/
+services/ml-*/models/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Env & secrets — NEVER commit real credentials
+.env
+.env.local
+.env.*.local
+.env.production
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Coverage
+coverage/
+*.lcov
+
+# Tests
+snapshots-actual/
+
+# Assets: large model weights (downloaded on demand)
+u2net.onnx
+u2netp.onnx
