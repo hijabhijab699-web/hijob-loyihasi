@@ -42,6 +42,26 @@ export class TryOnController {
   }
 
   /**
+   * Face-swap try-on against a seller-published styled mannequin photo.
+   * The buyer picks a variant, we drop their face onto the mannequin, and
+   * they see themselves wearing that hijab.
+   */
+  @Post('faceswap')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('face', { limits: { fileSize: MAX_IMAGE_BYTES } }))
+  faceswap(
+    @CurrentUser() user: CurrentUserInfo,
+    @Body() dto: { variantId: string },
+    @UploadedFile() face: Express.Multer.File,
+  ) {
+    if (!face) throw new BadRequestException('FACE_IMAGE_REQUIRED');
+    if (!dto?.variantId) throw new BadRequestException('VARIANT_ID_REQUIRED');
+    return this.tryon.createFaceSwap(user.id, dto.variantId, face);
+  }
+
+  /**
    * Public image stream — anyone with the session id can view (short TTL, ephemeral).
    * The URL is only handed to the requesting client so it stays effectively private.
    */

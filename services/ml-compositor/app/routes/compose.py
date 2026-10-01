@@ -13,6 +13,7 @@ from app.models import LandmarksPayload, ScarfSpec
 from app.services.geometry import to_pixels
 from app.services.scarf import draw_scarf
 from app.services.dress_compose import compose_dress_template
+from app.services.face_swap import face_swap
 from app.services.template_compose import compose_scarf_template
 from app.utils import decode_image_bytes, encode_output
 
@@ -158,6 +159,54 @@ async def compose_scarf_from_template(
         content=jpeg,
         media_type="image/jpeg",
         headers={"X-Compose-Time-Ms": str(elapsed_ms), "X-Mode": "template"},
+    )
+
+
+@router.post(
+    "/faceswap",
+    responses={200: {"content": {"image/jpeg": {}}, "description": "Face-swap result"}},
+)
+async def compose_faceswap(
+    mannequin: UploadFile = File(
+        ..., description="Pre-styled mannequin photo (model already wearing the hijab)"
+    ),
+    user: UploadFile = File(..., description="Buyer's frontal selfie"),
+) -> Response:
+    """Drop the buyer's face onto a seller-published styled image.
+
+    This is the buyer-side try-on endpoint for the "mannequin pre-dressed by
+    the seller, face swapped at request time" workflow. No landmarks are
+    required — Haar face detection runs inside and keeps the request simple
+    (two files in, one JPEG out).
+    """
+    started = time.perf_counter()
+
+    mannequin_bytes = await _read_upload(mannequin)
+    user_bytes = await _read_upload(user)
+
+    try:
+        mannequin_img = decode_image_bytes(mannequin_bytes)
+        user_img = decode_image_bytes(user_bytes)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        result = face_swap(mannequin_img, user_img)
+    except ValueError as exc:
+        # No face detected on one of the inputs. 422 so the mobile client can
+        # tell the buyer "yuzingiz aniqlanmadi — qaytadan oling".
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception:  # noqa: BLE001
+        logger.exception("face swap failed")
+        raise HTTPException(status_code=500, detail="FACESWAP_FAILED")
+
+    jpeg = encode_output(result)
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    logger.info("face swap in %d ms", elapsed_ms)
+    return Response(
+        content=jpeg,
+        media_type="image/jpeg",
+        headers={"X-Compose-Time-Ms": str(elapsed_ms), "X-Mode": "faceswap"},
     )
 
 

@@ -22,6 +22,7 @@ export default function Splash() {
     const needsBody = !user?.onboarding?.bodyProvided;
     if (needsFace) return <Redirect href="/(onboarding)/face" />;
     if (needsBody) return <Redirect href="/(onboarding)/body" />;
+    if (user?.role === 'seller') return <Redirect href="/(seller-tabs)/dashboard" />;
     return <Redirect href="/(tabs)/home" />;
   }
 

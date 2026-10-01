@@ -1,10 +1,10 @@
+import { useState } from 'react';
+import { Alert, Image, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Image, Pressable, ScrollView, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
-import { Button } from '../../src/components/Button';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 
@@ -26,24 +26,41 @@ interface CartResponse {
   itemCount: number;
 }
 
-const DELIVERY_METHODS = [
-  { key: 'courier', icon: 'car-outline' as const },
-  { key: 'pickup', icon: 'storefront-outline' as const },
-  { key: 'proba', icon: 'cube-outline' as const },
+const MOCK_ITEMS = [
+  {
+    id: '1',
+    productTitle: "Ipak ro'mol Premium",
+    productImage: '',
+    sellerBrand: 'Amani',
+    color: 'Qizil',
+    colorHex: '#C0504D',
+    size: 'M',
+    priceUsd: 45,
+    quantity: 2,
+    availableColors: [],
+    availableSizes: [],
+  },
+  {
+    id: '2',
+    productTitle: "Shoyi ko'ylak Elegant",
+    productImage: '',
+    sellerBrand: 'Zahra',
+    color: 'Oq',
+    colorHex: '#F0EBDA',
+    size: 'S',
+    priceUsd: 89,
+    quantity: 1,
+    availableColors: [],
+    availableSizes: [],
+  },
 ];
-
-const SPEEDS = [
-  { key: 'today', icon: 'flash' as const, fee: 5 },
-  { key: 'tomorrow', icon: 'calendar-outline' as const, fee: 3 },
-  { key: 'scheduled', icon: 'time-outline' as const, fee: null },
-];
-
-const PAYMENTS = ['click', 'payme', 'visa', 'mastercard'];
 
 export default function CartScreen() {
   const { t } = useTranslation();
   const { colors, theme } = useTheme();
   const qc = useQueryClient();
+  const [deliveryMethod, setDeliveryMethod] = useState<'courier' | 'pickup' | 'proba'>('courier');
+  const [promoCode, setPromoCode] = useState('');
 
   const { data } = useQuery<CartResponse>({
     queryKey: ['cart'],
@@ -64,10 +81,14 @@ export default function CartScreen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cart'] }),
   });
 
-  const items = data?.items ?? [];
-  const deliveryFee = 5;
-  const subtotal = data?.subtotalUsd ?? 0;
-  const total = subtotal + deliveryFee;
+  const items = data?.items ?? MOCK_ITEMS;
+  const itemCount = data?.itemCount ?? items.reduce((sum, i) => sum + i.quantity, 0);
+  const subtotal = data?.subtotalUsd ?? items.reduce((sum, i) => sum + i.priceUsd * i.quantity, 0);
+
+  const PLACEHOLDER_BG = [
+    'linear-gradient(135deg, #E4CE9A 0%, #C9A96E 50%, #A88848 100%)',
+    'linear-gradient(135deg, #FDFAF3 0%, #E4CE9A 50%, #C9A96E 100%)',
+  ];
 
   return (
     <Screen>
@@ -78,300 +99,554 @@ export default function CartScreen() {
           paddingHorizontal: 20,
           paddingBottom: 12,
           flexDirection: 'row',
-          alignItems: 'center',
+          alignItems: 'flex-end',
           justifyContent: 'space-between',
         }}
       >
-        <Pressable hitSlop={12}>
-          <Ionicons name="arrow-back" size={26} color={colors.ink} />
-        </Pressable>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Ionicons name="bag-outline" size={22} color={colors.gold} />
+        <View>
           <Text
-            variant="labelUppercase"
-            color="gold"
-            style={{ fontFamily: theme.fontFamilies.display, fontSize: 20, letterSpacing: 3 }}
+            variant="displayLarge"
+            color="oliveDeep"
+            style={{ fontSize: 26, fontWeight: '700' }}
           >
-            {t('cart.title').toUpperCase()}
+            Savat
+          </Text>
+          <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
+            {itemCount} ta mahsulot
           </Text>
         </View>
-        <View style={{ flexDirection: 'row', gap: 14 }}>
-          <Ionicons name="heart-outline" size={22} color={colors.ink} />
-          <Ionicons name="bag-outline" size={22} color={colors.ink} />
-        </View>
+        {items.length > 0 && (
+          <Pressable style={{ paddingBottom: 4 }}>
+            <Text variant="bodySmall" style={{ color: colors.danger, fontSize: 12 }}>
+              Tozalash
+            </Text>
+          </Pressable>
+        )}
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 100 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 0 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Empty state */}
         {items.length === 0 && (
-          <View style={{ alignItems: 'center', paddingVertical: 40, gap: 8 }}>
+          <View style={{ alignItems: 'center', paddingVertical: 60, gap: 8 }}>
             <Ionicons name="bag-outline" size={48} color={colors.muted} />
             <Text variant="titleMedium" color="muted">{t('cart.empty')}</Text>
           </View>
         )}
 
-        {items.map((item) => (
+        {/* Cart Items */}
+        {items.map((item, idx) => (
           <View
             key={item.id}
             style={{
-              flexDirection: 'row',
-              gap: 12,
-              padding: 12,
               backgroundColor: colors.surface,
-              borderRadius: theme.radii.lg,
               borderWidth: 1,
               borderColor: colors.rule,
+              borderRadius: 16,
+              padding: 14,
+              flexDirection: 'row',
+              gap: 14,
+              marginBottom: idx === items.length - 1 ? 16 : 12,
             }}
           >
-            <Image
-              source={{ uri: item.productImage }}
-              style={{ width: 100, height: 130, borderRadius: theme.radii.md }}
-            />
-            <View style={{ flex: 1, gap: 4 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Text variant="titleSmall" color="ink" style={{ flex: 1 }}>
+            {/* Image */}
+            <View
+              style={{
+                width: 90,
+                height: 90,
+                borderRadius: 12,
+                backgroundColor: idx === 0 ? colors.gold : colors.goldSoft,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {item.productImage ? (
+                <Image
+                  source={{ uri: item.productImage }}
+                  style={{ width: 90, height: 90, borderRadius: 12 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Ionicons name="ribbon-outline" size={28} color="rgba(255,255,255,0.5)" />
+              )}
+            </View>
+
+            {/* Details */}
+            <View style={{ flex: 1, justifyContent: 'space-between' }}>
+              <View>
+                <Text
+                  variant="bodySmall"
+                  color="ink"
+                  style={{ fontWeight: '500', lineHeight: 18 }}
+                >
                   {item.productTitle}
                 </Text>
-                <Ionicons name="heart-outline" size={18} color={colors.muted} />
-              </View>
-              <Text variant="caption" color="muted">
-                {t('cart.brand')}: {item.sellerBrand}
-              </Text>
-              <Text variant="caption" color="muted">
-                {t('cart.color')}: {item.color}
-              </Text>
-              <View style={{ flexDirection: 'row', gap: 4, marginTop: 2 }}>
-                {item.availableColors.slice(0, 5).map((c, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 9,
-                      backgroundColor: c.colorHex,
-                      borderWidth: c.color === item.color ? 2 : 1,
-                      borderColor: c.color === item.color ? colors.gold : colors.rule,
-                    }}
-                  />
-                ))}
-              </View>
-              <Text variant="caption" color="muted" style={{ marginTop: 2 }}>
-                {t('cart.size')}: {item.size}
-              </Text>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                <Text variant="titleMedium" color="gold">
-                  ${item.priceUsd}
-                </Text>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 12,
-                    borderWidth: 1,
-                    borderColor: colors.rule,
-                    borderRadius: theme.radii.pill,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                  }}
+                <Text
+                  variant="caption"
+                  color="muted"
+                  style={{ fontSize: 12, marginTop: 3 }}
                 >
-                  <Pressable
-                    onPress={() => updateQty.mutate({ id: item.id, quantity: item.quantity - 1 })}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="remove" size={16} color={colors.ink} />
-                  </Pressable>
-                  <Text variant="titleSmall" color="ink">{item.quantity}</Text>
-                  <Pressable
-                    onPress={() => updateQty.mutate({ id: item.id, quantity: item.quantity + 1 })}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="add" size={16} color={colors.ink} />
-                  </Pressable>
-                </View>
-                <Pressable onPress={() => removeItem.mutate(item.id)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={20} color={colors.muted} />
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        ))}
-
-        {/* Delivery */}
-        {items.length > 0 && (
-          <>
-            <View style={{ padding: 16, backgroundColor: colors.surface, borderRadius: theme.radii.lg, borderWidth: 1, borderColor: colors.rule, gap: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="cube-outline" size={20} color={colors.gold} />
-                <Text variant="titleSmall" color="ink" style={{ flex: 1, marginLeft: 10 }}>
-                  {t('cart.delivery.title')}
+                  {item.color} · {item.size}
                 </Text>
-                <Text variant="caption" color="gold">
-                  {t('cart.delivery.details')}
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {DELIVERY_METHODS.map((m, i) => (
-                  <View
-                    key={m.key}
-                    style={{
-                      flex: 1,
-                      padding: 12,
-                      borderRadius: theme.radii.md,
-                      backgroundColor: i === 0 ? colors.goldSoft + '40' : colors.surfaceAlt,
-                      borderWidth: 1,
-                      borderColor: i === 0 ? colors.gold : colors.rule,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Ionicons name={m.icon} size={20} color={i === 0 ? colors.gold : colors.muted} />
-                      <View
-                        style={{
-                          width: 14,
-                          height: 14,
-                          borderRadius: 7,
-                          borderWidth: 2,
-                          borderColor: i === 0 ? colors.gold : colors.rule,
-                        }}
-                      />
-                    </View>
-                    <Text variant="bodySmall" color="ink" style={{ marginTop: 6, fontWeight: '600' }}>
-                      {t(`cart.delivery.${m.key}`)}
-                    </Text>
-                    <Text variant="caption" color="muted" style={{ marginTop: 2 }}>
-                      {t(`cart.delivery.${m.key}Desc`)}
-                    </Text>
-                    {m.key === 'proba' && (
-                      <Text variant="caption" color="gold" style={{ marginTop: 4 }}>
-                        {t('cart.delivery.probaNote')}
-                      </Text>
-                    )}
-                  </View>
-                ))}
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {SPEEDS.map((s, i) => (
-                  <View
-                    key={s.key}
-                    style={{
-                      flex: 1,
-                      padding: 12,
-                      borderRadius: theme.radii.md,
-                      backgroundColor: i === 0 ? colors.goldSoft + '40' : colors.surfaceAlt,
-                      borderWidth: 1,
-                      borderColor: i === 0 ? colors.gold : colors.rule,
-                    }}
-                  >
-                    <Ionicons name={s.icon} size={18} color={i === 0 ? colors.gold : colors.muted} />
-                    <Text variant="bodySmall" color="ink" style={{ marginTop: 6, fontWeight: '600' }}>
-                      {t(`cart.delivery.${s.key}`)}
-                    </Text>
-                    {s.fee !== null ? (
-                      <Text variant="caption" color="muted">${s.fee}</Text>
-                    ) : (
-                      <Text variant="caption" color="muted">
-                        {t('cart.delivery.scheduledDesc')}
-                      </Text>
-                    )}
-                  </View>
-                ))}
               </View>
 
               <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 12,
-                  padding: 12,
-                  backgroundColor: colors.surfaceAlt,
-                  borderRadius: theme.radii.md,
+                  justifyContent: 'space-between',
                 }}
               >
-                <Ionicons name="location-outline" size={20} color={colors.gold} />
-                <View style={{ flex: 1 }}>
-                  <Text variant="caption" color="ink" style={{ fontWeight: '600' }}>
-                    {t('cart.address.title')}
-                  </Text>
-                  <Text variant="caption" color="muted">
-                    г. Ташкент, Мирзо-Улугбекский район, ул. Буюк Ипак Йули, 25
-                  </Text>
-                </View>
-                <Text variant="caption" color="gold">{t('cart.address.change')}</Text>
-              </View>
-            </View>
+                <Text
+                  variant="displayLarge"
+                  color="oliveDeep"
+                  style={{
+                    fontFamily: theme.fontFamilies.display,
+                    fontSize: 18,
+                    fontWeight: '700',
+                  }}
+                >
+                  ${item.priceUsd}
+                </Text>
 
-            {/* Summary */}
-            <View style={{ padding: 16, backgroundColor: colors.surface, borderRadius: theme.radii.lg, borderWidth: 1, borderColor: colors.rule, gap: 8 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text variant="bodySmall" color="muted">
-                  {t('cart.summary.items', { count: data?.itemCount ?? 0 })}
-                </Text>
-                <Text variant="bodySmall" color="ink">${subtotal.toFixed(0)}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text variant="bodySmall" color="muted">
-                  {t('cart.summary.delivery', { when: t('cart.delivery.today') })}
-                </Text>
-                <Text variant="bodySmall" color="ink">${deliveryFee}</Text>
-              </View>
-              <View style={{ height: 1, backgroundColor: colors.rule, marginVertical: 4 }} />
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <Text variant="titleMedium" color="ink">
-                  {t('cart.summary.total')}
-                </Text>
-                <Text variant="displayMedium" color="gold">${total.toFixed(0)}</Text>
-              </View>
-
-              <View style={{ marginTop: 8 }}>
-                <Text variant="caption" color="muted">{t('cart.payment.title')}</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                  {PAYMENTS.map((p) => (
-                    <View
-                      key={p}
-                      style={{
-                        flex: 1,
-                        height: 36,
-                        borderRadius: theme.radii.sm,
-                        backgroundColor: colors.surfaceAlt,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderWidth: 1,
-                        borderColor: colors.rule,
-                      }}
+                {/* Quantity Stepper */}
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Pressable
+                    onPress={() =>
+                      item.quantity > 1
+                        ? updateQty.mutate({ id: item.id, quantity: item.quantity - 1 })
+                        : removeItem.mutate(item.id)
+                    }
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      backgroundColor: colors.surfaceAlt,
+                      borderWidth: 1,
+                      borderColor: colors.rule,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name="remove" size={14} color={colors.muted} />
+                  </Pressable>
+                  <View
+                    style={{
+                      width: 36,
+                      height: 32,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text
+                      variant="bodySmall"
+                      color="ink"
+                      style={{ fontSize: 14, fontWeight: '600' }}
                     >
-                      <Text variant="caption" color="ink">{p.toUpperCase()}</Text>
-                    </View>
-                  ))}
+                      {item.quantity}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() =>
+                      updateQty.mutate({ id: item.id, quantity: item.quantity + 1 })
+                    }
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      backgroundColor: colors.surfaceAlt,
+                      borderWidth: 1,
+                      borderColor: colors.rule,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name="add" size={14} color={colors.oliveDeep} />
+                  </Pressable>
                 </View>
               </View>
             </View>
+          </View>
+        ))}
+
+        {items.length > 0 && (
+          <>
+            {/* Delivery Section */}
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.rule,
+                borderRadius: 16,
+                padding: 16,
+                marginBottom: 16,
+              }}
+            >
+              <Text
+                variant="bodySmall"
+                color="ink"
+                style={{ fontSize: 14, fontWeight: '600', marginBottom: 14 }}
+              >
+                Yetkazish usuli
+              </Text>
+
+              {/* Courier (delivery) */}
+              <Pressable
+                onPress={() => setDeliveryMethod('courier')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  marginBottom: 14,
+                }}
+              >
+                <View
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 999,
+                    borderWidth: deliveryMethod === 'courier' ? 2 : 1.5,
+                    borderColor:
+                      deliveryMethod === 'courier' ? colors.oliveDeep : colors.rule,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {deliveryMethod === 'courier' && (
+                    <View
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 999,
+                        backgroundColor: colors.oliveDeep,
+                      }}
+                    />
+                  )}
+                </View>
+                <Ionicons
+                  name="car-outline"
+                  size={20}
+                  color={
+                    deliveryMethod === 'courier' ? colors.oliveDeep : colors.muted
+                  }
+                />
+                <Text
+                  variant="bodySmall"
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    fontWeight: '500',
+                    color:
+                      deliveryMethod === 'courier' ? colors.ink : colors.muted,
+                  }}
+                >
+                  Yetkazib berish
+                </Text>
+                <View
+                  style={{
+                    backgroundColor: 'rgba(122,138,91,0.12)',
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 999,
+                  }}
+                >
+                  <Text
+                    variant="caption"
+                    style={{
+                      fontSize: 11,
+                      fontWeight: '600',
+                      color: colors.success,
+                    }}
+                  >
+                    Bepul
+                  </Text>
+                </View>
+              </Pressable>
+
+              {/* Pickup */}
+              <Pressable
+                onPress={() => setDeliveryMethod('pickup')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  marginBottom: 14,
+                }}
+              >
+                <View
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 999,
+                    borderWidth: deliveryMethod === 'pickup' ? 2 : 1.5,
+                    borderColor:
+                      deliveryMethod === 'pickup' ? colors.oliveDeep : colors.rule,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {deliveryMethod === 'pickup' && (
+                    <View
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 999,
+                        backgroundColor: colors.oliveDeep,
+                      }}
+                    />
+                  )}
+                </View>
+                <Ionicons
+                  name="storefront-outline"
+                  size={20}
+                  color={
+                    deliveryMethod === 'pickup' ? colors.oliveDeep : colors.muted
+                  }
+                />
+                <Text
+                  variant="bodySmall"
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    fontWeight: '500',
+                    color:
+                      deliveryMethod === 'pickup' ? colors.ink : colors.muted,
+                  }}
+                >
+                  O'zi olib ketish
+                </Text>
+              </Pressable>
+
+              {/* Proba */}
+              <Pressable
+                onPress={() => setDeliveryMethod('proba')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <View
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 999,
+                    borderWidth: deliveryMethod === 'proba' ? 2 : 1.5,
+                    borderColor:
+                      deliveryMethod === 'proba' ? colors.oliveDeep : colors.rule,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {deliveryMethod === 'proba' && (
+                    <View
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 999,
+                        backgroundColor: colors.oliveDeep,
+                      }}
+                    />
+                  )}
+                </View>
+                <Ionicons
+                  name="body-outline"
+                  size={20}
+                  color={
+                    deliveryMethod === 'proba' ? colors.oliveDeep : colors.muted
+                  }
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    variant="bodySmall"
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '500',
+                      color:
+                        deliveryMethod === 'proba' ? colors.ink : colors.muted,
+                    }}
+                  >
+                    Proba
+                  </Text>
+                  <Text
+                    variant="caption"
+                    style={{ fontSize: 11, color: colors.muted, marginTop: 1 }}
+                  >
+                    Avval kiyib ko'ring
+                  </Text>
+                </View>
+              </Pressable>
+            </View>
+
+            {/* Promo Code */}
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 10,
+                marginBottom: 16,
+              }}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  height: 44,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.rule,
+                  borderRadius: 12,
+                  justifyContent: 'center',
+                  paddingHorizontal: 14,
+                }}
+              >
+                <TextInput
+                  placeholder="Promo kod"
+                  placeholderTextColor={colors.muted}
+                  value={promoCode}
+                  onChangeText={setPromoCode}
+                  style={{
+                    fontSize: 13,
+                    color: colors.ink,
+                    fontFamily: 'Inter',
+                    padding: 0,
+                  }}
+                />
+              </View>
+              <Pressable
+                style={{
+                  height: 44,
+                  paddingHorizontal: 20,
+                  backgroundColor: colors.oliveDeep,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text
+                  variant="bodySmall"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '600',
+                    color: colors.goldSoft,
+                  }}
+                >
+                  Qo'llash
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Order Summary */}
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.rule,
+                borderRadius: 16,
+                padding: 16,
+                marginBottom: 16,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  marginBottom: 10,
+                }}
+              >
+                <Text variant="bodySmall" color="muted" style={{ fontSize: 13 }}>
+                  Mahsulotlar ({itemCount})
+                </Text>
+                <Text
+                  variant="bodySmall"
+                  color="ink"
+                  style={{ fontSize: 13, fontWeight: '500' }}
+                >
+                  ${subtotal.toFixed(2)}
+                </Text>
+              </View>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  marginBottom: 12,
+                }}
+              >
+                <Text variant="bodySmall" color="muted" style={{ fontSize: 13 }}>
+                  Yetkazib berish
+                </Text>
+                <Text
+                  variant="bodySmall"
+                  style={{ fontSize: 13, fontWeight: '500', color: colors.success }}
+                >
+                  Bepul
+                </Text>
+              </View>
+              <View
+                style={{
+                  height: 1,
+                  backgroundColor: colors.rule,
+                  marginBottom: 12,
+                }}
+              />
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  variant="bodySmall"
+                  color="ink"
+                  style={{ fontSize: 14, fontWeight: '600' }}
+                >
+                  Jami
+                </Text>
+                <Text
+                  variant="displayLarge"
+                  color="oliveDeep"
+                  style={{
+                    fontFamily: theme.fontFamilies.display,
+                    fontSize: 22,
+                    fontWeight: '700',
+                  }}
+                >
+                  ${subtotal.toFixed(2)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Checkout Button */}
+            <Pressable
+              onPress={() => Alert.alert('TODO', 'Payment integration')}
+              style={({ pressed }) => ({
+                height: 54,
+                borderRadius: 14,
+                backgroundColor: colors.oliveDeep,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                marginBottom: 8,
+                opacity: pressed ? 0.9 : 1,
+              })}
+            >
+              <Text
+                variant="body"
+                style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: colors.goldSoft,
+                }}
+              >
+                Buyurtma berish
+              </Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.goldSoft} />
+            </Pressable>
           </>
         )}
       </ScrollView>
-
-      {/* Checkout bar */}
-      {items.length > 0 && (
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: 16,
-            paddingBottom: 34,
-            backgroundColor: colors.bg,
-          }}
-        >
-          <Button
-            label={`${t('cart.checkout')}  $${total.toFixed(0)}`}
-            variant="gold"
-            icon={<Ionicons name="lock-closed-outline" size={18} color={colors.ink} />}
-            iconRight={<Ionicons name="chevron-forward" size={20} color={colors.ink} />}
-            onPress={() => Alert.alert('TODO', 'Payment integration')}
-          />
-        </View>
-      )}
     </Screen>
   );
 }

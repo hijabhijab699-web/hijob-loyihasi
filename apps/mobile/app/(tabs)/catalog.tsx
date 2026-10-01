@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
-import { Logo } from '../../src/components/Logo';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 
@@ -15,21 +14,39 @@ type CategoryId = 'scarves' | 'dresses' | 'bags' | 'accessories';
 
 interface Product {
   id: string;
-  title: { ru: string };
+  title: { ru: string; uz: string };
   basePriceUsd: number;
   coverUrl: string;
   seller: { brandName: string; rating: number; reviewsCount: number };
 }
 
-const COLORS: Array<{ key: string; hex: string; label: string }> = [
-  { key: 'yellow', hex: '#F4D06F', label: 'yellow' },
-  { key: 'white', hex: '#F8F5EE', label: 'white' },
-  { key: 'beige', hex: '#D4C3A0', label: 'beige' },
-  { key: 'pink', hex: '#E8B0B0', label: 'pink' },
-  { key: 'gray', hex: '#B0AEA7', label: 'gray' },
-  { key: 'green', hex: '#7A8A5B', label: 'green' },
-  { key: 'blue', hex: '#5F7A94', label: 'blue' },
-  { key: 'black', hex: '#1A1A1A', label: 'black' },
+const CATEGORY_ICONS: Record<CategoryId, string> = {
+  scarves: 'ribbon-outline',
+  dresses: 'shirt-outline',
+  bags: 'bag-handle-outline',
+  accessories: 'diamond-outline',
+};
+
+const COLORS: Array<{ key: string; hex: string }> = [
+  { key: 'yellow', hex: '#F4D06F' },
+  { key: 'white', hex: '#F8F5EE' },
+  { key: 'beige', hex: '#D4C3A0' },
+  { key: 'pink', hex: '#E8B0B0' },
+  { key: 'gray', hex: '#B0AEA7' },
+  { key: 'green', hex: '#7A8A5B' },
+  { key: 'blue', hex: '#5F7A94' },
+  { key: 'black', hex: '#1A1A1A' },
+  { key: 'brown', hex: '#8B6E4E' },
+  { key: 'burgundy', hex: '#722F37' },
+];
+
+const MOCK_PRODUCTS: Product[] = [
+  { id: '1', title: { ru: 'Silk Hijab Premium', uz: 'Silk Hijab Premium' }, basePriceUsd: 45, coverUrl: '', seller: { brandName: 'Amani', rating: 4.8, reviewsCount: 1200 } },
+  { id: '2', title: { ru: 'Cotton Voile Scarf', uz: 'Cotton Voile Scarf' }, basePriceUsd: 28, coverUrl: '', seller: { brandName: 'Zahra', rating: 4.6, reviewsCount: 890 } },
+  { id: '3', title: { ru: 'Chiffon Shawl', uz: 'Chiffon Shawl' }, basePriceUsd: 35, coverUrl: '', seller: { brandName: 'Noor', rating: 4.9, reviewsCount: 2100 } },
+  { id: '4', title: { ru: 'Jersey Hijab', uz: 'Jersey Hijab' }, basePriceUsd: 22, coverUrl: '', seller: { brandName: 'Hija', rating: 4.7, reviewsCount: 560 } },
+  { id: '5', title: { ru: 'Modal Blend Scarf', uz: 'Modal Blend Scarf' }, basePriceUsd: 38, coverUrl: '', seller: { brandName: 'Amani', rating: 4.8, reviewsCount: 1200 } },
+  { id: '6', title: { ru: 'Pashmina Wrap', uz: 'Pashmina Wrap' }, basePriceUsd: 55, coverUrl: '', seller: { brandName: 'Zahra', rating: 4.6, reviewsCount: 890 } },
 ];
 
 export default function CatalogScreen() {
@@ -39,27 +56,40 @@ export default function CatalogScreen() {
   const params = useLocalSearchParams<{ category?: CategoryId }>();
 
   const [category, setCategory] = useState<CategoryId>(params.category ?? 'scarves');
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
   const { data } = useQuery({
     queryKey: ['products', category, selectedColor],
-    queryFn: async () =>
-      (
-        await api.get('/catalog/products', {
-          params: {
-            category,
-            ...(selectedColor && { color: selectedColor }),
-            pageSize: 20,
-          },
-        })
-      ).data,
+    queryFn: async () => {
+      try {
+        return (
+          await api.get('/catalog/products', {
+            params: { category, ...(selectedColor && { color: selectedColor }), pageSize: 20 },
+          })
+        ).data;
+      } catch {
+        return { items: MOCK_PRODUCTS };
+      }
+    },
   });
 
-  const products: Product[] = data?.items ?? [];
+  const products: Product[] = data?.items ?? MOCK_PRODUCTS;
 
-  return (
-    <Screen>
+  const renderProduct = useCallback(
+    ({ item, index }: { item: Product; index: number }) => (
+      <ProductCard
+        product={item}
+        index={index}
+        onPress={() => router.push({ pathname: '/product/[id]', params: { id: item.id } })}
+        isLeft={index % 2 === 0}
+      />
+    ),
+    [router],
+  );
+
+  const listHeader = (
+    <>
       {/* Header */}
       <View
         style={{
@@ -70,274 +100,394 @@ export default function CatalogScreen() {
           justifyContent: 'space-between',
         }}
       >
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={26} color={colors.ink} />
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: colors.surfaceGlass,
+            borderWidth: 1,
+            borderColor: colors.ruleSoft,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="chevron-back" size={20} color={colors.oliveDeep} />
         </Pressable>
-        <Logo size={60} label={false} />
-        <View style={{ flexDirection: 'row', gap: 14 }}>
-          <Ionicons name="heart-outline" size={22} color={colors.ink} />
-          <Ionicons name="bag-outline" size={22} color={colors.ink} />
+        <Text
+          variant="displayLarge"
+          color="oliveDeep"
+          style={{ fontSize: 22, letterSpacing: -0.5 }}
+        >
+          N24:31
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Pressable
+            hitSlop={8}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: colors.surfaceGlass,
+              borderWidth: 1,
+              borderColor: colors.ruleSoft,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="heart-outline" size={20} color={colors.oliveDeep} />
+          </Pressable>
+          <Pressable
+            hitSlop={8}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: colors.surfaceGlass,
+              borderWidth: 1,
+              borderColor: colors.ruleSoft,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="bag-outline" size={20} color={colors.oliveDeep} />
+            <View
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: colors.danger,
+                borderWidth: 2,
+                borderColor: colors.bg,
+              }}
+            />
+          </Pressable>
         </View>
       </View>
 
-      <View style={{ paddingHorizontal: 20, marginTop: 12 }}>
+      {/* Title */}
+      <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
         <Text variant="displayLarge" color="oliveDeep">
           {t(`catalog.${category === 'scarves' ? 'scarves' : 'dresses'}.title`)}
         </Text>
-        <Text variant="bodySmall" color="muted" style={{ marginTop: 4 }}>
+        <Text variant="bodySmall" color="muted" style={{ marginTop: 2 }}>
           {t(`catalog.${category === 'scarves' ? 'scarves' : 'dresses'}.subtitle`)}
         </Text>
       </View>
 
-      {/* Category chips */}
+      {/* Category Tabs */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 14, gap: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, gap: 10 }}
       >
-        {(['scarves', 'dresses', 'bags', 'accessories'] as CategoryId[]).map((c) => (
-          <Pressable
-            key={c}
-            onPress={() => setCategory(c)}
-            style={{
-              paddingHorizontal: 16,
-              paddingVertical: 10,
-              borderRadius: theme.radii.pill,
-              backgroundColor: c === category ? colors.oliveDeep : colors.surface,
-              borderWidth: 1,
-              borderColor: c === category ? colors.oliveDeep : colors.rule,
-            }}
-          >
-            <Text variant="bodySmall" color={c === category ? 'surface' : 'ink'}>
-              {t(`home.categories.${c}`)}
-            </Text>
-          </Pressable>
-        ))}
+        {(['scarves', 'dresses', 'bags', 'accessories'] as CategoryId[]).map((c) => {
+          const active = c === category;
+          return (
+            <Pressable
+              key={c}
+              onPress={() => setCategory(c)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 16,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: active ? colors.oliveDeep : colors.surface,
+                borderWidth: active ? 0 : 1,
+                borderColor: colors.rule,
+              }}
+            >
+              <Ionicons
+                name={CATEGORY_ICONS[c] as any}
+                size={16}
+                color={active ? colors.goldSoft : colors.muted}
+              />
+              <Text
+                variant="bodySmall"
+                style={{
+                  color: active ? colors.goldSoft : colors.ink,
+                  fontWeight: active ? '600' : '400',
+                }}
+              >
+                {t(`home.categories.${c}`)}
+              </Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
-      {/* Filter toggle */}
-      <View style={{ flexDirection: 'row', paddingHorizontal: 20, gap: 12 }}>
+      {/* Filter + Sort */}
+      <View style={{ flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 8 }}>
         <Pressable
           onPress={() => setShowFilters((v) => !v)}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 16,
-            height: 44,
-            borderRadius: theme.radii.pill,
-            backgroundColor: colors.oliveDeep,
+            gap: 6,
+            paddingHorizontal: 14,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: showFilters ? colors.oliveDeep : colors.surface,
+            borderWidth: showFilters ? 0 : 1,
+            borderColor: colors.rule,
           }}
         >
-          <Ionicons name="options-outline" size={18} color={colors.surface} />
-          <Text variant="bodySmall" color="surface">
+          <Ionicons
+            name="options-outline"
+            size={16}
+            color={showFilters ? colors.goldSoft : colors.ink}
+          />
+          <Text
+            variant="bodySmall"
+            style={{ color: showFilters ? colors.goldSoft : colors.ink, fontWeight: '500' }}
+          >
             {t('catalog.filters')}
           </Text>
           <Ionicons
             name={showFilters ? 'chevron-up' : 'chevron-down'}
-            size={16}
-            color={colors.surface}
+            size={14}
+            color={showFilters ? colors.goldSoft : colors.muted}
           />
         </Pressable>
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 16,
-            height: 44,
-            borderRadius: theme.radii.pill,
+            gap: 6,
+            paddingHorizontal: 14,
+            height: 36,
+            borderRadius: 18,
             backgroundColor: colors.surface,
             borderWidth: 1,
             borderColor: colors.rule,
             flex: 1,
           }}
         >
-          <Ionicons name="swap-vertical-outline" size={16} color={colors.ink} />
+          <Ionicons name="swap-vertical-outline" size={14} color={colors.muted} />
           <Text variant="bodySmall" color="ink" style={{ flex: 1 }}>
             {t('catalog.sort.popularity')}
           </Text>
-          <Ionicons name="chevron-down" size={14} color={colors.ink} />
+          <Ionicons name="chevron-down" size={12} color={colors.muted} />
         </View>
       </View>
 
-      {/* Filters */}
+      {/* Filter Panel */}
       {showFilters && (
         <View
           style={{
             marginHorizontal: 20,
-            marginTop: 12,
-            padding: 16,
+            marginBottom: 12,
+            padding: 14,
             backgroundColor: colors.surface,
             borderRadius: theme.radii.xl,
             borderWidth: 1,
             borderColor: colors.rule,
           }}
         >
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <View
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+          >
             <Text variant="titleSmall" color="ink">
               {t('catalog.color')}
             </Text>
-            <Pressable onPress={() => setSelectedColor(null)}>
-              <Text variant="caption" color="oliveDeep">
-                {t('common.reset')}
-              </Text>
-            </Pressable>
+            {selectedColor && (
+              <Pressable onPress={() => setSelectedColor(null)}>
+                <Text variant="caption" color="oliveDeep" style={{ fontWeight: '500' }}>
+                  {t('common.reset')}
+                </Text>
+              </Pressable>
+            )}
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              {COLORS.map((c) => (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
+            {COLORS.map((c) => {
+              const active = c.key === selectedColor;
+              return (
                 <Pressable
                   key={c.key}
-                  onPress={() => setSelectedColor(c.key === selectedColor ? null : c.key)}
-                  style={{ alignItems: 'center', gap: 4 }}
+                  onPress={() => setSelectedColor(active ? null : c.key)}
+                  style={{ alignItems: 'center', gap: 4, width: 44 }}
                 >
                   <View
                     style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
                       backgroundColor: c.hex,
-                      borderWidth: c.key === selectedColor ? 2 : 1,
-                      borderColor: c.key === selectedColor ? colors.oliveDeep : colors.rule,
+                      borderWidth: active ? 2.5 : 1,
+                      borderColor: active ? colors.oliveDeep : colors.rule,
                     }}
                   />
-                  <Text variant="caption" color="muted">
-                    {t(`catalog.colors.${c.label}`)}
+                  <Text
+                    variant="caption"
+                    style={{
+                      color: active ? colors.oliveDeep : colors.muted,
+                      fontSize: 9,
+                      fontWeight: active ? '600' : '400',
+                    }}
+                  >
+                    {t(`catalog.colors.${c.key}`)}
                   </Text>
                 </Pressable>
-              ))}
-            </View>
-          </ScrollView>
+              );
+            })}
+          </View>
         </View>
       )}
+    </>
+  );
 
-      {/* Product grid */}
-      <View style={{ flex: 1, marginTop: 16, paddingHorizontal: 16 }}>
+  return (
+    <Screen>
+      <View style={{ flex: 1, paddingHorizontal: 4 }}>
         <FlashList
           data={products}
           numColumns={2}
           estimatedItemSize={280}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 24 }}
-          renderItem={({ item, index }) => (
-            <ProductCard
-              product={item}
-              onPress={() => router.push({ pathname: '/product/[id]', params: { id: item.id } })}
-              isLeft={index % 2 === 0}
-            />
-          )}
+          ListHeaderComponent={listHeader}
+          renderItem={renderProduct}
+          ListEmptyComponent={
+            <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
+              <Ionicons name="search-outline" size={48} color={colors.muted} />
+              <Text variant="body" color="muted">Mahsulot topilmadi</Text>
+            </View>
+          }
         />
       </View>
     </Screen>
   );
 }
 
+const PLACEHOLDER_BG = [
+  '#B5B891', '#E4CE9A', '#D4C3A0', '#C4C88C', '#D9D0BE', '#E8DFCC',
+];
+
 function ProductCard({
   product,
+  index,
   onPress,
   isLeft,
 }: {
   product: Product;
+  index: number;
   onPress: () => void;
   isLeft: boolean;
 }) {
   const { colors, theme } = useTheme();
+  const [imgError, setImgError] = useState(!product.coverUrl);
+  const bg = PLACEHOLDER_BG[index % PLACEHOLDER_BG.length];
+
   return (
     <Pressable
       onPress={onPress}
-      style={{
+      style={({ pressed }) => ({
         flex: 1,
         marginRight: isLeft ? 6 : 0,
         marginLeft: isLeft ? 0 : 6,
         marginBottom: 12,
+        marginHorizontal: 12,
         backgroundColor: colors.surface,
-        borderRadius: theme.radii.lg,
+        borderRadius: 20,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: colors.rule,
-      }}
+        opacity: pressed ? 0.92 : 1,
+      })}
     >
-      <View style={{ height: 220, position: 'relative' }}>
-        <Image source={{ uri: product.coverUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+      {/* Image */}
+      <View style={{ height: 200, backgroundColor: bg, position: 'relative' }}>
+        {!imgError && product.coverUrl ? (
+          <Image
+            source={{ uri: product.coverUrl }}
+            style={{ width: '100%', height: '100%' }}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="ribbon-outline" size={40} color="rgba(255,255,255,0.35)" />
+          </View>
+        )}
+        {/* Wishlist */}
+        <Pressable
+          hitSlop={8}
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            width: 30,
+            height: 30,
+            borderRadius: 15,
+            backgroundColor: 'rgba(255,255,255,0.8)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="heart-outline" size={16} color={colors.ink} />
+        </Pressable>
+        {/* TRY-ON Badge */}
         <View
           style={{
             position: 'absolute',
             top: 10,
-            right: 10,
-            width: 32,
-            height: 32,
-            borderRadius: 16,
-            backgroundColor: colors.surfaceGlass,
-            alignItems: 'center',
-            justifyContent: 'center',
+            left: 10,
+            backgroundColor: colors.olive,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 999,
           }}
         >
-          <Ionicons name="heart-outline" size={18} color={colors.ink} />
-        </View>
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 10,
-            right: 10,
-            width: 48,
-            height: 48,
-            borderRadius: 24,
-            backgroundColor: colors.oliveDark,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 2,
-            borderColor: colors.gold,
-          }}
-        >
-          <Ionicons name="body-outline" size={22} color={colors.goldSoft} />
+          <Text
+            variant="caption"
+            style={{ color: '#fff', fontSize: 9, fontWeight: '700', letterSpacing: 0.5 }}
+          >
+            TRY-ON
+          </Text>
         </View>
       </View>
-      <View style={{ padding: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <View
+
+      {/* Info */}
+      <View style={{ padding: 10, gap: 4 }}>
+        <Text variant="bodySmall" color="ink" numberOfLines={1}>
+          {product.title.ru}
+        </Text>
+
+        <Text variant="caption" color="muted" style={{ fontSize: 11 }}>
+          {product.seller.brandName} · <Text variant="caption" style={{ color: colors.gold, fontSize: 11 }}>★</Text> {product.seller.rating}
+        </Text>
+
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: 2,
+          }}
+        >
+          <Text variant="titleSmall" color="oliveDeep" style={{ fontWeight: '700' }}>
+            ${product.basePriceUsd}
+          </Text>
+          <Pressable
+            hitSlop={8}
             style={{
-              width: 20,
-              height: 20,
-              borderRadius: 10,
+              width: 28,
+              height: 28,
+              borderRadius: 14,
               backgroundColor: colors.olive,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Text variant="caption" color="surface" style={{ fontSize: 9 }}>
-              {product.seller.brandName.slice(0, 1)}
-            </Text>
-          </View>
-          <Text variant="caption" color="ink" numberOfLines={1}>
-            {product.seller.brandName}
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-          <Ionicons name="star" size={11} color={colors.gold} />
-          <Text variant="caption" color="muted">
-            {product.seller.rating.toFixed(1)} ({product.seller.reviewsCount})
-          </Text>
-        </View>
-        <Text variant="bodySmall" color="ink" style={{ marginTop: 4 }} numberOfLines={1}>
-          {product.title.ru}
-        </Text>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-          <Text variant="titleSmall" color="ink">
-            ${product.basePriceUsd}
-          </Text>
-          <View
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 14,
-              backgroundColor: colors.oliveDeep,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Ionicons name="bag-add-outline" size={14} color={colors.surface} />
-          </View>
+            <Ionicons name="add" size={16} color="#fff" />
+          </Pressable>
         </View>
       </View>
     </Pressable>

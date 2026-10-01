@@ -155,6 +155,85 @@ export class TryOnService {
     };
   }
 
+  /**
+   * Buyer-side try-on against a styled mannequin photo.
+   *
+   * The product is expected to carry ``styledImageUrl`` (the mannequin
+   * pre-dressed by the seller or seeded). We fetch that image, hand it plus
+   * the buyer's selfie to ml-compositor's ``/compose/faceswap`` route, and
+   * cache the result the same way the TPS compose flow does.
+   */
+  async createFaceSwap(
+    userId: string,
+    variantId: string,
+    faceImage: Express.Multer.File,
+  ) {
+    const started = Date.now();
+
+    const variant = await this.prisma.productVariant.findUnique({
+      where: { id: variantId },
+      include: {
+        product: {
+          select: { id: true, titleRu: true, categoryId: true, styledImageUrl: true, coverUrl: true },
+        },
+      },
+    });
+    if (!variant) throw new NotFoundException('VARIANT_NOT_FOUND');
+
+    const mannequinUrl = variant.product.styledImageUrl ?? variant.product.coverUrl;
+    if (!mannequinUrl) throw new BadRequestException('STYLED_IMAGE_MISSING');
+
+    // The styledImageUrl is a public URL. In local mode it points at our own
+    // express.static mount, so a plain fetch works regardless of driver.
+    let mannequinBytes: Buffer;
+    let mannequinMime = 'image/jpeg';
+    try {
+      const res = await fetch(mannequinUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      mannequinMime = res.headers.get('content-type') ?? 'image/jpeg';
+      mannequinBytes = Buffer.from(await res.arrayBuffer());
+    } catch (err) {
+      this.logger.warn(`styled image fetch failed for ${mannequinUrl}: ${(err as Error).message}`);
+      throw new BadRequestException('STYLED_IMAGE_UNREACHABLE');
+    }
+
+    const jpeg = await this.compositor.composeFaceSwap(
+      { buffer: mannequinBytes, mimetype: mannequinMime, filename: 'mannequin.jpg' },
+      faceImage,
+    );
+
+    const session = await this.prisma.tryOnSession.create({
+      data: {
+        userId,
+        variantId: variant.id,
+        tyingStyle: 'classical',
+        latencyMs: Date.now() - started,
+      },
+    });
+
+    this.imageCache.set(session.id, {
+      bytes: jpeg,
+      expiresAt: Date.now() + IMAGE_CACHE_TTL_MS,
+    });
+
+    const resultUrl = `${this.publicBase}/api/v1/tryon/preview/${session.id}/image`;
+    await this.prisma.tryOnSession.update({
+      where: { id: session.id },
+      data: { resultUrl },
+    });
+
+    this.logger.log(
+      `faceswap session ${session.id} composed in ${session.latencyMs}ms (${(jpeg.length / 1024).toFixed(1)} KB)`,
+    );
+
+    return {
+      sessionId: session.id,
+      resultUrl,
+      latencyMs: session.latencyMs ?? 0,
+      expiresAt: new Date(Date.now() + IMAGE_CACHE_TTL_MS).toISOString(),
+    };
+  }
+
   async history(userId: string, limit = 20) {
     const sessions = await this.prisma.tryOnSession.findMany({
       where: { userId },

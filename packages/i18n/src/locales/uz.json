@@ -233,7 +233,8 @@
     "notifications": "Bildirishnomalar",
     "language": "Til",
     "support": "Yordam",
-    "logout": "Chiqish"
+    "logout": "Chiqish",
+    "switchToSeller": "Sotuvchi rejimiga o'tish"
   },
   "tabs": {
     "home": "Asosiy",
@@ -242,5 +243,82 @@
     "wishlist": "Sevimli",
     "cart": "Savat",
     "profile": "Profil"
+  },
+  "seller": {
+    "tabs": {
+      "dashboard": "Bosh sahifa",
+      "products": "Mahsulotlar",
+      "orders": "Buyurtmalar",
+      "analytics": "Statistika"
+    },
+    "dashboard": {
+      "title": "Bosh sahifa",
+      "quickActions": "Tezkor harakatlar",
+      "stats": {
+        "totalProducts": "Jami mahsulotlar",
+        "activeOrders": "Faol buyurtmalar",
+        "revenue": "Daromad",
+        "tryOnCount": "Primerkalar"
+      },
+      "actions": {
+        "addProduct": "Mahsulot qo'shish",
+        "viewOrders": "Buyurtmalar",
+        "viewStats": "Statistika"
+      }
+    },
+    "products": {
+      "title": "Mahsulotlar",
+      "add": "Qo'shish",
+      "empty": "Hali mahsulot yo'q",
+      "variants": "variant",
+      "stock": "Ombor",
+      "status": {
+        "all": "Barchasi",
+        "live": "Faol",
+        "draft": "Qoralama",
+        "pending": "Kutilmoqda"
+      }
+    },
+    "orders": {
+      "title": "Buyurtmalar",
+      "empty": "Hali buyurtma yo'q",
+      "accept": "Qabul",
+      "reject": "Rad",
+      "status": {
+        "new": "Yangi",
+        "preparing": "Tayyorlanmoqda",
+        "shipping": "Yo'lda",
+        "delivered": "Yetkazildi"
+      }
+    },
+    "analytics": {
+      "title": "Statistika",
+      "revenue": "Daromad",
+      "topProducts": "Top mahsulotlar (primerka)",
+      "period": {
+        "today": "Bugun",
+        "week": "Hafta",
+        "month": "Oy",
+        "year": "Yil"
+      },
+      "metrics": {
+        "orders": "Buyurtmalar",
+        "tryOns": "Primerkalar",
+        "conversion": "Konversiya",
+        "avgCheck": "O'rtacha chek"
+      }
+    },
+    "profile": {
+      "currentMode": "Joriy rejim",
+      "buyerMode": "Xaridor",
+      "sellerMode": "Sotuvchi",
+      "menu": {
+        "storeInfo": "Do'kon ma'lumotlari",
+        "payment": "To'lov sozlamalari",
+        "delivery": "Yetkazib berish",
+        "notifications": "Bildirishnomalar",
+        "settings": "Sozlamalar"
+      }
+    }
   }
 }

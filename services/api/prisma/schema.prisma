@@ -259,6 +259,10 @@ model Product {
   filters        Json          @default("{}")
   coverUrl       String        @map("cover_url")
   gallery        String[]      @default([])
+  // Mannequin pre-dressed with this hijab — rendered by seller once at
+  // publish time (or seeded). Buyer-side try-on just face-swaps their selfie
+  // into this image, so the heavy composition only runs once per product.
+  styledImageUrl String?       @map("styled_image_url")
   status         ProductStatus @default(draft)
   popularityScore Float        @default(0) @map("popularity_score")
   createdAt      DateTime      @default(now()) @map("created_at")

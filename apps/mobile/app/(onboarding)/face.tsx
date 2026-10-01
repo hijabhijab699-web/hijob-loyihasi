@@ -14,9 +14,9 @@ import { api } from '../../src/api/client';
 import { useAuth } from '../../src/store/auth';
 import { encryptImageFile } from '../../src/lib/face-crypto';
 
-type CaptureStep = 'front' | 'left' | 'right';
+type CaptureStep = 'front';
 
-const STEPS: CaptureStep[] = ['front', 'left', 'right'];
+const currentStep: CaptureStep = 'front';
 
 export default function FaceCaptureScreen() {
   const { t } = useTranslation();
@@ -25,15 +25,11 @@ export default function FaceCaptureScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
-  const [step, setStep] = useState(0);
-  const [captured, setCaptured] = useState<Array<{ step: CaptureStep; uri: string }>>([]);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (!permission?.granted) requestPermission();
   }, [permission, requestPermission]);
-
-  const currentStep = STEPS[step]!;
 
   const refreshMe = useAuth((s) => s.refreshMe);
 
@@ -92,29 +88,23 @@ export default function FaceCaptureScreen() {
       });
       if (!photo?.uri) return;
 
-      const next = [...captured, { step: currentStep, uri: photo.uri }];
-      setCaptured(next);
-
-      if (step < 2) {
-        setStep(step + 1);
-      } else {
-        try {
-          const result = await uploadTemplate(next);
-          if (result.warnings.length) {
-            console.warn('face template warnings:', result.warnings);
-          }
-          await refreshMe();
-          router.replace('/(onboarding)/body');
-        } catch (e: any) {
-          const msg =
-            e?.response?.data?.message ??
-            e?.response?.data?.detail ??
-            e?.message ??
-            'Upload failed';
-          Alert.alert(t('common.error'), String(msg));
-          setStep(0);
-          setCaptured([]);
+      // Single frontal shot — ml-face can derive the full template from one
+      // well-lit front photo, so we skip the left/right profile angles that
+      // slowed people down and often failed to detect anyway.
+      try {
+        const result = await uploadTemplate([{ step: 'front', uri: photo.uri }]);
+        if (result.warnings.length) {
+          console.warn('face template warnings:', result.warnings);
         }
+        await refreshMe();
+        router.replace('/(onboarding)/body');
+      } catch (e: any) {
+        const msg =
+          e?.response?.data?.message ??
+          e?.response?.data?.detail ??
+          e?.message ??
+          'Upload failed';
+        Alert.alert(t('common.error'), String(msg));
       }
     } catch (e) {
       Alert.alert(t('common.error'), String(e));
@@ -208,10 +198,7 @@ export default function FaceCaptureScreen() {
             {t('onboarding.face.title')}
           </Text>
           <Text variant="bodySmall" color="oliveDark" style={{ marginTop: 8 }}>
-            {t(`onboarding.face.${currentStep}`)}
-          </Text>
-          <Text variant="caption" color="muted" style={{ marginTop: 8 }}>
-            {t('onboarding.face.step', { step: step + 1, total: 3 })}
+            {t('onboarding.face.front')}
           </Text>
         </View>
       </View>

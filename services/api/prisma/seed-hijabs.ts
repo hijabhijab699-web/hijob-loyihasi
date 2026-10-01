@@ -19,6 +19,23 @@ const prisma = new PrismaClient();
 const P = (photoId: number, w: number, h: number) =>
   `https://images.pexels.com/photos/${photoId}/pexels-photo-${photoId}.jpeg?auto=compress&cs=tinysrgb&w=${w}&h=${h}&fit=crop`;
 
+/* Local hijab product photos uploaded by the merchant — these are the
+ * REAL hijabs shown on models. Served by express.static under /uploads/.
+ * The mobile client reaches them through the Cloudflare tunnel baked into
+ * EXPO_PUBLIC_API_URL. */
+const BASE = (process.env.PUBLIC_BASE_URL ?? 'http://localhost:4000').replace(/\/$/, '');
+const HIJAB_IMAGES = [
+  `${BASE}/uploads/products/hijab-01-print.png`,
+  `${BASE}/uploads/products/hijab-02-chiffon.png`,
+];
+const pickHijabImage = (slug: string) => {
+  // Deterministic rotation by slug hash so a given product always shows the
+  // same photo and the catalogue alternates visually between the two shots.
+  let h = 0;
+  for (const c of slug) h = ((h << 5) - h + c.charCodeAt(0)) | 0;
+  return HIJAB_IMAGES[Math.abs(h) % HIJAB_IMAGES.length]!;
+};
+
 const BRAND_LOGOS: Record<string, string> = {
   Noor: P(2703181, 200, 200),
   Amani: P(3568520, 200, 200),
@@ -142,14 +159,22 @@ async function main() {
   console.log(`  ✓ ${Object.keys(BRAND_LOGOS).length} logos`);
 
   console.log('\n2. Hijabs / scarves…');
-  await upsertProducts(HIJABS, 'scarves', sellers, (h) => ({
-    cover: P(h.photoId, 600, 800),
-    gallery: [P(h.photoId, 800, 1000), P(h.photoId, 600, 900)],
-    variantImage: P(h.photoId, 800, 1000),
-    attributes: { scarfModel: h.style, fabric: h.fabric },
-    sizes: ['110x110'],
-    variantsPerSize: (size: string) => ({ size, price: h.price, sku: `SC-${h.slug}` }),
-  }));
+  await upsertProducts(HIJABS, 'scarves', sellers, (h) => {
+    // Use the real hijab product photos we have on-disk, not random stock.
+    // These photos ARE already of a model wearing the hijab, so we use them
+    // both as the catalogue image AND as the styledImageUrl the buyer-side
+    // face-swap will drop their selfie into.
+    const img = pickHijabImage(h.slug);
+    return {
+      cover: img,
+      gallery: [img],
+      variantImage: img,
+      styled: img,
+      attributes: { scarfModel: h.style, fabric: h.fabric },
+      sizes: ['110x110'],
+      variantsPerSize: (size: string) => ({ size, price: h.price, sku: `SC-${h.slug}` }),
+    };
+  });
 
   console.log('\n3. Dresses / abayas…');
   await upsertProducts(DRESSES, 'dresses', sellers, (d) => ({
@@ -210,6 +235,7 @@ async function upsertProducts<T extends ProductInput>(
     cover: string;
     gallery: string[];
     variantImage: string;
+    styled?: string;
     attributes: Record<string, unknown>;
     sizes: string[];
     variantsPerSize: (size: string) => { size: string; price: number; sku: string };
@@ -220,9 +246,10 @@ async function upsertProducts<T extends ProductInput>(
     const s = spec(item);
     const seller = sellers[i % sellers.length]!;
 
-    await prisma.product.deleteMany({
-      where: { titleRu: item.titleRu, sellerId: seller.id },
-    });
+    // Delete any prior product with this title regardless of seller — a
+    // previous seed run may have assigned it to a different seller, and the
+    // SKU unique constraint would collide otherwise.
+    await prisma.product.deleteMany({ where: { titleRu: item.titleRu } });
 
     const product = await prisma.product.create({
       data: {
@@ -233,6 +260,7 @@ async function upsertProducts<T extends ProductInput>(
         basePriceUsd: item.price,
         coverUrl: s.cover,
         gallery: s.gallery,
+        styledImageUrl: s.styled ?? null,
         attributes: s.attributes as never,
         filters: { color: [item.color], size: s.sizes } as never,
         status: ProductStatus.published,

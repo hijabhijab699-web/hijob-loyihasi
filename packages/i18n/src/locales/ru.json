@@ -233,7 +233,8 @@
     "notifications": "Уведомления",
     "language": "Язык",
     "support": "Помощь",
-    "logout": "Выйти"
+    "logout": "Выйти",
+    "switchToSeller": "Перейти в режим продавца"
   },
   "tabs": {
     "home": "Главная",
@@ -242,5 +243,82 @@
     "wishlist": "Избранное",
     "cart": "Корзина",
     "profile": "Профиль"
+  },
+  "seller": {
+    "tabs": {
+      "dashboard": "Главная",
+      "products": "Товары",
+      "orders": "Заказы",
+      "analytics": "Статистика"
+    },
+    "dashboard": {
+      "title": "Главная",
+      "quickActions": "Быстрые действия",
+      "stats": {
+        "totalProducts": "Всего товаров",
+        "activeOrders": "Активные заказы",
+        "revenue": "Доход",
+        "tryOnCount": "Примерки"
+      },
+      "actions": {
+        "addProduct": "Добавить товар",
+        "viewOrders": "Заказы",
+        "viewStats": "Статистика"
+      }
+    },
+    "products": {
+      "title": "Товары",
+      "add": "Добавить",
+      "empty": "Пока нет товаров",
+      "variants": "вариант",
+      "stock": "Склад",
+      "status": {
+        "all": "Все",
+        "live": "Активные",
+        "draft": "Черновик",
+        "pending": "На модерации"
+      }
+    },
+    "orders": {
+      "title": "Заказы",
+      "empty": "Пока нет заказов",
+      "accept": "Принять",
+      "reject": "Отклонить",
+      "status": {
+        "new": "Новый",
+        "preparing": "Готовится",
+        "shipping": "В пути",
+        "delivered": "Доставлен"
+      }
+    },
+    "analytics": {
+      "title": "Статистика",
+      "revenue": "Доход",
+      "topProducts": "Топ товары (примерки)",
+      "period": {
+        "today": "Сегодня",
+        "week": "Неделя",
+        "month": "Месяц",
+        "year": "Год"
+      },
+      "metrics": {
+        "orders": "Заказы",
+        "tryOns": "Примерки",
+        "conversion": "Конверсия",
+        "avgCheck": "Средний чек"
+      }
+    },
+    "profile": {
+      "currentMode": "Текущий режим",
+      "buyerMode": "Покупатель",
+      "sellerMode": "Продавец",
+      "menu": {
+        "storeInfo": "Информация о магазине",
+        "payment": "Настройки оплаты",
+        "delivery": "Доставка",
+        "notifications": "Уведомления",
+        "settings": "Настройки"
+      }
+    }
   }
 }

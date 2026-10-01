@@ -52,6 +52,54 @@ export class MlCompositorClient {
     this.composerBase = config.get<string>('ML_COMPOSITOR_URL') ?? 'http://localhost:5002';
   }
 
+  /**
+   * Buyer-side face swap. Takes a pre-styled mannequin image (seller-prepared)
+   * and the buyer's selfie, returns the mannequin with the buyer's face
+   * swapped in. ml-compositor runs the detection internally so this method
+   * stays a thin proxy.
+   */
+  async composeFaceSwap(
+    mannequin: { buffer: Buffer; mimetype: string; filename?: string },
+    user: Express.Multer.File,
+  ): Promise<Buffer> {
+    const body = new FormData();
+    body.append(
+      'mannequin',
+      new Blob([new Uint8Array(mannequin.buffer)], { type: mannequin.mimetype }),
+      mannequin.filename || 'mannequin.jpg',
+    );
+    body.append(
+      'user',
+      new Blob([new Uint8Array(user.buffer)], { type: user.mimetype }),
+      user.originalname || 'user.jpg',
+    );
+
+    const started = Date.now();
+    const res = await fetch(`${this.composerBase}/compose/faceswap`, {
+      method: 'POST',
+      body,
+    });
+    const elapsed = Date.now() - started;
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      this.logger.warn(`ml-compositor faceswap ${res.status}: ${txt}`);
+      // 422 → surface detail (NO_USER_FACE / NO_MANNEQUIN_FACE) so the mobile
+      // client can show a precise message. Everything else is a 500.
+      if (res.status === 422) {
+        throw new InternalServerErrorException({
+          code: 'FACESWAP_UNPROCESSABLE',
+          detail: txt,
+        });
+      }
+      throw new InternalServerErrorException({ code: 'FACESWAP_FAILED', upstream: res.status });
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+    this.logger.log(`faceswap composed in ${elapsed}ms`);
+    return Buffer.from(arrayBuffer);
+  }
+
   async composeScarf(faceImage: Express.Multer.File, spec: ScarfSpec): Promise<Buffer> {
     const landmarks = await this.extractLandmarks(faceImage);
 
