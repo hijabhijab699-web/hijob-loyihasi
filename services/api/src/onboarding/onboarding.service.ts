@@ -1,16 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import { BodyParamsDto } from './dto';
 import { ClothingSize, FaceTemplateStatus } from '@prisma/client';
 import { MlFaceClient } from './ml-face.client';
 
 @Injectable()
 export class OnboardingService {
+  private readonly logger = new Logger(OnboardingService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly mlFace: MlFaceClient,
     private readonly config: ConfigService,
+    private readonly storage: StorageService,
   ) {}
 
   async uploadFace(
@@ -120,5 +123,63 @@ export class OnboardingService {
       data: { onboardingFaceDone: false },
     });
     return { ok: true };
+  }
+
+  /**
+   * Zero-knowledge vault for client-encrypted selfies. We never see the key,
+   * so we treat every blob as an opaque byte stream and persist it under a
+   * per-user prefix. The FaceTemplate row keeps the prefix so a future
+   * "review my photos" screen can list them.
+   */
+  async storeEncryptedFaceVault(
+    userId: string,
+    shots: Array<{
+      view: 'front' | 'left' | 'right';
+      payload: string;
+      mac: string;
+      plaintextBytes: number;
+    }>,
+  ) {
+    const prefix = `face/vault/${userId}`;
+    const stored: Array<{ view: string; key: string; url: string }> = [];
+    for (const shot of shots) {
+      // payload is base64 of (iv ∥ ciphertext). Decode once, store opaque.
+      const buf = Buffer.from(shot.payload, 'base64');
+      const sidecar = Buffer.from(
+        JSON.stringify({
+          view: shot.view,
+          mac: shot.mac,
+          plaintextBytes: shot.plaintextBytes,
+          encryption: 'aes-256-cbc-v1',
+          storedAt: new Date().toISOString(),
+        }),
+      );
+      // We prefix the sidecar JSON length as 4 bytes big-endian, then the
+      // sidecar, then the ciphertext. That way one GET returns everything
+      // the client needs to decrypt and verify.
+      const len = Buffer.alloc(4);
+      len.writeUInt32BE(sidecar.length, 0);
+      const bundled = Buffer.concat([len, sidecar, buf]);
+
+      const result = await this.storage.save(
+        `${prefix}/${shot.view}`,
+        bundled,
+        'application/octet-stream',
+        `${shot.view}.bin`,
+      );
+      stored.push({ view: shot.view, key: result.key, url: result.url });
+    }
+
+    await this.prisma.faceTemplate.update({
+      where: { userId },
+      data: { s3EncryptedPhotosPrefix: prefix },
+    }).catch((err) => {
+      // Vault upload can arrive before the face template exists (race with
+      // the plaintext pipeline). Log and keep the files; next upload or
+      // reconciliation job will link them.
+      this.logger.warn(`vault stored but no template yet for ${userId}: ${err.message}`);
+    });
+
+    return { stored: stored.length, prefix, files: stored };
   }
 }

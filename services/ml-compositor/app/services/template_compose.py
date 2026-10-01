@@ -235,22 +235,10 @@ def compose_scarf_template(
         fabric_bgra, source_points=src, target_points=dst, output_size=(user_w, user_h)
     )
 
-    # Alpha composite: warped fabric on top of the selfie.
-    if warped.shape[2] == 4:
-        alpha = (warped[..., 3:4].astype(np.float32) / 255.0) * spec.opacity
-    else:
-        alpha = np.ones(warped.shape[:2] + (1,), dtype=np.float32) * spec.opacity
-
-    fabric_bgr = warped[..., :3].astype(np.float32)
-    base = user_image.astype(np.float32)
-    out = base * (1.0 - alpha) + fabric_bgr * alpha
-
-    # Soft feather at the mask edge to reduce stair-step artefacts.
-    edge = cv2.GaussianBlur(alpha[..., 0], (0, 0), sigmaX=2.0)
-    edge = np.clip(edge[..., None] * 1.6, 0, 1)
-    out = base * (1.0 - edge) + out * edge
-
-    composed = np.clip(out, 0, 255).astype(np.uint8)
+    # Pick the compositing mode. "alpha" is the original per-pixel mix; "poisson"
+    # hands the warped fabric to OpenCV's seamlessClone which solves a Laplacian
+    # over the mask edge so the scarf blends into the selfie's lighting.
+    composed = _blend(user_image, warped, spec)
 
     # Hairline protection — small extra pass that pulls the user's crown back
     # where the scarf sits low over the forehead. Tunable via spec.opacity so
@@ -261,3 +249,84 @@ def compose_scarf_template(
         user_landmarks_px=user_landmarks_px,
         protect_strength=0.55,
     )
+
+
+def _blend(user_image: np.ndarray, warped: np.ndarray, spec: "ScarfSpec") -> np.ndarray:
+    """Mix the warped fabric onto the selfie. Mode comes from spec.blend_mode."""
+    if warped.shape[2] == 4:
+        alpha = (warped[..., 3:4].astype(np.float32) / 255.0) * spec.opacity
+    else:
+        alpha = np.ones(warped.shape[:2] + (1,), dtype=np.float32) * spec.opacity
+    fabric_bgr = warped[..., :3]
+
+    if spec.blend_mode == "poisson":
+        return _poisson_blend(user_image, fabric_bgr, alpha[..., 0], spec.opacity)
+
+    base = user_image.astype(np.float32)
+    out = base * (1.0 - alpha) + fabric_bgr.astype(np.float32) * alpha
+
+    # Soft feather at the mask edge to reduce stair-step artefacts.
+    edge = cv2.GaussianBlur(alpha[..., 0], (0, 0), sigmaX=2.0)
+    edge = np.clip(edge[..., None] * 1.6, 0, 1)
+    out = base * (1.0 - edge) + out * edge
+    return np.clip(out, 0, 255).astype(np.uint8)
+
+
+def _poisson_blend(
+    base_bgr: np.ndarray, fabric_bgr: np.ndarray, alpha: np.ndarray, opacity: float
+) -> np.ndarray:
+    """Edge-only Poisson blend.
+
+    Pure seamlessClone homogenises the interior to the destination's boundary
+    tone — fine for photo transplants, catastrophic for a solid-coloured
+    scarf which ends up looking like skin. So we split the work:
+
+      1. Alpha-composite the fabric onto the selfie — the interior now holds
+         the correct scarf colour.
+      2. Build a thin ring mask that only covers ~10 pixels around the fabric
+         edge, and seamlessClone that pre-composite over the selfie through
+         just the ring. The interior stays untouched; the ring dissolves
+         into the face's lighting via the Laplacian solve.
+
+    Result: scarf colour preserved inside, soft believable edge outside.
+    """
+    mask8 = (alpha > 0.08).astype(np.uint8) * 255
+    if mask8.sum() < 64:
+        return base_bgr
+
+    # Pre-composite — the interior reference we want to keep.
+    a3 = np.repeat(alpha[..., None], 3, axis=2)
+    pre = (
+        base_bgr.astype(np.float32) * (1.0 - a3) + fabric_bgr.astype(np.float32) * a3
+    ).astype(np.uint8)
+
+    # Ring = dilated-mask minus eroded-mask → an annulus along the edge.
+    ring_width = 8
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    dilated = cv2.dilate(mask8, kernel, iterations=ring_width)
+    eroded = cv2.erode(mask8, kernel, iterations=ring_width)
+    ring = cv2.subtract(dilated, eroded)
+    if ring.sum() < 64:
+        return pre  # mask too small to usefully blend; return straight composite
+
+    ys, xs = np.where(ring > 0)
+    cy, cx = int(ys.mean()), int(xs.mean())
+
+    try:
+        edge_blended = cv2.seamlessClone(pre, base_bgr, ring, (cx, cy), cv2.NORMAL_CLONE)
+    except cv2.error:
+        return pre
+
+    # Compose: interior from the pre, edge from seamlessClone, everything
+    # outside the dilated mask straight from the original base.
+    out = base_bgr.copy()
+    interior = cv2.erode(mask8, kernel, iterations=ring_width)
+    out[interior > 0] = pre[interior > 0]
+    out[ring > 0] = edge_blended[ring > 0]
+
+    if opacity < 0.999:
+        base_f = base_bgr.astype(np.float32)
+        return np.clip(
+            base_f * (1.0 - opacity) + out.astype(np.float32) * opacity, 0, 255
+        ).astype(np.uint8)
+    return out

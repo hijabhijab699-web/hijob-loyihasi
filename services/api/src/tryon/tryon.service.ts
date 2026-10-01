@@ -5,8 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { MlCompositorClient } from './ml-compositor.client';
 import { StorageService } from '../storage/storage.service';
@@ -94,8 +92,7 @@ export class TryOnService {
       if (!template || !template.canonicalImageKey) {
         throw new BadRequestException('DRESS_TEMPLATE_MISSING');
       }
-      const canonicalPath = path.join(this.storage.getRoot(), template.canonicalImageKey);
-      const canonical = await fs.readFile(canonicalPath);
+      const canonical = await this.storage.read(template.canonicalImageKey);
       jpeg = await this.compositor.composeDressWithTemplate(faceImage, spec, {
         canonical,
         mimetype: 'image/png',
@@ -104,8 +101,7 @@ export class TryOnService {
       mode = 'dress-template';
     } else if (template && template.canonicalImageKey) {
       try {
-        const canonicalPath = path.join(this.storage.getRoot(), template.canonicalImageKey);
-        const canonical = await fs.readFile(canonicalPath);
+        const canonical = await this.storage.read(template.canonicalImageKey);
         jpeg = await this.compositor.composeScarfWithTemplate(faceImage, spec, {
           canonical,
           mimetype: 'image/png',

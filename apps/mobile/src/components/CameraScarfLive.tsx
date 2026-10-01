@@ -23,12 +23,15 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Pressable, ActivityIndicator } from 'react-native';
-import { Canvas, Group, Path, Skia } from '@shopify/react-native-skia';
+import { Canvas, Group, Path, Shader, Skia } from '@shopify/react-native-skia';
 import { useSharedValue, useDerivedValue, runOnJS } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
 
 import { useTheme } from '../theme/ThemeProvider';
 import type { SkiaTyingStyle } from './ScarfSkiaPreview';
+import { getFabricEffect, hexToVec3BGR, type FabricKind } from '../lib/fabric-shaders';
 
 // Lazy-required so the JS bundle still parses in Expo Go (no native module).
 // The `available` flag below tells the caller whether live mode can render.
@@ -44,25 +47,54 @@ try {
   useCameraPermission = vc.useCameraPermission;
   useCameraDevice = vc.useCameraDevice;
   useFrameProcessor = vc.useFrameProcessor;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const fd = require('react-native-vision-camera-face-detector');
-  useFaceDetector = fd.useFaceDetector;
 } catch {
-  // Native modules missing — the parent should route the user to the static
-  // /tryon flow instead. isAvailable() reflects this.
+  // Vision Camera not linked — the caller shows a fallback.
+}
+let _hasRealDetector = false;
+try {
+  // Apple Vision framework — built into iOS 13+, arm64-simulator native.
+  // Local plugin at apps/mobile/native-modules/apple-face-detector.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fd = require('apple-face-detector');
+  if (fd?.useAppleFaceDetector) {
+    useFaceDetector = fd.useAppleFaceDetector;
+    _hasRealDetector = true;
+  }
+} catch {
+  // Native plugin missing — live view still runs with a fixed centred anchor.
 }
 
+// A stub hook so React sees the same hook count on every render, even when
+// the real detector isn't installed. Returning `null` for `detectFaces`
+// signals the worklet to skip detection.
+if (!useFaceDetector) {
+  useFaceDetector = () => ({ detectFaces: null });
+}
+
+/** Live camera can render whenever Vision Camera is present. */
 export const isLiveCameraAvailable = () =>
-  Boolean(VisionCamera && useFaceDetector && useFrameProcessor);
+  Boolean(VisionCamera && useFrameProcessor);
+
+/** Whether we have a real on-device face tracker. When false, we fall back
+ *  to a fixed centred scarf anchor and the HUD says so. */
+export const hasFaceDetector = () => _hasRealDetector;
 
 interface Props {
   colorHex: string;
   tyingStyle?: SkiaTyingStyle;
   opacity?: number;
+  /** Fabric kind — drives the AR Runtime Effect shader (silk sheen, chiffon mesh, etc.).
+   *  Defaults to "solid" which renders the plain-colour polygon. */
+  fabric?: FabricKind;
   /** Called when the user hits the shutter — returns a still uri you can send onward. */
   onCapture?: (uri: string) => void;
+  /** Called after a video clip is recorded. The uri points at the saved
+   *  Camera Roll asset — share-sheet ready. */
+  onVideo?: (uri: string) => void;
   onClose?: () => void;
 }
+
+const VIDEO_SECONDS = 4;
 
 // Same style constants as the static ScarfSkiaPreview so the two previews stay coherent.
 const STYLE_TUNING: Record<SkiaTyingStyle, { crown: number; drapeY: number; drapeX: number }> = {
@@ -88,7 +120,9 @@ export function CameraScarfLive({
   colorHex,
   tyingStyle = 'classical',
   opacity = 0.92,
+  fabric = 'solid',
   onCapture,
+  onVideo,
   onClose,
 }: Props) {
   const { colors } = useTheme();
@@ -120,6 +154,7 @@ export function CameraScarfLive({
     minFaceSize: 0.15,
     trackingEnabled: true,
   });
+  const detectorPresent = hasFaceDetector();
 
   useEffect(() => {
     if (!hasPermission) requestPermission();
@@ -132,10 +167,44 @@ export function CameraScarfLive({
 
   const updateFps = useCallback((v: number) => setFps(v), []);
 
+  // When there's no on-device detector — or no camera at all (simulator) —
+  // we anchor the scarf to a fixed oval sized against the view. The pipeline
+  // still exercises Vision Camera + Skia overlay + style/color switching.
+  useEffect(() => {
+    if (detectorPresent && device) return;
+    const vw = viewSize.width;
+    const vh = viewSize.height;
+    if (vw < 20 || vh < 20) return;
+    const faceW = Math.min(vw * 0.55, 260);
+    const faceH = faceW * 1.28;
+    const cx = vw / 2;
+    const cy = vh * 0.38;
+    const oval: Array<{ x: number; y: number }> = [];
+    const steps = 32;
+    for (let i = 0; i < steps; i++) {
+      const t = (i / steps) * Math.PI * 2 - Math.PI / 2;
+      oval.push({
+        x: cx + Math.cos(t) * (faceW / 2),
+        y: cy + Math.sin(t) * (faceH / 2),
+      });
+    }
+    face.value = {
+      foreheadX: cx,
+      foreheadY: cy - faceH / 2,
+      chinX: cx,
+      chinY: cy + faceH / 2,
+      leftX: cx - faceW / 2,
+      leftY: cy,
+      rightX: cx + faceW / 2,
+      rightY: cy,
+      contour: oval,
+    };
+    setFps(30); // camera is running native-fast; display a placeholder.
+  }, [detectorPresent, device, viewSize.width, viewSize.height, face]);
+
   const frameProcessor = useFrameProcessor(
     (frame: any) => {
       'worklet';
-      const detected = detectFaces(frame);
 
       // Rolling FPS counter — updates once a second, cheap.
       framesSinceTick.value += 1;
@@ -146,6 +215,10 @@ export function CameraScarfLive({
         lastFpsTick.value = now;
       }
 
+      // No detector → JS side already pinned face.value to a fixed anchor.
+      if (!detectFaces) return;
+
+      const detected = detectFaces(frame);
       if (!detected || detected.length === 0) {
         face.value = null;
         return;
@@ -168,7 +241,9 @@ export function CameraScarfLive({
       const toViewX = (x: number) => vw - (x * scale - offX); // mirror front
       const toViewY = (y: number) => y * scale - offY;
 
-      const contourPts = (f.contours?.face ?? []) as Array<{ x: number; y: number }>;
+      // Apple Vision returns `contour` directly; MLKit put it under
+      // `contours.face`. Support both so a future swap needs no code change.
+      const contourPts = ((f.contour ?? f.contours?.face) ?? []) as Array<{ x: number; y: number }>;
       if (contourPts.length < 8) {
         face.value = null;
         return;
@@ -254,6 +329,39 @@ export function CameraScarfLive({
     return Skia.Color(`rgba(${r},${g},${b},${opacity})`);
   }, [colorHex, opacity]);
 
+  // --- Fabric Runtime Effect ----------------------------------------------
+  // Compile once per fabric kind (getFabricEffect caches). "solid" returns
+  // null and we fall back to the plain colour <Path>.
+  const fabricEffect = useMemo(() => getFabricEffect(fabric), [fabric]);
+
+  // u_time is driven on the UI thread so silk/satin specular travels at the
+  // same cadence as the camera preview. A 30 Hz interval is enough — the
+  // highlight band moves slowly (sin(u_time * 0.6)) and the interval is only
+  // a shared-value write.
+  const clock = useSharedValue(0);
+  useEffect(() => {
+    if (!fabricEffect) return;
+    const start = Date.now();
+    const id = setInterval(() => {
+      clock.value = (Date.now() - start) / 1000;
+    }, 1000 / 30);
+    return () => clearInterval(id);
+  }, [fabricEffect, clock]);
+
+  const bgr = useMemo(() => hexToVec3BGR(colorHex), [colorHex]);
+  const fabricUniforms = useDerivedValue(
+    () => ({
+      u_color: bgr,
+      u_size: [
+        Math.max(1, viewSize.width),
+        Math.max(1, viewSize.height),
+      ] as [number, number],
+      u_time: clock.value,
+      u_alpha: opacity,
+    }),
+    [bgr, viewSize.width, viewSize.height, opacity],
+  );
+
   const capture = useCallback(async () => {
     if (!cameraRef.current || capturing) return;
     setCapturing(true);
@@ -266,15 +374,75 @@ export function CameraScarfLive({
     }
   }, [capturing, onCapture]);
 
-  if (!device) {
-    return (
-      <View style={[styles.center, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator size="large" color={colors.gold} />
-        <Text style={{ color: colors.muted, marginTop: 12 }}>Old kamerani izlayapmiz…</Text>
-      </View>
-    );
+  /**
+   * Record a short clip of the live try-on then save to Camera Roll and offer
+   * the share sheet (IG Story, Telegram, Messages). On the simulator or when
+   * MediaLibrary permission is denied we fall through to Share directly.
+   */
+  const recording = useRef(false);
+  const [recordProgress, setRecordProgress] = useState(0);
+  const recordVideo = useCallback(async () => {
+    if (!cameraRef.current || recording.current) return;
+    recording.current = true;
+    setRecordProgress(0);
+
+    try {
+      // Permission request is cheap; iOS caches the answer after the first ask.
+      const perm = await MediaLibrary.requestPermissionsAsync();
+
+      // Visual countdown so the user knows the clip is in progress.
+      const tick = setInterval(() => {
+        setRecordProgress((p) => Math.min(1, p + 1 / (VIDEO_SECONDS * 10)));
+      }, 100);
+
+      const uri: string = await new Promise((resolve, reject) => {
+        cameraRef.current.startRecording({
+          flash: 'off',
+          onRecordingFinished: (video: any) => resolve('file://' + video.path),
+          onRecordingError: (err: Error) => reject(err),
+        });
+        setTimeout(() => {
+          try {
+            cameraRef.current.stopRecording();
+          } catch (e) {
+            reject(e);
+          }
+        }, VIDEO_SECONDS * 1000);
+      });
+
+      clearInterval(tick);
+      setRecordProgress(1);
+
+      let shareUri = uri;
+      if (perm.granted) {
+        try {
+          const asset = await MediaLibrary.createAssetAsync(uri);
+          shareUri = asset.uri;
+        } catch (e) {
+          console.warn('MediaLibrary save failed, sharing temp uri:', e);
+        }
+      }
+
+      onVideo?.(shareUri);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(shareUri, { mimeType: 'video/mp4', dialogTitle: 'N24:31 try-on' });
+      }
+    } catch (e) {
+      console.warn('record failed:', e);
+    } finally {
+      recording.current = false;
+      setTimeout(() => setRecordProgress(0), 600);
+    }
+  }, [onVideo]);
+
+  // iOS Simulator has no camera device. Fall through to a placeholder view
+  // that still exercises the Skia overlay pipeline (fixed anchor + controls).
+  const hasCamera = Boolean(device);
+  if (!hasCamera && !hasPermission) {
+    // On simulator we don't even bother with permissions.
   }
-  if (!hasPermission) {
+  if (hasCamera && !hasPermission) {
     return (
       <View style={[styles.center, { backgroundColor: colors.bg }]}>
         <Ionicons name="camera-outline" size={44} color={colors.oliveDark} />
@@ -300,20 +468,38 @@ export function CameraScarfLive({
       style={{ flex: 1, backgroundColor: '#000' }}
       onLayout={(e) => setViewSize(e.nativeEvent.layout)}
     >
-      <VisionCamera
-        ref={cameraRef}
-        style={StyleSheet.absoluteFill}
-        device={device}
-        isActive={true}
-        photo={true}
-        frameProcessor={frameProcessor}
-        pixelFormat="yuv"
-      />
+      {hasCamera ? (
+        <VisionCamera
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
+          device={device}
+          isActive={true}
+          photo={true}
+          video={true}
+          audio={false}
+          frameProcessor={frameProcessor}
+          pixelFormat="yuv"
+        />
+      ) : (
+        // Simulator placeholder — dark canvas that lets the Skia scarf
+        // polygon read cleanly so the pipeline is testable without hardware.
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#1B1B14' }]}>
+          <View style={styles.simBadge}>
+            <Text style={styles.simBadgeText}>SIMULATOR · no camera</Text>
+          </View>
+        </View>
+      )}
 
       {/* Transparent Skia overlay — draws over the live preview. */}
       <Canvas style={StyleSheet.absoluteFill}>
         <Group>
-          <Path path={scarfPath} color={scarfColor} />
+          {fabricEffect ? (
+            <Path path={scarfPath}>
+              <Shader source={fabricEffect} uniforms={fabricUniforms} />
+            </Path>
+          ) : (
+            <Path path={scarfPath} color={scarfColor} />
+          )}
           <Path
             path={scarfPath}
             style="stroke"
@@ -329,22 +515,64 @@ export function CameraScarfLive({
           <Ionicons name="close" size={22} color="#fff" />
         </Pressable>
         <View style={styles.fpsChip}>
-          <View style={styles.fpsDot} />
-          <Text style={styles.fpsText}>{fps} fps</Text>
+          <View
+            style={[
+              styles.fpsDot,
+              !detectorPresent && { backgroundColor: '#C9A96E' },
+              detectorPresent && !hasCamera && { backgroundColor: '#C9A96E' },
+            ]}
+          />
+          <Text style={styles.fpsText}>
+            {!detectorPresent
+              ? 'demo — no tracking'
+              : hasCamera
+                ? `${fps} fps · Apple Vision`
+                : 'Apple Vision · no camera'}
+          </Text>
         </View>
         <View style={{ width: 44 }} />
       </View>
 
       <View style={styles.shutterBar}>
-        <Pressable onPress={capture} style={styles.shutter} disabled={capturing}>
-          <View style={styles.shutterInner}>
-            {capturing ? (
-              <ActivityIndicator size="small" color="#000" />
-            ) : (
-              <Ionicons name="camera" size={26} color="#000" />
+        {/* Shutter + video capture buttons. Video sits to the right so the
+         *  gesture matches iOS Camera.app muscle memory. */}
+        <View style={styles.shutterRow}>
+          <View style={styles.shutterSide} />
+          <Pressable onPress={capture} style={styles.shutter} disabled={capturing || recording.current}>
+            <View style={styles.shutterInner}>
+              {capturing ? (
+                <ActivityIndicator size="small" color="#000" />
+              ) : (
+                <Ionicons name="camera" size={26} color="#000" />
+              )}
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={recordVideo}
+            style={styles.shutterSide}
+            disabled={!hasCamera || recording.current || capturing}
+          >
+            <View
+              style={[
+                styles.videoBtn,
+                recording.current && { borderColor: '#C9A96E', borderWidth: 3 },
+              ]}
+            >
+              {recording.current ? (
+                <View style={styles.recDot} />
+              ) : (
+                <Ionicons name="videocam" size={20} color="#fff" />
+              )}
+            </View>
+            {recordProgress > 0 && (
+              <View style={styles.recProgress}>
+                <View
+                  style={[styles.recProgressFill, { width: `${Math.round(recordProgress * 100)}%` }]}
+                />
+              </View>
             )}
-          </View>
-        </Pressable>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -383,6 +611,44 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
+  shutterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 24,
+  },
+  shutterSide: {
+    width: 56,
+    alignItems: 'center',
+  },
+  videoBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  recDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 3,
+    backgroundColor: '#D14343',
+  },
+  recProgress: {
+    width: 48,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  recProgressFill: {
+    height: '100%',
+    backgroundColor: '#C9A96E',
+  },
   fpsDot: {
     width: 6,
     height: 6,
@@ -414,5 +680,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  simBadge: {
+    position: 'absolute',
+    top: 120,
+    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(201,169,110,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  simBadgeText: {
+    color: '#C9A96E',
+    fontSize: 10,
+    letterSpacing: 2,
+    fontWeight: '600',
   },
 });

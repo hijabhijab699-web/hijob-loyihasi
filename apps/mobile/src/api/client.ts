@@ -13,6 +13,9 @@ const REFRESH_KEY = 'n2431.refreshToken';
 export const api = axios.create({
   baseURL: API_URL,
   timeout: 15_000,
+  // localtunnel shows an anti-abuse HTML page on first request from a new IP.
+  // This header opts us out so the tunnel forwards straight to the backend.
+  headers: { 'bypass-tunnel-reminder': 'true' },
 });
 
 api.interceptors.request.use(async (config) => {

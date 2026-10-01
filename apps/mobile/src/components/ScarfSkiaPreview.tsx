@@ -17,11 +17,13 @@ import {
   Group,
   Image as SkImage,
   Path,
+  Shader,
   Skia,
   useImage,
 } from '@shopify/react-native-skia';
 
 import { useTheme } from '../theme/ThemeProvider';
+import { getFabricEffect, hexToVec3BGR, type FabricKind } from '../lib/fabric-shaders';
 
 export type SkiaTyingStyle = 'classical' | 'loose' | 'double';
 
@@ -40,6 +42,8 @@ interface Props {
   colorHex: string;
   tyingStyle?: SkiaTyingStyle;
   opacity?: number;
+  /** Fabric kind drives the AR shader (silk sheen, chiffon mesh, etc.). */
+  fabric?: FabricKind;
 }
 
 // Same face-mesh landmark indices the server-side compositor uses.
@@ -61,6 +65,7 @@ export function ScarfSkiaPreview({
   colorHex,
   tyingStyle = 'classical',
   opacity = 0.92,
+  fabric = 'solid',
 }: Props) {
   const image = useImage(imageUri);
   const { colors } = useTheme();
@@ -122,7 +127,7 @@ export function ScarfSkiaPreview({
     return path;
   }, [landmarks, tyingStyle, width, height]);
 
-  // Parse #RRGGBB → Skia opaque colour.
+  // Parse #RRGGBB → Skia opaque colour (used when no shader is attached).
   const scarfColor = useMemo(() => {
     const hex = colorHex.startsWith('#') ? colorHex.slice(1) : colorHex;
     const r = parseInt(hex.slice(0, 2), 16);
@@ -131,13 +136,32 @@ export function ScarfSkiaPreview({
     return Skia.Color(`rgba(${r},${g},${b},${opacity})`);
   }, [colorHex, opacity]);
 
+  // Compile the fabric shader once per kind. getFabricEffect caches
+  // internally so repeated calls are free.
+  const fabricEffect = useMemo(() => getFabricEffect(fabric), [fabric]);
+  const fabricUniforms = useMemo(() => {
+    const [r, g, b] = hexToVec3BGR(colorHex);
+    return {
+      u_color: [r, g, b] as [number, number, number],
+      u_size: [width, height] as [number, number],
+      u_time: 0,
+      u_alpha: opacity,
+    };
+  }, [colorHex, width, height, opacity]);
+
   return (
     <View style={[styles.wrap, { width, height, backgroundColor: colors.surface2 }]}>
       <Canvas style={{ width, height }}>
         {image && <SkImage image={image} x={0} y={0} width={width} height={height} fit="cover" />}
         {scarfPath && (
           <Group>
-            <Path path={scarfPath} color={scarfColor} />
+            {fabricEffect ? (
+              <Path path={scarfPath}>
+                <Shader source={fabricEffect} uniforms={fabricUniforms} />
+              </Path>
+            ) : (
+              <Path path={scarfPath} color={scarfColor} />
+            )}
             {/* subtle inner shadow along the crown for depth */}
             <Path
               path={scarfPath}

@@ -18,6 +18,7 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1144.0",
     "@n2431/shared-types": "workspace:*",
     "@nestjs/common": "^10.4.0",
     "@nestjs/config": "^3.3.0",
@@ -33,6 +34,7 @@
     "class-validator": "^0.14.1",
     "helmet": "^8.0.0",
     "ioredis": "^5.4.1",
+    "mime-types": "^3.0.2",
     "multer": "^2.4.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -46,6 +48,7 @@
     "@nestjs/testing": "^10.4.0",
     "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.0",
+    "@types/mime-types": "^3.0.1",
     "@types/multer": "^2.3.0",
     "@types/node": "^22.9.0",
     "@types/passport-jwt": "^4.0.1",

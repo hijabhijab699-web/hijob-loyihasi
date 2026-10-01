@@ -1,0 +1,13 @@
+{
+  "name": "apple-face-detector",
+  "version": "0.0.1",
+  "description": "Vision Camera frame-processor plugin that runs Apple's Vision framework on-device (no external dependencies).",
+  "main": "src/index.js",
+  "types": "src/index.ts",
+  "private": true,
+  "react-native": "src/index.js",
+  "peerDependencies": {
+    "react-native": "*",
+    "react-native-vision-camera": ">=4.0.0"
+  }
+}

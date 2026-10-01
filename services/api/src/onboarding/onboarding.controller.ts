@@ -76,4 +76,35 @@ export class OnboardingController {
   deleteFace(@CurrentUser() user: CurrentUserInfo) {
     return this.onboarding.deleteFaceTemplate(user.id);
   }
+
+  /**
+   * Zero-knowledge encrypted vault.
+   *
+   * The phone holds the key in iOS Keychain / Android Keystore and sends only
+   * the ciphertext here; we store it opaquely under the user's prefix. The
+   * backend has no way to decrypt — this exists so the user can later review
+   * their selfie on-device without us ever being able to.
+   */
+  @Post('face/vault')
+  storeFaceVault(
+    @CurrentUser() user: CurrentUserInfo,
+    @Body()
+    body: {
+      encryption: string;
+      shots: Array<{
+        view: 'front' | 'left' | 'right';
+        payload: string;
+        mac: string;
+        plaintextBytes: number;
+      }>;
+    },
+  ) {
+    if (body.encryption !== 'aes-256-cbc-v1') {
+      throw new BadRequestException('UNSUPPORTED_ENCRYPTION');
+    }
+    if (!Array.isArray(body.shots) || body.shots.length === 0) {
+      throw new BadRequestException('NO_SHOTS');
+    }
+    return this.onboarding.storeEncryptedFaceVault(user.id, body.shots);
+  }
 }

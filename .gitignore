@@ -6,6 +6,7 @@ node_modules/
 dist/
 .turbo/
 .next/
+*.tsbuildinfo
 .expo/
 apps/mobile/ios/build/
 apps/mobile/ios/Pods/
@@ -24,6 +25,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+*.egg-info/
 services/*/data/
 services/*/uploads/
 services/ml-*/models/

@@ -12,6 +12,7 @@ import { Logo } from '../../src/components/Logo';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 import { useAuth } from '../../src/store/auth';
+import { encryptImageFile } from '../../src/lib/face-crypto';
 
 type CaptureStep = 'front' | 'left' | 'right';
 
@@ -37,9 +38,10 @@ export default function FaceCaptureScreen() {
   const refreshMe = useAuth((s) => s.refreshMe);
 
   const uploadTemplate = async (shots: Array<{ step: CaptureStep; uri: string }>) => {
+    // Stage 1 — plaintext multipart upload so ml-face can extract landmarks.
+    // The backend keeps the pixels only in-memory during that pipeline.
     const form = new FormData();
     for (const shot of shots) {
-      // React Native FormData supports the {uri, name, type} shape natively.
       form.append(shot.step, {
         uri: shot.uri,
         name: `${shot.step}.jpg`,
@@ -50,6 +52,33 @@ export default function FaceCaptureScreen() {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60_000,
     });
+
+    // Stage 2 — fire-and-forget encrypted vault upload. The server never sees
+    // the key; this is purely so the user can review their selfie later
+    // without us ever being able to.
+    (async () => {
+      try {
+        const vault = await Promise.all(
+          shots.map(async (s) => ({ view: s.step, blob: await encryptImageFile(s.uri) })),
+        );
+        await api.post(
+          '/onboarding/face/vault',
+          {
+            encryption: 'aes-256-cbc-v1',
+            shots: vault.map((v) => ({
+              view: v.view,
+              payload: v.blob.payload,
+              mac: v.blob.mac,
+              plaintextBytes: v.blob.plaintextBytes,
+            })),
+          },
+          { timeout: 60_000 },
+        );
+      } catch (err) {
+        console.warn('face vault upload failed (non-fatal):', err);
+      }
+    })();
+
     return data as { status: string; warnings: string[] };
   };
 

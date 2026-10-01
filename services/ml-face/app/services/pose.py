@@ -83,6 +83,18 @@ def body_summary(result: PoseResult) -> dict:
         # off-frame. Clamp so the downstream compositor stays in normalised space.
         return {"x": round(float(np.clip(x, 0.0, 1.0)), 5), "y": round(float(np.clip(y, 0.0, 1.0)), 5)}
 
+    # Neck length — distance from the shoulder midpoint up to the chin. We
+    # don't have the chin from Pose, so approximate with (nose_y - 0.08) which
+    # tracks the jaw/chin plane for a frontal upright shot. The scarf
+    # compositor uses this to decide how high the drape should hang.
+    shoulder_mid_y = (sl[1] + sr[1]) / 2.0
+    chin_proxy_y = max(0.0, nose[1] + 0.08)
+    neck_len = max(0.0, shoulder_mid_y - chin_proxy_y)
+
+    # Shoulder-to-shoulder span is the natural normaliser the compositor uses
+    # to scale the scarf drape — same axis as body width.
+    shoulder_span = float(np.hypot(sr[0] - sl[0], sr[1] - sl[1]))
+
     return {
         "shoulder_left": _pt(sl[0], sl[1]),
         "shoulder_right": _pt(sr[0], sr[1]),
@@ -90,4 +102,8 @@ def body_summary(result: PoseResult) -> dict:
         "hip_right": _pt(hr[0], hr[1]),
         "neck_center": _pt(neck_x, max(neck_y, 0.0)),
         "hem_center": _pt(hem_center_x, hem_y),
+        # Normalised scalar fields (0..1 image space) describing head/neck
+        # geometry — new in Sprint 8.
+        "neck_length": round(float(np.clip(neck_len, 0.0, 1.0)), 5),
+        "shoulder_span": round(float(np.clip(shoulder_span, 0.0, 1.0)), 5),
     }

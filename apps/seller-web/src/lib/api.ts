@@ -182,4 +182,120 @@ export async function getSellerAnalytics() {
   return request<SellerAnalytics>('/seller/analytics', { method: 'GET' });
 }
 
+/* ─── admin ─── */
+
+export interface AdminDashboard {
+  users: { total: number; buyers: number; sellers: number };
+  sellers: { total: number; verified: number; pending: number };
+  products: { total: number; published: number; pendingReview: number };
+  orders: { total: number };
+}
+
+export interface AdminSeller {
+  id: string;
+  brandName: string;
+  logoUrl: string | null;
+  verified: boolean;
+  city: string | null;
+  rating: number;
+  reviewsCount: number;
+  productsCount: number;
+  createdAt: string;
+  user: {
+    username: string;
+    phone: string;
+    fullName: string | null;
+    active: boolean;
+    createdAt: string;
+  };
+}
+
+export interface AdminProduct {
+  id: string;
+  titleRu: string;
+  titleUz: string | null;
+  categoryId: 'scarves' | 'dresses' | 'bags' | 'accessories';
+  status: 'draft' | 'pending' | 'published' | 'archived' | 'rejected';
+  coverUrl: string;
+  basePriceUsd: number;
+  createdAt: string;
+  publishedAt: string | null;
+  seller: { brandName: string; verified: boolean };
+  variantsCount: number;
+}
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  phone: string;
+  fullName: string | null;
+  role: 'buyer' | 'seller' | 'admin' | 'moderator';
+  language: 'uz' | 'ru' | 'en';
+  isActive: boolean;
+  createdAt: string;
+  lastSeenAt: string | null;
+}
+
+export interface AdminOrder {
+  id: string;
+  userUsername: string;
+  userFullName: string | null;
+  itemCount: number;
+  totalUsd: number;
+  orderStatus: string;
+  paymentStatus: string;
+  paymentMethod: string;
+  createdAt: string;
+}
+
+export async function adminDashboard() {
+  return request<AdminDashboard>('/admin/dashboard', { method: 'GET' });
+}
+
+export async function adminListSellers() {
+  return request<AdminSeller[]>('/admin/sellers', { method: 'GET' });
+}
+
+export async function adminVerifySeller(id: string, verified: boolean) {
+  return request<{ id: string; verified: boolean }>(`/admin/sellers/${id}/verify`, {
+    method: 'PATCH',
+    body: JSON.stringify({ verified }),
+  });
+}
+
+export async function adminBanSeller(id: string, banned: boolean) {
+  return request<{ id: string; isActive: boolean }>(`/admin/sellers/${id}/ban`, {
+    method: 'PATCH',
+    body: JSON.stringify({ banned }),
+  });
+}
+
+export async function adminListProducts(status?: string) {
+  const qs = status ? `?status=${status}` : '';
+  return request<AdminProduct[]>(`/admin/products${qs}`, { method: 'GET' });
+}
+
+export async function adminSetProductStatus(id: string, status: AdminProduct['status']) {
+  return request<AdminProduct>(`/admin/products/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function adminListUsers(role?: string) {
+  const qs = role ? `?role=${role}` : '';
+  return request<AdminUser[]>(`/admin/users${qs}`, { method: 'GET' });
+}
+
+export async function adminBanUser(id: string, banned: boolean) {
+  return request<{ id: string; username: string; isActive: boolean }>(`/admin/users/${id}/ban`, {
+    method: 'PATCH',
+    body: JSON.stringify({ banned }),
+  });
+}
+
+export async function adminListOrders() {
+  return request<AdminOrder[]>('/admin/orders', { method: 'GET' });
+}
+
 export { ApiError, API_BASE };

@@ -112,6 +112,11 @@ model User {
   onboardingFaceDone Boolean @default(false) @map("onboarding_face_done")
   onboardingBodyDone Boolean @default(false) @map("onboarding_body_done")
 
+  // Admin / moderation: flipped by admins to lock accounts. The auth guard
+  // and anything role-sensitive respects this; login refuses when false.
+  isActive   Boolean   @default(true) @map("is_active")
+  lastSeenAt DateTime? @map("last_seen_at")
+
   bodyParams    BodyParams?
   faceTemplate  FaceTemplate?
   seller        Seller?

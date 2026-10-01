@@ -16,11 +16,14 @@ import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 import type { SkiaTyingStyle } from '../../src/components/ScarfSkiaPreview';
+import { fabricKindFromAttribute, type FabricKind } from '../../src/lib/fabric-shaders';
 
 interface Variant {
   id: string;
   color: string;
   colorHex: string;
+  /** Carried over from the parent product so the shader can pick the right fabric. */
+  fabric: FabricKind;
 }
 
 export default function LiveTryOnScreen() {
@@ -36,7 +39,10 @@ export default function LiveTryOnScreen() {
       (await api.get('/catalog/products', { params: { category: 'scarves', pageSize: 12 } })).data,
   });
 
-  const variants: Variant[] = (catalog?.items ?? []).flatMap((p: any) => p.variants);
+  const variants: Variant[] = (catalog?.items ?? []).flatMap((p: any) => {
+    const fabric = fabricKindFromAttribute(p?.attributes?.fabric);
+    return (p.variants ?? []).map((v: any) => ({ ...v, fabric }));
+  });
   const initialIdx = Math.max(0, variants.findIndex((v) => v.id === variantId));
   const [activeIdx, setActiveIdx] = useState(initialIdx >= 0 ? initialIdx : 0);
   const active = variants[activeIdx];
@@ -47,6 +53,7 @@ export default function LiveTryOnScreen() {
       <CameraScarfLive
         colorHex={active?.colorHex ?? '#8A8D5B'}
         tyingStyle={tyingStyle}
+        fabric={active?.fabric ?? 'solid'}
         onClose={() => router.back()}
         onCapture={(uri) => {
           // Hand the captured still to the main try-on flow so /preview,

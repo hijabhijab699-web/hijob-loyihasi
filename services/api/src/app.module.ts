@@ -15,6 +15,7 @@ import { StorageModule } from './storage/storage.module';
 import { PaymentModule } from './payment/payment.module';
 import { SmsModule } from './sms/sms.module';
 import { PushModule } from './push/push.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { PushModule } from './push/push.module';
     OrdersModule,
     SellerModule,
     PaymentModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

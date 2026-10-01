@@ -1,124 +1,94 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as crypto from 'crypto';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { StorageDriver, StoredFile } from './storage.types';
+import { LocalStorageDriver } from './local.driver';
+import { R2StorageDriver } from './r2.driver';
 
 /**
- * Local-filesystem storage. Files land under `./uploads/{prefix}/{yyyy-mm}/{uuid}.{ext}`
- * and are served statically by `express.static` (see main.ts). The public URL is
- * always the API's own origin so mobile and web share one config.
+ * Storage facade. Picks a driver at bootstrap based on env:
  *
- * The interface is deliberately small (save/delete/localPath) so we can swap in
- * a MinIO/S3 driver later without touching callers.
+ *   STORAGE_DRIVER=r2      → Cloudflare R2 (needs R2_* env)
+ *   STORAGE_DRIVER=local   → local filesystem (default)
+ *
+ * Callers only see save/read/delete/extractKey — driver-agnostic.
  */
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  private readonly root: string;
-  private readonly publicBase: string;
+  private readonly driver: StorageDriver;
 
-  constructor(private readonly config: ConfigService) {
-    this.root = path.resolve(
-      config.get<string>('STORAGE_ROOT') ?? path.join(process.cwd(), 'uploads'),
-    );
-    // Public base URL for building absolute image URLs (used by mobile + web).
-    this.publicBase = (config.get<string>('API_URL') ?? 'http://localhost:4000').replace(/\/$/, '');
+  constructor(config: ConfigService) {
+    const kind = (config.get<string>('STORAGE_DRIVER') ?? 'local').toLowerCase();
+
+    if (kind === 'r2') {
+      const endpoint = config.get<string>('R2_ENDPOINT');
+      const accessKeyId = config.get<string>('R2_ACCESS_KEY_ID');
+      const secretAccessKey = config.get<string>('R2_SECRET_ACCESS_KEY');
+      const bucket = config.get<string>('R2_BUCKET');
+      const publicUrl = config.get<string>('R2_PUBLIC_URL');
+      const missing = [
+        !endpoint && 'R2_ENDPOINT',
+        !accessKeyId && 'R2_ACCESS_KEY_ID',
+        !secretAccessKey && 'R2_SECRET_ACCESS_KEY',
+        !bucket && 'R2_BUCKET',
+        !publicUrl && 'R2_PUBLIC_URL',
+      ].filter(Boolean);
+      if (missing.length) {
+        throw new Error(
+          `STORAGE_DRIVER=r2 but missing env: ${missing.join(', ')}. See .env.example.`,
+        );
+      }
+      this.driver = new R2StorageDriver({
+        endpoint: endpoint!,
+        accessKeyId: accessKeyId!,
+        secretAccessKey: secretAccessKey!,
+        bucket: bucket!,
+        publicUrl: publicUrl!,
+      });
+    } else {
+      this.driver = new LocalStorageDriver({
+        root: config.get<string>('STORAGE_ROOT'),
+        publicBaseUrl: config.get<string>('API_URL'),
+      });
+    }
+    this.logger.log(`storage driver = ${this.driver.kind}`);
   }
 
+  get kind(): 'local' | 'r2' {
+    return this.driver.kind;
+  }
+
+  get servesStatic(): boolean {
+    return this.driver.servesStatic;
+  }
+
+  /** Local FS root — only meaningful in local mode; returns '' otherwise. */
   getRoot(): string {
-    return this.root;
+    return this.driver.getRoot?.() ?? '';
   }
 
-  async save(
+  save(
     prefix: string,
     buffer: Buffer,
     mime: string,
     originalName?: string,
-  ): Promise<{ url: string; key: string; size: number }> {
-    const ext = this.extForMime(mime, originalName);
-    if (!ext) throw new Error(`UNSUPPORTED_MIME:${mime}`);
-
-    const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const uuid = crypto.randomUUID();
-    const key = path.posix.join(this.sanitisePrefix(prefix), month, `${uuid}${ext}`);
-    const fullPath = path.join(this.root, key);
-
-    await fs.mkdir(path.dirname(fullPath), { recursive: true });
-    await fs.writeFile(fullPath, buffer);
-
-    return {
-      key,
-      url: `${this.publicBase}/uploads/${key}`,
-      size: buffer.length,
-    };
+  ): Promise<StoredFile> {
+    return this.driver.save(prefix, buffer, mime, originalName);
   }
 
-  async delete(key: string): Promise<void> {
-    const safe = this.sanitiseKey(key);
-    if (!safe) return;
-    const fullPath = path.join(this.root, safe);
-    await fs.unlink(fullPath).catch((err) => {
-      if (err.code !== 'ENOENT') this.logger.warn(`delete failed for ${key}: ${err.message}`);
-    });
+  read(key: string): Promise<Buffer> {
+    return this.driver.read(key);
   }
 
-  /**
-   * Convert a stored URL back to its key so callers can hand us either shape.
-   */
+  delete(key: string): Promise<void> {
+    return this.driver.delete(key);
+  }
+
+  publicUrl(key: string): string {
+    return this.driver.publicUrl(key);
+  }
+
   extractKey(url: string): string | null {
-    try {
-      const u = new URL(url, this.publicBase);
-      const marker = '/uploads/';
-      const idx = u.pathname.indexOf(marker);
-      if (idx === -1) return null;
-      return u.pathname.slice(idx + marker.length);
-    } catch {
-      return null;
-    }
-  }
-
-  private extForMime(mime: string, originalName?: string): string | null {
-    const m = mime.toLowerCase().split(';')[0]!.trim();
-    switch (m) {
-      case 'image/jpeg':
-      case 'image/jpg':
-        return '.jpg';
-      case 'image/png':
-        return '.png';
-      case 'image/webp':
-        return '.webp';
-      case 'image/heic':
-      case 'image/heif':
-        return '.heic';
-      default:
-        // Fall back to the extension of the original filename if it looks safe.
-        if (originalName) {
-          const dot = originalName.lastIndexOf('.');
-          if (dot > -1) {
-            const ext = originalName.slice(dot).toLowerCase();
-            if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) return ext;
-          }
-        }
-        return null;
-    }
-  }
-
-  /**
-   * Keep the prefix segment ASCII-safe. Prevents path traversal like `../../etc`.
-   */
-  private sanitisePrefix(prefix: string): string {
-    return prefix
-      .split('/')
-      .map((seg) => seg.replace(/[^a-zA-Z0-9_-]/g, '_'))
-      .filter(Boolean)
-      .join('/');
-  }
-
-  private sanitiseKey(key: string): string | null {
-    const normalised = path.posix.normalize(key);
-    if (normalised.startsWith('..') || path.isAbsolute(normalised)) return null;
-    return normalised;
+    return this.driver.extractKey(url);
   }
 }

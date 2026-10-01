@@ -19,8 +19,12 @@ async function bootstrap() {
   // from the seller portal and mobile app; we disable that one policy.
   app.use(helmet({ crossOriginResourcePolicy: false }));
 
+  // Local-mode only: serve /uploads/* from disk. In R2 mode files are hosted
+  // on the CDN so we skip this and never touch the filesystem.
   const storage = app.get(StorageService);
-  app.useStaticAssets(storage.getRoot(), { prefix: '/uploads/' });
+  if (storage.servesStatic) {
+    app.useStaticAssets(storage.getRoot(), { prefix: '/uploads/' });
+  }
 
   app.enableCors({
     origin:

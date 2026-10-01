@@ -78,6 +78,10 @@ export class AuthService {
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('INVALID_CREDENTIALS');
 
+    // Admins can lock an account by setting isActive=false. We refuse login
+    // here instead of letting them in and failing at the first guard.
+    if (!user.isActive) throw new UnauthorizedException('ACCOUNT_SUSPENDED');
+
     if (!user.phoneVerified) {
       await this.sendOtp(user.phone);
       throw new UnauthorizedException('PHONE_NOT_VERIFIED');

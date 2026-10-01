@@ -13,6 +13,9 @@ class Point2D(BaseModel):
     y: float
 
 
+BlendMode = Literal["alpha", "poisson"]
+
+
 class ScarfSpec(BaseModel):
     """What the mobile client tells us about the scarf being tried on."""
 
@@ -21,6 +24,11 @@ class ScarfSpec(BaseModel):
     pattern: Literal["solid", "silk", "chiffon"] = "solid"
     opacity: float = Field(1.0, ge=0.0, le=1.0)
     accent_hex: str | None = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    # Default "alpha" keeps every existing test and client working.
+    # "poisson" blends the fabric with cv2.seamlessClone NORMAL_CLONE so the
+    # scarf edge dissolves into the face's lighting instead of showing a
+    # sharp alpha boundary.
+    blend_mode: BlendMode = "alpha"
 
 
 class LandmarksPayload(BaseModel):

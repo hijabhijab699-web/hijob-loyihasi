@@ -1,0 +1,123 @@
+# N24:31 production stack — every service in one file, wired on a private
+# Docker network. Nginx is the only public port; api/ml-* are only reachable
+# from inside the compose network.
+#
+# Deploy:
+#   scp -r deploy/ .env.production docker root@<host>:/opt/n2431/
+#   ssh root@<host> "cd /opt/n2431 && docker compose --env-file .env.production -f deploy/docker-compose.prod.yml up -d"
+
+name: n2431
+
+x-restart: &default-restart
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    <<: *default-restart
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-n2431}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-n2431}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n2431}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    <<: *default-restart
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: services/api/Dockerfile
+    <<: *default-restart
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_PORT: 4000
+      API_HOST: 0.0.0.0
+      API_URL: ${API_URL:?public API base URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-n2431}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-n2431}?schema=public
+      REDIS_URL: redis://redis:6379
+      # storage (Cloudflare R2)
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-r2}
+      R2_ENDPOINT: ${R2_ENDPOINT}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_BUCKET: ${R2_BUCKET}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL}
+      # ML mesh
+      ML_FACE_URL: http://ml-face:5001
+      ML_COMPOSITOR_URL: http://ml-compositor:5002
+      ML_GARMENT_URL: http://ml-garment:5003
+      # auth + secrets
+      JWT_SECRET: ${JWT_SECRET:?generate with openssl rand -hex 32}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-30d}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-90d}
+      # optional integrations
+      ESKIZ_EMAIL: ${ESKIZ_EMAIL:-}
+      ESKIZ_PASSWORD: ${ESKIZ_PASSWORD:-}
+      ESKIZ_FROM: ${ESKIZ_FROM:-4546}
+      PAYME_KEY: ${PAYME_KEY:-}
+      USD_UZS_RATE: ${USD_UZS_RATE:-12800}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+
+  ml-face:
+    build:
+      context: ../services/ml-face
+    <<: *default-restart
+
+  ml-compositor:
+    build:
+      context: ../services/ml-compositor
+    <<: *default-restart
+
+  ml-garment:
+    build:
+      context: ../services/ml-garment
+    <<: *default-restart
+
+  nginx:
+    image: nginx:1.27-alpine
+    <<: *default-restart
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+
+  # Runs once to obtain the initial cert, then again periodically to renew.
+  # Use scripts/ssl-init.sh for the first-time interactive issue.
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done'"
+
+volumes:
+  postgres_data:
+  redis_data:
+  certbot_conf:
+  certbot_www:

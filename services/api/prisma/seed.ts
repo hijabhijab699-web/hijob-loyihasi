@@ -34,6 +34,22 @@ async function main() {
   });
   console.log('✓ Test buyer @diyor / test1234');
 
+  /* ─── Admin ─── */
+  await prisma.user.upsert({
+    where: { username: 'admin' },
+    create: {
+      username: 'admin',
+      phone: '+998900099999',
+      fullName: 'N24:31 Admin',
+      role: 'admin',
+      language: 'ru',
+      passwordHash: await bcrypt.hash('admin1234', 10),
+      phoneVerified: true,
+    },
+    update: { role: 'admin' },
+  });
+  console.log('✓ Admin @admin / admin1234');
+
   /* ─── Test sellers ─── */
   const sellersData = [
     { username: 'noor', brand: 'Noor', desc: 'Классические платки премиум-класса' },
