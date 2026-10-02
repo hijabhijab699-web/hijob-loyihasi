@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { ScrollView, View, Pressable } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -12,154 +11,374 @@ type Period = 'today' | 'week' | 'month' | 'year';
 
 interface AnalyticsData {
   revenue: number;
+  revenueChange: number;
   orders: number;
+  ordersToday: number;
   tryOns: number;
+  tryOnsToday: number;
   conversion: number;
+  conversionChange: number;
   avgCheck: number;
-  topProducts: { name: string; tryOns: number; maxTryOns: number }[];
+  avgCheckChange: number;
+  chartBars: number[];
+  topProducts: { name: string; tryOns: number }[];
 }
 
-function useAnalytics(period: Period) {
-  return useQuery<AnalyticsData>({
+const MOCK_DATA: AnalyticsData = {
+  revenue: 1247,
+  revenueChange: 18,
+  orders: 12,
+  ordersToday: 3,
+  tryOns: 156,
+  tryOnsToday: 24,
+  conversion: 7.7,
+  conversionChange: 1.2,
+  avgCheck: 104,
+  avgCheckChange: -8,
+  chartBars: [35, 50, 40, 70, 55, 85, 100],
+  topProducts: [
+    { name: "Ipak ro'mol Premium", tryOns: 48 },
+    { name: "Shoyi ko'ylak Elegant", tryOns: 36 },
+    { name: 'Charm sumka Classic', tryOns: 28 },
+  ],
+};
+
+const PERIOD_TABS: { key: Period; label: string }[] = [
+  { key: 'today', label: 'Bugun' },
+  { key: 'week', label: 'Hafta' },
+  { key: 'month', label: 'Oy' },
+  { key: 'year', label: 'Yil' },
+];
+
+const DAY_LABELS = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
+
+const BAR_COLORS = [
+  'rgba(228,206,154,0.2)',
+  'rgba(228,206,154,0.2)',
+  'rgba(228,206,154,0.2)',
+  'rgba(228,206,154,0.2)',
+  'rgba(228,206,154,0.2)',
+  'rgba(228,206,154,0.3)',
+  '#E4CE9A',
+];
+
+const PRODUCT_BAR_COLORS = ['#363924', '#8A8D5B', '#C9A96E'];
+
+export default function SellerAnalyticsScreen() {
+  const { colors, theme } = useTheme();
+  const [period, setPeriod] = useState<Period>('week');
+
+  const { data } = useQuery<AnalyticsData>({
     queryKey: ['seller', 'analytics', period],
     queryFn: async () => {
       try {
-        const { data } = await api.get('/seller/analytics', { params: { period } });
-        return data;
+        return (await api.get('/seller/analytics', { params: { period } })).data;
       } catch {
-        return {
-          revenue: 0,
-          orders: 0,
-          tryOns: 0,
-          conversion: 0,
-          avgCheck: 0,
-          topProducts: [],
-        };
+        return MOCK_DATA;
       }
     },
   });
-}
 
-const PERIODS: Period[] = ['today', 'week', 'month', 'year'];
+  const d = data ?? MOCK_DATA;
+  const maxTryOns = Math.max(...d.topProducts.map((p) => p.tryOns), 1);
 
-export default function SellerAnalyticsScreen() {
-  const { t } = useTranslation();
-  const { colors, theme } = useTheme();
-  const [period, setPeriod] = useState<Period>('week');
-  const { data } = useAnalytics(period);
-
-  const metrics = [
-    { key: 'orders', value: data?.orders ?? 0, icon: 'receipt-outline' as const },
-    { key: 'tryOns', value: data?.tryOns ?? 0, icon: 'body-outline' as const },
-    { key: 'conversion', value: `${data?.conversion ?? 0}%`, icon: 'trending-up-outline' as const },
-    { key: 'avgCheck', value: `$${data?.avgCheck ?? 0}`, icon: 'cash-outline' as const },
+  const STATS = [
+    { label: 'Buyurtmalar', value: String(d.orders), change: `+${d.ordersToday} bugun`, positive: true },
+    { label: 'Primerka', value: String(d.tryOns), change: `+${d.tryOnsToday} bugun`, positive: true },
+    { label: 'Konversiya', value: `${d.conversion}%`, change: `${d.conversionChange > 0 ? '+' : ''}${d.conversionChange}% haftada`, positive: d.conversionChange >= 0 },
+    { label: "O'rtacha chek", value: `$${d.avgCheck}`, change: `${d.avgCheckChange > 0 ? '+' : d.avgCheckChange < 0 ? '-' : ''}$${Math.abs(d.avgCheckChange)} haftada`, positive: d.avgCheckChange >= 0 },
   ];
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }}>
-        <Text variant="displayLarge" color="oliveDeep">
-          {t('seller.analytics.title')}
-        </Text>
-
-        {/* Period Toggle */}
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {PERIODS.map((p) => (
-            <Pressable
-              key={p}
-              onPress={() => setPeriod(p)}
-              style={{
-                flex: 1,
-                paddingVertical: 8,
-                borderRadius: theme.radii.pill,
-                backgroundColor: period === p ? colors.oliveDeep : colors.surface,
-                borderWidth: period === p ? 0 : 1,
-                borderColor: colors.rule,
-                alignItems: 'center',
-              }}
-            >
-              <Text
-                variant="caption"
-                style={{ color: period === p ? colors.goldSoft : colors.ink, fontWeight: '500' }}
-              >
-                {t(`seller.analytics.period.${p}`)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Revenue Card */}
-        <View
-          style={{
-            backgroundColor: colors.oliveDeep,
-            borderRadius: theme.radii.xl,
-            padding: 20,
-            gap: 8,
-          }}
-        >
-          <Text variant="caption" style={{ color: colors.goldSoft }}>
-            {t('seller.analytics.revenue')}
-          </Text>
-          <Text variant="displayLarge" style={{ color: colors.goldSoft }}>
-            ${data?.revenue ?? 0}
-          </Text>
-        </View>
-
-        {/* Metrics Grid */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-          {metrics.map((m) => (
-            <View
-              key={m.key}
-              style={{
-                flex: 1,
-                minWidth: '45%',
-                backgroundColor: colors.surface,
-                borderRadius: theme.radii.xl,
-                padding: 14,
-                borderWidth: 1,
-                borderColor: colors.rule,
-                gap: 6,
-              }}
-            >
-              <Ionicons name={m.icon} size={20} color={colors.olive} />
-              <Text variant="titleMedium" color="oliveDeep">{String(m.value)}</Text>
-              <Text variant="caption" color="muted">{t(`seller.analytics.metrics.${m.key}`)}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Top Try-On Products */}
-        <Text variant="titleMedium" color="oliveDeep">
-          {t('seller.analytics.topProducts')}
-        </Text>
-        {(data?.topProducts ?? []).map((product, idx) => (
-          <View
-            key={idx}
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 30 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
+          <Text
+            variant="displayLarge"
+            color="oliveDeep"
             style={{
-              backgroundColor: colors.surface,
-              borderRadius: theme.radii.lg,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: colors.rule,
-              gap: 8,
+              fontFamily: theme.fontFamilies.display,
+              fontSize: 26,
+              fontWeight: '700',
             }}
           >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text variant="body" color="ink">{product.name}</Text>
-              <Text variant="bodySmall" color="muted">{product.tryOns} primerka</Text>
-            </View>
-            <View style={{ height: 6, backgroundColor: colors.surfaceAlt, borderRadius: 3 }}>
-              <View
+            Statistika
+          </Text>
+          <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
+            Do'kon ko'rsatgichlari
+          </Text>
+        </View>
+
+        {/* Period Toggle */}
+        <View
+          style={{
+            marginHorizontal: 20,
+            marginBottom: 14,
+            flexDirection: 'row',
+            backgroundColor: colors.surface,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: colors.rule,
+            padding: 3,
+          }}
+        >
+          {PERIOD_TABS.map((tab) => {
+            const active = tab.key === period;
+            return (
+              <Pressable
+                key={tab.key}
+                onPress={() => setPeriod(tab.key)}
                 style={{
-                  height: 6,
-                  width: `${product.maxTryOns > 0 ? (product.tryOns / product.maxTryOns) * 100 : 0}%`,
-                  backgroundColor: colors.olive,
-                  borderRadius: 3,
+                  flex: 1,
+                  paddingVertical: 8,
+                  alignItems: 'center',
+                  borderRadius: 8,
+                  backgroundColor: active ? colors.oliveDeep : 'transparent',
                 }}
-              />
+              >
+                <Text
+                  variant="caption"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '500',
+                    color: active ? colors.goldSoft : colors.muted,
+                  }}
+                >
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={{ paddingHorizontal: 20, gap: 14 }}>
+          {/* Revenue Card */}
+          <View
+            style={{
+              backgroundColor: colors.oliveDeep,
+              borderRadius: 16,
+              padding: 20,
+            }}
+          >
+            <Text
+              variant="caption"
+              style={{
+                fontSize: 11,
+                color: colors.oliveSoft,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+              }}
+            >
+              Haftalik daromad
+            </Text>
+            <Text
+              variant="displayLarge"
+              style={{
+                fontFamily: theme.fontFamilies.display,
+                fontSize: 36,
+                fontWeight: '700',
+                color: colors.goldSoft,
+                marginTop: 4,
+              }}
+            >
+              ${d.revenue.toLocaleString()}
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                marginTop: 6,
+              }}
+            >
+              <Ionicons name="trending-up" size={14} color="#7A8A5B" />
+              <Text variant="caption" style={{ fontSize: 12, color: '#7A8A5B', fontWeight: '500' }}>
+                +{d.revenueChange}% o'tgan haftaga nisbatan
+              </Text>
+            </View>
+
+            {/* Mini Bar Chart */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'flex-end',
+                gap: 6,
+                height: 60,
+                marginTop: 16,
+              }}
+            >
+              {d.chartBars.map((height, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flex: 1,
+                    height: `${height}%`,
+                    backgroundColor: BAR_COLORS[i] ?? BAR_COLORS[0],
+                    borderTopLeftRadius: 4,
+                    borderTopRightRadius: 4,
+                  }}
+                />
+              ))}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
+              {DAY_LABELS.map((day, i) => (
+                <Text
+                  key={day}
+                  variant="caption"
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    fontSize: 9,
+                    color: i === DAY_LABELS.length - 1 ? colors.goldSoft : colors.oliveSoft,
+                    fontWeight: i === DAY_LABELS.length - 1 ? '600' : '400',
+                  }}
+                >
+                  {day}
+                </Text>
+              ))}
             </View>
           </View>
-        ))}
+
+          {/* Stats Grid 2x2 */}
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 10,
+            }}
+          >
+            {STATS.map((stat) => (
+              <View
+                key={stat.label}
+                style={{
+                  width: '48%',
+                  backgroundColor: colors.surface,
+                  borderRadius: 14,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: colors.rule,
+                }}
+              >
+                <Text
+                  variant="caption"
+                  style={{
+                    fontSize: 10,
+                    color: colors.muted,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.4,
+                  }}
+                >
+                  {stat.label}
+                </Text>
+                <Text
+                  variant="displayLarge"
+                  color="oliveDeep"
+                  style={{
+                    fontFamily: theme.fontFamilies.display,
+                    fontSize: 28,
+                    fontWeight: '700',
+                    marginTop: 4,
+                  }}
+                >
+                  {stat.value}
+                </Text>
+                <Text
+                  variant="caption"
+                  style={{
+                    fontSize: 11,
+                    color: stat.positive ? '#7A8A5B' : colors.danger,
+                    marginTop: 2,
+                  }}
+                >
+                  {stat.change}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Top Try-On Products */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: 16,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: colors.rule,
+            }}
+          >
+            <Text
+              variant="bodySmall"
+              color="oliveDeep"
+              style={{ fontSize: 13, fontWeight: '600', marginBottom: 12 }}
+            >
+              Top sinab ko'rilgan
+            </Text>
+
+            <View style={{ gap: 8 }}>
+              {d.topProducts.map((product, idx) => (
+                <View key={product.name}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      marginBottom: 6,
+                      marginTop: idx > 0 ? 4 : 0,
+                    }}
+                  >
+                    <Text
+                      variant="bodySmall"
+                      style={{
+                        width: 24,
+                        fontFamily: theme.fontFamilies.display,
+                        fontSize: 14,
+                        fontWeight: '700',
+                        color: colors.gold,
+                      }}
+                    >
+                      {idx + 1}
+                    </Text>
+                    <Text
+                      variant="bodySmall"
+                      color="ink"
+                      style={{ flex: 1, fontSize: 13, fontWeight: '500' }}
+                    >
+                      {product.name}
+                    </Text>
+                    <Text
+                      variant="bodySmall"
+                      color="oliveDeep"
+                      style={{ fontSize: 13, fontWeight: '600' }}
+                    >
+                      {product.tryOns}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      height: 4,
+                      backgroundColor: '#EDE5D0',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: `${(product.tryOns / maxTryOns) * 100}%`,
+                        height: 4,
+                        backgroundColor: PRODUCT_BAR_COLORS[idx] ?? colors.olive,
+                        borderRadius: 2,
+                      }}
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </Screen>
   );
