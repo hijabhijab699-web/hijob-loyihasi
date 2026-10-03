@@ -17,7 +17,7 @@ export default function Splash() {
   }, []);
 
   if (!isLoading) {
-    if (!isAuthed) return <Redirect href="/(auth)/register" />;
+    if (!isAuthed) return <Redirect href="/(auth)/welcome" />;
     const needsFace = !user?.onboarding?.faceCaptured;
     const needsBody = !user?.onboarding?.bodyProvided;
     if (needsFace) return <Redirect href="/(onboarding)/face" />;

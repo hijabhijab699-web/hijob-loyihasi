@@ -1,269 +1,291 @@
-import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Alert, Pressable, ScrollView, View, Text as RNText } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import Svg, { Circle, Rect } from 'react-native-svg';
-import { Screen } from '../../src/components/Screen';
-import { Text } from '../../src/components/Text';
-import { Button } from '../../src/components/Button';
-import { Logo } from '../../src/components/Logo';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, Ellipse, Line, Path, Rect } from 'react-native-svg';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 import { useAuth } from '../../src/store/auth';
-import { encryptImageFile } from '../../src/lib/face-crypto';
-
-type CaptureStep = 'front';
-
-const currentStep: CaptureStep = 'front';
 
 export default function FaceCaptureScreen() {
-  const { t } = useTranslation();
-  const { colors, theme } = useTheme();
+  const { colors, theme, scheme } = useTheme();
   const router = useRouter();
-
-  const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef<CameraView>(null);
-  const [processing, setProcessing] = useState(false);
-
-  useEffect(() => {
-    if (!permission?.granted) requestPermission();
-  }, [permission, requestPermission]);
-
   const refreshMe = useAuth((s) => s.refreshMe);
 
-  const uploadTemplate = async (shots: Array<{ step: CaptureStep; uri: string }>) => {
-    // Stage 1 — plaintext multipart upload so ml-face can extract landmarks.
-    // The backend keeps the pixels only in-memory during that pipeline.
-    const form = new FormData();
-    for (const shot of shots) {
-      form.append(shot.step, {
-        uri: shot.uri,
-        name: `${shot.step}.jpg`,
-        type: 'image/jpeg',
-      } as unknown as Blob);
-    }
-    const { data } = await api.post('/onboarding/face/upload', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 60_000,
-    });
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanning, setScanning] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
 
-    // Stage 2 — fire-and-forget encrypted vault upload. The server never sees
-    // the key; this is purely so the user can review their selfie later
-    // without us ever being able to.
-    (async () => {
-      try {
-        const vault = await Promise.all(
-          shots.map(async (s) => ({ view: s.step, blob: await encryptImageFile(s.uri) })),
-        );
-        await api.post(
-          '/onboarding/face/vault',
-          {
-            encryption: 'aes-256-cbc-v1',
-            shots: vault.map((v) => ({
-              view: v.view,
-              payload: v.blob.payload,
-              mac: v.blob.mac,
-              plaintextBytes: v.blob.plaintextBytes,
-            })),
-          },
-          { timeout: 60_000 },
-        );
-      } catch (err) {
-        console.warn('face vault upload failed (non-fatal):', err);
+  const startScan = async () => {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) {
+        Alert.alert('Kamera ruxsati', 'Yuz skaneri uchun kameraga ruxsat kerak');
+        return;
       }
-    })();
-
-    return data as { status: string; warnings: string[] };
+    }
+    setScanning(true);
   };
 
-  const takeShot = async () => {
+  const capturePhoto = async () => {
     if (!cameraRef.current) return;
     setProcessing(true);
     try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.9,
-        skipProcessing: false,
-      });
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.9 });
       if (!photo?.uri) return;
-
-      // Single frontal shot — ml-face can derive the full template from one
-      // well-lit front photo, so we skip the left/right profile angles that
-      // slowed people down and often failed to detect anyway.
-      try {
-        const result = await uploadTemplate([{ step: 'front', uri: photo.uri }]);
-        if (result.warnings.length) {
-          console.warn('face template warnings:', result.warnings);
-        }
-        await refreshMe();
-        router.replace('/(onboarding)/body');
-      } catch (e: any) {
-        const msg =
-          e?.response?.data?.message ??
-          e?.response?.data?.detail ??
-          e?.message ??
-          'Upload failed';
-        Alert.alert(t('common.error'), String(msg));
-      }
-    } catch (e) {
-      Alert.alert(t('common.error'), String(e));
+      const form = new FormData();
+      form.append('front', {
+        uri: photo.uri,
+        name: 'front.jpg',
+        type: 'image/jpeg',
+      } as unknown as Blob);
+      await api.post('/onboarding/face/upload', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60_000,
+      });
+      await refreshMe();
+      router.replace('/(tabs)/home');
+    } catch (e: any) {
+      Alert.alert('Xatolik', e?.response?.data?.message ?? 'Tarmoq xatosi');
     } finally {
       setProcessing(false);
     }
   };
 
-  if (!permission) return null;
-  if (!permission.granted) {
+  const skip = () => {
+    router.replace('/(tabs)/home');
+  };
+
+  if (scanning) {
     return (
-      <Screen gradient>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <Ionicons name="camera-outline" size={48} color={colors.oliveDark} />
-          <Text variant="titleMedium" color="ink" style={{ marginTop: 12, textAlign: 'center' }}>
-            {t('onboarding.face.title')}
-          </Text>
-          <Text variant="bodySmall" color="muted" style={{ marginTop: 8, textAlign: 'center' }}>
-            {t('onboarding.face.safeDesc')}
-          </Text>
-          <View style={{ marginTop: 24, width: '100%' }}>
-            <Button label={t('common.continue')} variant="gold" onPress={requestPermission} />
-          </View>
+      <View style={{ flex: 1, backgroundColor: '#000' }}>
+        <CameraView ref={cameraRef} style={{ flex: 1 }} facing="front" />
+        {/* Overlay */}
+        <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+          <Svg width={260} height={320} viewBox="0 0 260 320">
+            <Ellipse cx={130} cy={160} rx={110} ry={140} stroke={colors.gold} strokeWidth={3} fill="none" strokeDasharray="8 6" />
+          </Svg>
         </View>
-      </Screen>
+        <SafeAreaView edges={['top', 'bottom']} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'space-between' }}>
+          <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
+            <Pressable
+              onPress={() => setScanning(false)}
+              style={{
+                width: 36, height: 36, borderRadius: 18,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <Svg width={18} height={18} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M12 4 L6 9 L12 14" />
+              </Svg>
+            </Pressable>
+          </View>
+          <View style={{ paddingHorizontal: 20, paddingBottom: 20, gap: 12 }}>
+            <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 14, color: '#fff', textAlign: 'center', marginBottom: 8 }}>
+              Yuzingizni ramkaga joylashtiring
+            </RNText>
+            <Pressable
+              onPress={capturePhoto}
+              disabled={processing}
+              style={{
+                paddingVertical: 16, backgroundColor: colors.oliveDeep, borderRadius: 14,
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                opacity: processing ? 0.6 : 1,
+              }}
+            >
+              <Svg width={18} height={18} fill="none" stroke={colors.goldSoft} strokeWidth={2} strokeLinecap="round">
+                <Circle cx={9} cy={9} r={7} />
+                <Circle cx={9} cy={9} r={3} />
+              </Svg>
+              <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 15, fontWeight: '600', color: colors.goldSoft }}>
+                {processing ? 'Yuklanmoqda...' : 'Suratga olish'}
+              </RNText>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Header */}
-      <View
-        style={{
-          position: 'absolute',
-          top: 60,
-          left: 0,
-          right: 0,
-          zIndex: 5,
-          paddingHorizontal: 20,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-        }}
-      >
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={28} color={colors.ink} />
-        </Pressable>
-        <Logo size={70} label={false} />
-        <View style={{ width: 28 }} />
-      </View>
-
-      {/* Camera */}
-      <CameraView
-        ref={cameraRef}
-        style={{ flex: 1 }}
-        facing="front"
-      />
-
-      {/* Face overlay */}
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Svg width={260} height={340} viewBox="0 0 260 340">
-          <Circle cx={130} cy={170} r={125} stroke={colors.success} strokeWidth={4} fill="none" strokeDasharray="6 4" />
-          {/* Corner brackets */}
-          <Rect x={10} y={10} width={40} height={4} fill={colors.surface} />
-          <Rect x={10} y={10} width={4} height={40} fill={colors.surface} />
-          <Rect x={210} y={10} width={40} height={4} fill={colors.surface} />
-          <Rect x={246} y={10} width={4} height={40} fill={colors.surface} />
-          <Rect x={10} y={296} width={4} height={34} fill={colors.surface} />
-          <Rect x={10} y={326} width={40} height={4} fill={colors.surface} />
-          <Rect x={210} y={326} width={40} height={4} fill={colors.surface} />
-          <Rect x={246} y={296} width={4} height={34} fill={colors.surface} />
-        </Svg>
-
-        <View style={{ marginTop: 20, alignItems: 'center' }}>
-          <Text
-            variant="displayLarge"
-            color="oliveDeep"
-            style={{ textAlign: 'center', textShadowColor: 'rgba(255,255,255,0.8)', textShadowRadius: 6 }}
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
+        {/* Header */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Pressable
+            onPress={() => router.back()}
+            style={{
+              width: 36, height: 36, borderRadius: 18,
+              backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.rule,
+              alignItems: 'center', justifyContent: 'center',
+            }}
           >
-            {t('onboarding.face.title')}
-          </Text>
-          <Text variant="bodySmall" color="oliveDark" style={{ marginTop: 8 }}>
-            {t('onboarding.face.front')}
-          </Text>
+            <Svg width={18} height={18} fill="none" stroke={colors.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M12 4 L6 9 L12 14" />
+            </Svg>
+          </Pressable>
+
+          {/* Progress */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 11, color: colors.muted }}>
+              3 / 3
+            </RNText>
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              <View style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: colors.oliveDeep }} />
+              <View style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: colors.oliveDeep }} />
+              <View style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: colors.oliveDeep }} />
+            </View>
+          </View>
         </View>
-      </View>
 
-      {/* Privacy card */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 140,
-          left: 16,
-          right: 16,
-          backgroundColor: colors.surface,
-          borderRadius: theme.radii.xl,
-          padding: 20,
-          flexDirection: 'row',
-          gap: 12,
-          borderWidth: 1,
-          borderColor: colors.rule,
-        }}
-      >
-        <PrivacyBadge icon="shield-checkmark-outline" title={t('onboarding.face.safe')} desc={t('onboarding.face.safeDesc')} />
-        <PrivacyBadge icon="lock-closed-outline" title={t('onboarding.face.onlyApp')} desc={t('onboarding.face.onlyAppDesc')} />
-        <PrivacyBadge icon="eye-off-outline" title={t('onboarding.face.private')} desc={t('onboarding.face.privateDesc')} />
-      </View>
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 24, flexGrow: 1, alignItems: 'center' }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Title */}
+          <RNText style={{ fontFamily: theme.fontFamilies.display, fontSize: 26, fontWeight: '700', color: colors.oliveDeep, marginBottom: 6, textAlign: 'center' }}>
+            Yuz skaneri
+          </RNText>
+          <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 14, color: colors.muted, lineHeight: 20, marginBottom: 32, textAlign: 'center' }}>
+            Virtual primerka uchun yuzingizni skanerlang
+          </RNText>
 
-      {/* Capture button */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 40,
-          left: 20,
-          right: 20,
-        }}
-      >
-        <Button
-          label={t('common.continue')}
-          variant="primary"
-          loading={processing}
-          onPress={takeShot}
-          iconRight={<Ionicons name="arrow-forward" size={20} color={colors.surface} />}
-        />
-      </View>
+          {/* Face Scan Area */}
+          <View
+            style={{
+              width: 260, height: 320, borderRadius: 130,
+              borderWidth: 2, borderStyle: 'dashed', borderColor: colors.olive,
+              backgroundColor: colors.surface,
+              alignItems: 'center', justifyContent: 'center',
+              marginBottom: 28, position: 'relative',
+            }}
+          >
+            {/* Face Outline */}
+            <Svg width={120} height={160} fill="none" strokeLinecap="round" strokeLinejoin="round">
+              <Ellipse cx={60} cy={70} rx={48} ry={60} stroke={colors.oliveSoft} strokeWidth={1.5} />
+              <Ellipse cx={40} cy={58} rx={8} ry={4} stroke={colors.olive} strokeWidth={1.5} />
+              <Ellipse cx={80} cy={58} rx={8} ry={4} stroke={colors.olive} strokeWidth={1.5} />
+              <Path d="M56 72 Q60 82 64 72" stroke={colors.olive} strokeWidth={1.5} />
+              <Path d="M44 90 Q60 100 76 90" stroke={colors.olive} strokeWidth={1.5} />
+              <Line x1={12} y1={70} x2={108} y2={70} stroke={colors.gold} strokeWidth={2} strokeDasharray="6 4" opacity={0.6} />
+            </Svg>
+            <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 12, color: colors.olive, fontWeight: '500', marginTop: 12 }}>
+              Yuzingizni ramkaga joylashtiring
+            </RNText>
+
+            {/* Corner Markers */}
+            <View style={{ position: 'absolute', top: 16, left: 24, width: 20, height: 20, borderTopWidth: 3, borderLeftWidth: 3, borderColor: colors.gold, borderTopLeftRadius: 4 }} />
+            <View style={{ position: 'absolute', top: 16, right: 24, width: 20, height: 20, borderTopWidth: 3, borderRightWidth: 3, borderColor: colors.gold, borderTopRightRadius: 4 }} />
+            <View style={{ position: 'absolute', bottom: 16, left: 24, width: 20, height: 20, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: colors.gold, borderBottomLeftRadius: 4 }} />
+            <View style={{ position: 'absolute', bottom: 16, right: 24, width: 20, height: 20, borderBottomWidth: 3, borderRightWidth: 3, borderColor: colors.gold, borderBottomRightRadius: 4 }} />
+          </View>
+
+          {/* Instructions Card */}
+          <View
+            style={{
+              width: '100%', backgroundColor: colors.surface, borderRadius: 16,
+              padding: 18, borderWidth: 1, borderColor: colors.rule, gap: 14, marginBottom: 20,
+            }}
+          >
+            <InstructionRow
+              icon={
+                <Svg width={16} height={16} fill="none" stroke={colors.oliveDeep} strokeWidth={1.5} strokeLinecap="round">
+                  <Circle cx={8} cy={8} r={5} />
+                  <Path d="M8 5v3" />
+                  <Circle cx={8} cy={11} r={0.5} fill={colors.oliveDeep} />
+                </Svg>
+              }
+              title="Yaxshi yoritilgan joy"
+              desc="Tabiiy yorug'likda suratga tushing"
+              colors={colors}
+              theme={theme}
+            />
+            <InstructionRow
+              icon={
+                <Svg width={16} height={16} fill="none" stroke={colors.oliveDeep} strokeWidth={1.5} strokeLinecap="round">
+                  <Rect x={3} y={3} width={10} height={10} rx={2} />
+                  <Circle cx={8} cy={7} r={2} />
+                  <Path d="M4 13l2.5-3 1.5 1.5 2-2.5 3 4" />
+                </Svg>
+              }
+              title="To'g'ri qarash"
+              desc="Kameraga to'g'ri qarang"
+              colors={colors}
+              theme={theme}
+            />
+            <InstructionRow
+              icon={
+                <Svg width={16} height={16} fill="none" stroke={colors.oliveDeep} strokeWidth={1.5} strokeLinecap="round">
+                  <Circle cx={8} cy={8} r={6} />
+                  <Path d="M8 4v4l2.5 2.5" />
+                </Svg>
+              }
+              title="Qimirlamang"
+              desc="3 soniya davomida harakatsiz turing"
+              colors={colors}
+              theme={theme}
+            />
+          </View>
+
+          {/* Privacy Note */}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 24, paddingHorizontal: 4, width: '100%' }}>
+            <Svg width={16} height={16} fill="none" stroke={colors.olive} strokeWidth={1.5} strokeLinecap="round" style={{ marginTop: 1, flexShrink: 0 }}>
+              <Rect x={2} y={8} width={12} height={7} rx={2} />
+              <Path d="M5 8V5a3 3 0 016 0v3" />
+            </Svg>
+            <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 11, color: colors.muted, lineHeight: 16, flex: 1 }}>
+              Yuz ma'lumotlari qurilmangizda saqlanadi va serverga yuborilmaydi
+            </RNText>
+          </View>
+
+          {/* Spacer */}
+          <View style={{ flex: 1 }} />
+
+          {/* Actions */}
+          <View style={{ gap: 12, width: '100%' }}>
+            <Pressable
+              onPress={startScan}
+              style={{
+                width: '100%', paddingVertical: 16, backgroundColor: colors.oliveDeep,
+                borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              <Svg width={18} height={18} fill="none" stroke={colors.goldSoft} strokeWidth={2} strokeLinecap="round">
+                <Circle cx={9} cy={9} r={7} />
+                <Circle cx={9} cy={9} r={3} />
+              </Svg>
+              <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 15, fontWeight: '600', color: colors.goldSoft }}>
+                Skanerlash
+              </RNText>
+            </Pressable>
+
+            <Pressable onPress={skip} style={{ alignItems: 'center', paddingVertical: 8 }}>
+              <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 13, color: colors.muted, fontWeight: '500' }}>
+                O'tkazib yuborish
+              </RNText>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
 
-function PrivacyBadge({
-  icon,
-  title,
-  desc,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  title: string;
-  desc: string;
-}) {
-  const { colors } = useTheme();
+function InstructionRow({ icon, title, desc, colors, theme }: { icon: React.ReactNode; title: string; desc: string; colors: any; theme: any }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-      <Ionicons name={icon} size={22} color={colors.oliveDark} />
-      <Text variant="caption" color="ink" style={{ textAlign: 'center', fontWeight: '600' }}>
-        {title}
-      </Text>
-      <Text variant="caption" color="muted" style={{ textAlign: 'center', fontSize: 10 }}>
-        {desc}
-      </Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${colors.oliveDeep}10`, alignItems: 'center', justifyContent: 'center' }}>
+        {icon}
+      </View>
+      <View style={{ flex: 1 }}>
+        <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 13, fontWeight: '600', color: colors.ink, marginBottom: 2 }}>{title}</RNText>
+        <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 11, color: colors.muted }}>{desc}</RNText>
+      </View>
     </View>
   );
 }

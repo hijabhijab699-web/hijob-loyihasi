@@ -1,311 +1,356 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import { Screen } from '../../src/components/Screen';
+import { Alert, Pressable, ScrollView, TextInput, View, Text as RNText } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path, Polyline, Rect } from 'react-native-svg';
 import { Text } from '../../src/components/Text';
-import { Button } from '../../src/components/Button';
-import { Input, PasswordInput } from '../../src/components/Input';
-import { Logo } from '../../src/components/Logo';
 import { useTheme } from '../../src/theme/ThemeProvider';
-import { setLanguage } from '../../src/i18n/i18n';
 import { api } from '../../src/api/client';
 import { useAuth } from '../../src/store/auth';
 
 type Role = 'buyer' | 'seller';
 
 export default function RegisterScreen() {
-  const { t, i18n } = useTranslation();
-  const { colors, theme } = useTheme();
+  const { colors, theme, scheme } = useTheme();
   const router = useRouter();
+  const { phone } = useLocalSearchParams<{ phone: string }>();
   const loginSuccess = useAuth((s) => s.loginSuccess);
 
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
-  const [phone, setPhone] = useState('+998');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('buyer');
+  const [termsAccepted, setTermsAccepted] = useState(true);
   const [loading, setLoading] = useState(false);
 
+  const canSubmit = fullName.trim().length > 0 && username.trim().length > 0 && termsAccepted;
+
   const submit = async () => {
-    if (password !== confirmPassword) {
-      Alert.alert('', t('auth.register.password') + ' ≠ ' + t('auth.register.passwordConfirm'));
-      return;
-    }
+    if (!canSubmit) return;
     try {
       setLoading(true);
       const { data } = await api.post('/auth/register', {
-        fullName,
-        username: username.replace(/^@/, ''),
+        fullName: fullName.trim(),
+        username: username.trim().replace(/^@/, ''),
+        email: email.trim() || undefined,
         phone,
-        password,
         role,
-        language: i18n.language,
       });
-      // MVP: skip OTP, log in directly.
       await loginSuccess(data.user, data.tokens);
       router.replace('/');
     } catch (e: any) {
-      Alert.alert(t('common.error'), e?.response?.data?.message ?? 'Network error');
+      Alert.alert('Xatolik', e?.response?.data?.message ?? 'Tarmoq xatosi');
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleLanguage = () => {
-    const next = i18n.language === 'ru' ? 'uz' : 'ru';
-    setLanguage(next);
-  };
-
   return (
-    <Screen gradient>
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingBottom: 32,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Language toggle */}
-        <View style={{ alignItems: 'flex-end', paddingTop: 8 }}>
-          <Pressable
-            onPress={toggleLanguage}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
-              borderRadius: theme.radii.pill,
-              backgroundColor: colors.surfaceGlass,
-              borderWidth: 1,
-              borderColor: colors.rule,
-            }}
-          >
-            <Ionicons name="globe-outline" size={18} color={colors.oliveDeep} />
-            <Text variant="bodySmall" color="oliveDeep">
-              {i18n.language === 'ru' ? t('language.russian') : t('language.uzbek')}
-            </Text>
-            <Ionicons name="chevron-down" size={14} color={colors.oliveDeep} />
-          </Pressable>
-        </View>
-
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
         {/* Header */}
-        <View style={{ alignItems: 'center', marginTop: 16, marginBottom: 24 }}>
-          <Logo size={110} label />
-          <Text
-            variant="displayLarge"
-            color="oliveDeep"
-            style={{ marginTop: 16, textAlign: 'center' }}
-          >
-            {t('auth.register.title')}
-          </Text>
-          <Text
-            variant="bodySmall"
-            color="muted"
-            style={{ marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}
-          >
-            {t('auth.register.subtitle')}
-          </Text>
-        </View>
-
-        {/* Form */}
-        <View style={{ gap: 12 }}>
-          <Input
-            placeholder={t('auth.register.name')}
-            value={fullName}
-            onChangeText={setFullName}
-            icon={<Ionicons name="person-outline" size={20} color={colors.muted} />}
-            autoCapitalize="words"
-          />
-
-          <Input
-            placeholder={t('auth.register.usernamePlaceholder')}
-            value={username}
-            onChangeText={setUsername}
-            icon={<Ionicons name="at-outline" size={20} color={colors.muted} />}
-            autoCapitalize="none"
-            hint={t('auth.register.usernameHint')}
-          />
-
-          <Input
-            placeholder={t('auth.register.phone')}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            icon={<Ionicons name="call-outline" size={20} color={colors.muted} />}
-          />
-
-          {/* Role picker */}
-          <View
+        <View style={{ paddingHorizontal: 20, paddingTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Pressable
+            onPress={() => router.back()}
             style={{
-              flexDirection: 'row',
-              backgroundColor: colors.surfaceGlass,
-              borderRadius: theme.radii.pill,
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: colors.surface,
               borderWidth: 1,
               borderColor: colors.rule,
-              padding: 6,
               alignItems: 'center',
-              gap: 6,
+              justifyContent: 'center',
             }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 }}>
-              <Ionicons name="people-outline" size={18} color={colors.muted} />
-              <Text variant="caption" color="muted">
-                {t('auth.register.roleQuestion')}
-              </Text>
+            <Svg width={18} height={18} fill="none" stroke={colors.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M12 4 L6 9 L12 14" />
+            </Svg>
+          </Pressable>
+
+          {/* Progress */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 11, color: colors.muted }}>
+              1 / 3
+            </RNText>
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              <View style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: colors.oliveDeep }} />
+              <View style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: colors.rule }} />
+              <View style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: colors.rule }} />
             </View>
-            <RoleChip
-              label={t('auth.register.roleBuyer')}
-              icon="cart-outline"
-              active={role === 'buyer'}
-              onPress={() => setRole('buyer')}
-            />
-            <RoleChip
-              label={t('auth.register.roleSeller')}
-              icon="storefront-outline"
-              active={role === 'seller'}
-              onPress={() => setRole('seller')}
-            />
+          </View>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 32, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Title */}
+          <RNText
+            style={{
+              fontFamily: theme.fontFamilies.display,
+              fontSize: 26,
+              fontWeight: '700',
+              color: colors.oliveDeep,
+              marginBottom: 8,
+            }}
+          >
+            Ro'yxatdan o'tish
+          </RNText>
+          <RNText
+            style={{
+              fontFamily: theme.fontFamilies.body,
+              fontSize: 14,
+              color: colors.muted,
+              lineHeight: 20,
+              marginBottom: 32,
+            }}
+          >
+            Shaxsiy ma'lumotlaringizni kiriting
+          </RNText>
+
+          {/* Form */}
+          <View style={{ gap: 18, marginBottom: 28 }}>
+            {/* Full Name */}
+            <View>
+              <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 12, color: colors.muted, fontWeight: '500', marginBottom: 6 }}>
+                Ism va familiya
+              </RNText>
+              <TextInput
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder="Umidjon Gafforov"
+                placeholderTextColor={colors.muted}
+                autoCapitalize="words"
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 14,
+                  backgroundColor: colors.surfaceAlt,
+                  borderWidth: 1,
+                  borderColor: colors.rule,
+                  borderRadius: 12,
+                  fontFamily: theme.fontFamilies.body,
+                  fontSize: 14,
+                  color: colors.ink,
+                }}
+              />
+            </View>
+
+            {/* Username */}
+            <View>
+              <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 12, color: colors.muted, fontWeight: '500', marginBottom: 6 }}>
+                Foydalanuvchi nomi
+              </RNText>
+              <View style={{ position: 'relative', justifyContent: 'center' }}>
+                <TextInput
+                  value={username}
+                  onChangeText={(t) => setUsername(t.replace(/[^a-zA-Z0-9._]/g, '').toLowerCase())}
+                  placeholder="umidjon"
+                  placeholderTextColor={colors.muted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingLeft: 28,
+                    paddingVertical: 14,
+                    backgroundColor: colors.surfaceAlt,
+                    borderWidth: 1,
+                    borderColor: colors.rule,
+                    borderRadius: 12,
+                    fontFamily: theme.fontFamilies.body,
+                    fontSize: 14,
+                    color: colors.ink,
+                  }}
+                />
+                <RNText
+                  style={{
+                    position: 'absolute',
+                    left: 14,
+                    fontFamily: theme.fontFamilies.body,
+                    fontSize: 14,
+                    color: colors.muted,
+                  }}
+                >
+                  @
+                </RNText>
+              </View>
+            </View>
+
+            {/* Email */}
+            <View>
+              <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 12, color: colors.muted, fontWeight: '500', marginBottom: 6 }}>
+                Email{' '}
+                <RNText style={{ color: colors.oliveSoft }}>(ixtiyoriy)</RNText>
+              </RNText>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="email@example.com"
+                placeholderTextColor={colors.muted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 14,
+                  backgroundColor: colors.surfaceAlt,
+                  borderWidth: 1,
+                  borderColor: colors.rule,
+                  borderRadius: 12,
+                  fontFamily: theme.fontFamilies.body,
+                  fontSize: 14,
+                  color: colors.ink,
+                }}
+              />
+            </View>
+
+            {/* Role Selector */}
+            <View>
+              <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 12, color: colors.muted, fontWeight: '500', marginBottom: 8 }}>
+                Siz kimsiz?
+              </RNText>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {/* Xaridor */}
+                <Pressable
+                  onPress={() => setRole('buyer')}
+                  style={{
+                    flex: 1,
+                    padding: 14,
+                    backgroundColor: role === 'buyer' ? `${colors.oliveDeep}10` : colors.surfaceAlt,
+                    borderWidth: role === 'buyer' ? 2 : 1,
+                    borderColor: role === 'buyer' ? colors.oliveDeep : colors.rule,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
+                  <Svg width={22} height={22} fill="none" stroke={role === 'buyer' ? colors.oliveDeep : colors.muted} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M5 2h12l2 4H3l2-4z" />
+                    <Path d="M3 6v10a2 2 0 002 2h8a2 2 0 002-2V6" />
+                  </Svg>
+                  <View>
+                    <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 13, fontWeight: '600', color: colors.ink }}>Xaridor</RNText>
+                    <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 10, color: colors.muted }}>Xarid qilish</RNText>
+                  </View>
+                </Pressable>
+
+                {/* Sotuvchi */}
+                <Pressable
+                  onPress={() => setRole('seller')}
+                  style={{
+                    flex: 1,
+                    padding: 14,
+                    backgroundColor: role === 'seller' ? `${colors.oliveDeep}10` : colors.surfaceAlt,
+                    borderWidth: role === 'seller' ? 2 : 1,
+                    borderColor: role === 'seller' ? colors.oliveDeep : colors.rule,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
+                  <Svg width={22} height={22} fill="none" stroke={role === 'seller' ? colors.oliveDeep : colors.muted} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <Rect x={2} y={4} width={18} height={14} rx={2} />
+                    <Path d="M8 4V2h6v2" />
+                    <Path d="M2 10h18" />
+                  </Svg>
+                  <View>
+                    <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 13, fontWeight: role === 'seller' ? '600' : '500', color: colors.ink }}>Sotuvchi</RNText>
+                    <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 10, color: colors.muted }}>Sotish</RNText>
+                  </View>
+                </Pressable>
+              </View>
+            </View>
           </View>
 
-          <PasswordInput
-            placeholder={t('auth.register.password')}
-            value={password}
-            onChangeText={setPassword}
-            icon={<Ionicons name="lock-closed-outline" size={20} color={colors.muted} />}
-          />
+          {/* Terms */}
+          <Pressable
+            onPress={() => setTermsAccepted(!termsAccepted)}
+            style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 28 }}
+          >
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 6,
+                backgroundColor: termsAccepted ? colors.oliveDeep : 'transparent',
+                borderWidth: termsAccepted ? 0 : 1.5,
+                borderColor: colors.rule,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 1,
+              }}
+            >
+              {termsAccepted && (
+                <Svg width={12} height={12} fill="none" stroke={colors.goldSoft} strokeWidth={2} strokeLinecap="round">
+                  <Polyline points="2,6 5,9 10,3" />
+                </Svg>
+              )}
+            </View>
+            <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 12, color: colors.muted, lineHeight: 17, flex: 1 }}>
+              <RNText style={{ textDecorationLine: 'underline', color: colors.olive }}>Foydalanish shartlari</RNText>
+              {' '}va{' '}
+              <RNText style={{ textDecorationLine: 'underline', color: colors.olive }}>Maxfiylik siyosati</RNText>
+              ga roziman
+            </RNText>
+          </Pressable>
 
-          <PasswordInput
-            placeholder={t('auth.register.passwordConfirm')}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            icon={<Ionicons name="lock-closed-outline" size={20} color={colors.muted} />}
-          />
-        </View>
-
-        <View style={{ marginTop: 24 }}>
-          <Button
-            label={t('auth.register.submit')}
-            variant="gold"
+          {/* Submit */}
+          <Pressable
             onPress={submit}
-            loading={loading}
-            iconRight={<Ionicons name="arrow-forward" size={20} color={colors.ink} />}
-          />
-        </View>
+            disabled={!canSubmit || loading}
+            style={{
+              width: '100%',
+              paddingVertical: 16,
+              backgroundColor: colors.oliveDeep,
+              borderRadius: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              opacity: canSubmit ? 1 : 0.5,
+            }}
+          >
+            <RNText
+              style={{
+                fontFamily: theme.fontFamilies.body,
+                fontSize: 15,
+                fontWeight: '600',
+                color: colors.goldSoft,
+              }}
+            >
+              Davom etish
+            </RNText>
+            <Svg width={16} height={16} fill="none" stroke={colors.goldSoft} strokeWidth={2} strokeLinecap="round">
+              <Path d="M6 3 L12 8 L6 13" />
+            </Svg>
+          </Pressable>
 
-        {/* Divider */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 24, gap: 12 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: colors.rule }} />
-          <Text variant="caption" color="muted">
-            {t('auth.register.or')}
-          </Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: colors.rule }} />
-        </View>
-
-        {/* Social */}
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <SocialButton label="Google" icon="logo-google" />
-          <SocialButton label="Apple" icon="logo-apple" />
-          <SocialButton label="Facebook" icon="logo-facebook" />
-        </View>
-
-        {/* Terms */}
-        <View style={{ marginTop: 24, alignItems: 'center' }}>
-          <Text variant="caption" color="muted" style={{ textAlign: 'center' }}>
-            {t('auth.register.terms')}{'\n'}
-            <Text variant="caption" color="oliveDeep" style={{ textDecorationLine: 'underline' }}>
-              {t('auth.register.termsLink')}
+          {/* Spacer + Login link */}
+          <Pressable
+            onPress={() => router.push('/(auth)/login')}
+            style={{
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 6,
+              paddingVertical: 8,
+              marginTop: 24,
+            }}
+          >
+            <Text variant="bodySmall" color="muted">
+              Akkauntingiz bormi?
             </Text>
-            {' '}
-            {t('auth.register.termsAnd')}
-            {' '}
-            <Text variant="caption" color="oliveDeep" style={{ textDecorationLine: 'underline' }}>
-              {t('auth.register.privacyLink')}
+            <Text variant="bodySmall" color="gold" style={{ fontWeight: '600' }}>
+              Kirish
             </Text>
-          </Text>
-        </View>
-
-        {/* Have account */}
-        <Pressable
-          onPress={() => router.push('/(auth)/login')}
-          style={{ marginTop: 24, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
-        >
-          <Text variant="bodySmall" color="muted">
-            {t('auth.register.haveAccount')}
-          </Text>
-          <Text variant="bodySmall" color="oliveDeep" style={{ fontWeight: '600' }}>
-            {t('auth.register.login')}
-          </Text>
-        </Pressable>
-      </ScrollView>
-    </Screen>
-  );
-}
-
-function RoleChip({
-  label,
-  icon,
-  active,
-  onPress,
-}: {
-  label: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  active: boolean;
-  onPress: () => void;
-}) {
-  const { colors, theme } = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        flex: 1,
-        height: 40,
-        borderRadius: theme.radii.pill,
-        backgroundColor: active ? colors.goldSoft : 'transparent',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-      }}
-    >
-      <Ionicons name={icon} size={16} color={active ? colors.ink : colors.muted} />
-      <Text variant="bodySmall" color={active ? 'ink' : 'muted'}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-function SocialButton({
-  label,
-  icon,
-}: {
-  label: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-}) {
-  const { colors, theme } = useTheme();
-  return (
-    <Pressable
-      style={{
-        flex: 1,
-        height: 48,
-        borderRadius: theme.radii.pill,
-        backgroundColor: colors.surfaceGlass,
-        borderWidth: 1,
-        borderColor: colors.rule,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-      }}
-    >
-      <Ionicons name={icon} size={18} color={colors.ink} />
-      <Text variant="bodySmall" color="ink">
-        {label}
-      </Text>
-    </Pressable>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
