@@ -8,6 +8,8 @@ import { useFonts } from 'expo-font';
 import { ThemeProvider } from '../src/theme/ThemeProvider';
 import { initI18n } from '../src/i18n/i18n';
 import { useAuth } from '../src/store/auth';
+// Side-effect import: patches Alert.alert to be nil-safe (iOS 26 crash fix).
+import '../src/lib/safe-alert';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -52,6 +54,12 @@ export default function RootLayout() {
               <Stack.Screen name="(onboarding)" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="(seller-tabs)" />
+              <Stack.Screen name="search" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="wishlist" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="checkout" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="role-switcher" options={{ animation: 'fade' }} />
             </Stack>
           </ThemeProvider>
         </QueryClientProvider>

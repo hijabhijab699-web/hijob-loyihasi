@@ -223,8 +223,9 @@ model Seller {
   verified      Boolean  @default(false)
   createdAt     DateTime @default(now()) @map("created_at")
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products Product[]
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products  Product[]
+  styleJobs ProductStyleJob[]
 
   @@map("sellers")
 }
@@ -268,14 +269,55 @@ model Product {
   createdAt      DateTime      @default(now()) @map("created_at")
   publishedAt    DateTime?     @map("published_at")
 
-  seller       Seller           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  category     Category         @relation(fields: [categoryId], references: [id])
+  seller       Seller            @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category     Category          @relation(fields: [categoryId], references: [id])
   variants     ProductVariant[]
   wishlistedBy WishlistItem[]
+  styleJobs    ProductStyleJob[]
 
   @@index([categoryId, status, publishedAt(sort: Desc)])
   @@index([sellerId, status])
   @@map("products")
+}
+
+enum StyleJobStatus {
+  pending
+  running
+  done
+  failed
+}
+
+/// Asynchronous "dress the mannequin" job. A seller submits a plain
+/// mannequin photo + a hijab image; a worker loop picks it up, calls
+/// ml-compositor to compose the hijab onto the mannequin, uploads the
+/// result and writes it back onto Product.styledImageUrl. Buyer-side
+/// try-on then face-swaps straight into that pre-composed shot.
+model ProductStyleJob {
+  id            String         @id @default(uuid()) @db.Uuid
+  productId     String         @map("product_id") @db.Uuid
+  sellerId      String         @map("seller_id") @db.Uuid
+  status        StyleJobStatus @default(pending)
+  // Inputs — URLs the seller provided (R2 or /uploads/… keys).
+  mannequinUrl  String         @map("mannequin_url")
+  hijabUrl      String         @map("hijab_url")
+  // Garment template parameters (which style, which colour hex).
+  tyingStyle    String         @default("classical") @map("tying_style") @db.VarChar(20)
+  colorHex      String         @default("#8A8D5B") @map("color_hex") @db.VarChar(9)
+  // Output — populated when status flips to "done". Mirrors into
+  // Product.styledImageUrl on success.
+  resultUrl     String?        @map("result_url")
+  errorMessage  String?        @map("error_message")
+  attempts      Int            @default(0)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  startedAt     DateTime?      @map("started_at")
+  finishedAt    DateTime?      @map("finished_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  seller  Seller  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([productId])
+  @@map("product_style_jobs")
 }
 
 model ProductVariant {

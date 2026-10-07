@@ -6,5 +6,6 @@ import { MlCompositorClient } from './ml-compositor.client';
 @Module({
   controllers: [TryOnController],
   providers: [TryOnService, MlCompositorClient],
+  exports: [MlCompositorClient],
 })
 export class TryOnModule {}

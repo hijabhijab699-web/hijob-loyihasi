@@ -53,6 +53,17 @@ export class CatalogService {
           lte: filters.maxPrice,
         },
       }),
+      // Variant-level filters — a product matches if ANY of its variants
+      // match the colour/size the buyer picked. Hijabs ship as "one-size"
+      // (110x110), so a size filter effectively only trims apparel + bags.
+      ...((filters.size || filters.color) && {
+        variants: {
+          some: {
+            ...(filters.size && { size: filters.size }),
+            ...(filters.color && { color: filters.color }),
+          },
+        },
+      }),
     };
 
     const orderBy: Prisma.ProductOrderByWithRelationInput =

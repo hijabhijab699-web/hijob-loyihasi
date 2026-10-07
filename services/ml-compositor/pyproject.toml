@@ -14,6 +14,8 @@ dependencies = [
     "opencv-python-headless>=4.10.0.84",
     "pillow>=11.0.0",
     "scipy>=1.14.0",
+    "insightface>=2.0",
+    "onnxruntime>=1.30.0",
 ]
 
 [project.optional-dependencies]

@@ -69,6 +69,18 @@ export class OnboardingService {
   }
 
   async saveBodyParams(userId: string, dto: BodyParamsDto) {
+    // Mobile onboarding currently sends height/weight/bodyType; age and the
+    // explicit size enum are optional, so derive sensible defaults here.
+    const bodyTypeToSize: Record<'slim' | 'medium' | 'full', ClothingSize> = {
+      slim: 'S' as ClothingSize,
+      medium: 'M' as ClothingSize,
+      full: 'L' as ClothingSize,
+    };
+    const size: ClothingSize =
+      (dto.preferredSize as ClothingSize | undefined) ??
+      (dto.bodyType ? bodyTypeToSize[dto.bodyType] : ('M' as ClothingSize));
+    const age = dto.age ?? 25;
+
     await this.prisma.$transaction([
       this.prisma.bodyParams.upsert({
         where: { userId },
@@ -76,14 +88,14 @@ export class OnboardingService {
           userId,
           heightCm: dto.heightCm,
           weightKg: dto.weightKg,
-          age: dto.age,
-          preferredSize: dto.preferredSize as ClothingSize,
+          age,
+          preferredSize: size,
         },
         update: {
           heightCm: dto.heightCm,
           weightKg: dto.weightKg,
-          age: dto.age,
-          preferredSize: dto.preferredSize as ClothingSize,
+          age,
+          preferredSize: size,
         },
       }),
       this.prisma.user.update({

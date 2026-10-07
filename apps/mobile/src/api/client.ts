@@ -1,6 +1,6 @@
 import axios from 'axios';
 import Constants from 'expo-constants';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL ??
@@ -9,6 +9,35 @@ const API_URL =
 
 const TOKEN_KEY = 'n2431.accessToken';
 const REFRESH_KEY = 'n2431.refreshToken';
+
+// Thin SecureStore-shaped wrapper over AsyncStorage. ExpoSecureStore's
+// native code throws NSExceptions on some Release-build device profiles
+// (seen on iPhone 11 / iOS 26 — crashes Hermes via the TurboModule
+// conversion path), so we keep JWTs in AsyncStorage instead. These tokens
+// are short-lived JWTs; losing them to a factory-reset is acceptable.
+const Store = {
+  async getItemAsync(key: string): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  async setItemAsync(key: string, value: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch {
+      // storage full / disk error — swallow so the auth flow finishes.
+    }
+  },
+  async deleteItemAsync(key: string): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+  },
+};
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -19,7 +48,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const token = await SecureStore.getItemAsync(TOKEN_KEY).catch(() => null);
+  const token = await Store.getItemAsync(TOKEN_KEY).catch(() => null);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -46,30 +75,30 @@ api.interceptors.response.use(
 
 async function refreshTokens(): Promise<string | null> {
   try {
-    const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
+    const refreshToken = await Store.getItemAsync(REFRESH_KEY);
     if (!refreshToken) return null;
 
     const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-    await SecureStore.setItemAsync(TOKEN_KEY, data.tokens.accessToken);
-    await SecureStore.setItemAsync(REFRESH_KEY, data.tokens.refreshToken);
+    await Store.setItemAsync(TOKEN_KEY, data.tokens.accessToken);
+    await Store.setItemAsync(REFRESH_KEY, data.tokens.refreshToken);
     return data.tokens.accessToken;
   } catch {
-    await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
-    await SecureStore.deleteItemAsync(REFRESH_KEY).catch(() => {});
+    await Store.deleteItemAsync(TOKEN_KEY).catch(() => {});
+    await Store.deleteItemAsync(REFRESH_KEY).catch(() => {});
     return null;
   }
 }
 
 export async function saveTokens(access: string, refresh: string) {
-  await SecureStore.setItemAsync(TOKEN_KEY, access);
-  await SecureStore.setItemAsync(REFRESH_KEY, refresh);
+  await Store.setItemAsync(TOKEN_KEY, access);
+  await Store.setItemAsync(REFRESH_KEY, refresh);
 }
 
 export async function clearTokens() {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-  await SecureStore.deleteItemAsync(REFRESH_KEY);
+  await Store.deleteItemAsync(TOKEN_KEY);
+  await Store.deleteItemAsync(REFRESH_KEY);
 }
 
 export async function getStoredToken() {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+  return Store.getItemAsync(TOKEN_KEY);
 }

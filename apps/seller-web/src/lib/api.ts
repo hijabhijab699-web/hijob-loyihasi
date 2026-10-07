@@ -157,6 +157,46 @@ export async function publishProduct(id: string) {
   });
 }
 
+/* ─── style jobs — "dress the mannequin" async queue ─── */
+
+export type StyleJobStatus = 'pending' | 'running' | 'done' | 'failed';
+
+export interface StyleJob {
+  id: string;
+  productId: string;
+  status: StyleJobStatus;
+  mannequinUrl: string;
+  hijabUrl: string;
+  tyingStyle: string;
+  colorHex: string;
+  resultUrl: string | null;
+  errorMessage: string | null;
+  attempts: number;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+export interface DressMannequinInput {
+  mannequinUrl: string;
+  hijabUrl: string;
+  tyingStyle?: 'classical' | 'loose' | 'double';
+  colorHex?: string;
+}
+
+export async function submitDressMannequin(productId: string, input: DressMannequinInput) {
+  return request<StyleJob>(`/seller/products/${productId}/dress-mannequin`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getLatestStyleJob(productId: string) {
+  return request<StyleJob | null>(`/seller/products/${productId}/dress-mannequin`, {
+    method: 'GET',
+  });
+}
+
 /* ─── analytics ─── */
 
 export interface SellerAnalytics {
