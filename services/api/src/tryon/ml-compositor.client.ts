@@ -100,6 +100,58 @@ export class MlCompositorClient {
     return Buffer.from(arrayBuffer);
   }
 
+  /**
+   * Same input/output as composeFaceSwap, but goes through FaceFusion
+   * (occlusion-aware swapper + GFPGAN enhancer). ~4-6 s per call on CPU
+   * once the models are cached. Produces a much cleaner result than the
+   * raw InsightFace path, so this is the primary swap and the old route
+   * is kept only as a fallback.
+   */
+  async composeFacefusion(
+    mannequin: { buffer: Buffer; mimetype: string; filename?: string },
+    user: Express.Multer.File,
+    opts: { enhance?: boolean } = {},
+  ): Promise<Buffer> {
+    const body = new FormData();
+    body.append(
+      'mannequin',
+      new Blob([new Uint8Array(mannequin.buffer)], { type: mannequin.mimetype }),
+      mannequin.filename || 'mannequin.jpg',
+    );
+    body.append(
+      'user',
+      new Blob([new Uint8Array(user.buffer)], { type: user.mimetype }),
+      user.originalname || 'user.jpg',
+    );
+    body.append('enhance', String(opts.enhance ?? true));
+
+    const started = Date.now();
+    const res = await fetch(`${this.composerBase}/compose/facefusion`, {
+      method: 'POST',
+      body,
+    });
+    const elapsed = Date.now() - started;
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      this.logger.warn(`ml-compositor facefusion ${res.status}: ${txt}`);
+      if (res.status === 422) {
+        throw new InternalServerErrorException({
+          code: 'FACESWAP_UNPROCESSABLE',
+          detail: txt,
+        });
+      }
+      throw new InternalServerErrorException({
+        code: 'FACEFUSION_FAILED',
+        upstream: res.status,
+      });
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+    this.logger.log(`facefusion composed in ${elapsed}ms`);
+    return Buffer.from(arrayBuffer);
+  }
+
   async composeScarf(faceImage: Express.Multer.File, spec: ScarfSpec): Promise<Buffer> {
     const landmarks = await this.extractLandmarks(faceImage);
 

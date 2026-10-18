@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=380, initial-scale=1" />
+  <title>N24:31 Dev AI</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="brand-mark">24</span>
+      <div>
+        <div class="brand-title">N24:31</div>
+        <div class="brand-sub">Dev AI loop</div>
+      </div>
+    </div>
+    <button id="refresh" class="icon-btn" title="Yangilash">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+      </svg>
+    </button>
+  </header>
+
+  <main>
+    <div id="auth-missing" class="empty hidden">
+      <div class="empty-icon">🔐</div>
+      <div class="empty-title">Admin tokeni yo'q</div>
+      <button id="open-options" class="primary-btn">Sozlamalarga o'tish</button>
+    </div>
+
+    <section id="controls">
+      <div class="auto-row">
+        <label class="switch">
+          <input type="checkbox" id="auto-toggle" />
+          <span class="slider"></span>
+        </label>
+        <div class="auto-text">
+          <div class="auto-label">Avtomatik rejim</div>
+          <div class="auto-sub">Barcha pending job'larni avto bajaradi</div>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric"><div class="metric-value" id="metric-queued">0</div><div class="metric-label">Navbat</div></div>
+        <div class="metric"><div class="metric-value" id="metric-finished">0</div><div class="metric-label">Done</div></div>
+        <div class="metric metric-fail"><div class="metric-value" id="metric-failed">0</div><div class="metric-label">Fail</div></div>
+      </div>
+
+      <div class="state-row">
+        <span class="state-dot" id="state-dot"></span>
+        <span id="state-text">idle</span>
+      </div>
+
+      <div class="action-row">
+        <button id="start-one" class="secondary-btn">▶ Bitta job</button>
+        <button id="stop" class="danger-btn hidden">■ To'xtatish</button>
+      </div>
+
+      <div class="action-row">
+        <button id="base-grid" class="secondary-btn" title="9 ta base manekenni ChatGPT'da bitta rasm sifatida yaratib, 3×3 ga qirqib yuklaydi">⚙ 9 ta base maneken (bir martalik)</button>
+      </div>
+
+      <div class="action-row">
+        <button id="slice-last-grid" class="secondary-btn" title="ChatGPT'dagi OXIRGI rasmni qayta generatsiya qilmasdan oladi va 3×3 ga qirqib base-grid'ga yuklaydi">📥 Oxirgi rasmni 9 ga qirqib yukla</button>
+      </div>
+    </section>
+
+    <section id="log-section">
+      <div class="log-head">Jurnal</div>
+      <ul id="log" class="log"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <a id="footer-options" href="#">Sozlamalar</a>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Image, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, Share, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
+import { hasLocalFace, localFaceUri } from '../../src/lib/face-local-cache';
+import { errorMessage, errorTitle } from '../../src/lib/api-errors';
+import { safeBack } from '../../src/lib/safe-back';
+import { useTryonOnboarding } from '../../src/store/tryon-onboarding';
 
 interface ProductDetail {
   id: string;
@@ -18,6 +22,7 @@ interface ProductDetail {
   seller: { brandName: string; rating: number; reviewsCount: number };
   colors: Array<{ key: string; hex: string; label: string }>;
   sizes: string[];
+  resultVariants?: Record<string, string> | null;
   variants: Array<{
     id: string;
     color: string;
@@ -26,29 +31,38 @@ interface ProductDetail {
     priceUsd: number;
     stock: number;
     images: string[];
+    renderedUrl?: string | null;
   }>;
 }
 
-const MOCK_PRODUCT: ProductDetail = {
-  id: '1',
-  title: { ru: 'Ipak ro\'mol Premium', uz: 'Ipak ro\'mol Premium' },
-  basePriceUsd: 45,
-  coverUrl: '',
-  gallery: [],
-  description:
-    "100% tabiiy ipakdan tayyorlangan premium sifatli ro'mol. Nafis dizayn va yuqori sifat kafolati. Har qanday mavsumda kiyish uchun mos. O'zbek ipakchilik an'analarining eng yaxshi namunasi.",
-  seller: { brandName: 'SilkWay Collection', rating: 4.8, reviewsCount: 1200 },
-  colors: [
-    { key: 'red', hex: '#C0504D', label: 'Qizil' },
-    { key: 'black', hex: '#2A2820', label: 'Qora' },
-    { key: 'white', hex: '#FDFAF3', label: 'Oq' },
-    { key: 'olive', hex: '#8A8D5B', label: 'Zaytun' },
-  ],
-  sizes: ['S', 'M', 'L', 'XL'],
-  variants: [
-    { id: 'v1', color: 'red', colorHex: '#C0504D', size: 'M', priceUsd: 45, stock: 5, images: [] },
-  ],
-};
+function heightBand(cm: number | null | undefined): 'short' | 'mid' | 'tall' {
+  if (!cm || cm <= 160) return 'short';
+  if (cm <= 170) return 'mid';
+  return 'tall';
+}
+
+function pickBodyMatchedUrl(
+  resultVariants: Record<string, string> | null | undefined,
+  bodyType: 'slim' | 'medium' | 'full' | null | undefined,
+  heightCm: number | null | undefined,
+): string | null {
+  if (!resultVariants) return null;
+  const body = bodyType ?? 'medium';
+  const band = heightBand(heightCm);
+  return (
+    resultVariants[`${body}-${band}`] ??
+    resultVariants[`${body}-mid`] ??
+    resultVariants['medium-mid'] ??
+    Object.values(resultVariants)[0] ??
+    null
+  );
+}
+
+interface BodyParamsResponse {
+  heightCm: number;
+  weightKg: number;
+  preferredSize: string;
+}
 
 const IMAGE_BG = ['#E4CE9A', '#D9D0BE', '#C9A96E', '#A88848'];
 
@@ -57,25 +71,59 @@ export default function ProductScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
   const qc = useQueryClient();
+  const buyerBodyType = useTryonOnboarding((s) => s.bodyType);
+  const buyerHeightCm = useTryonOnboarding((s) => s.heightCm);
 
-  const { data } = useQuery<ProductDetail>({
+  const { data, isLoading, isError } = useQuery<ProductDetail>({
     queryKey: ['product', id],
-    queryFn: async () => {
-      try {
-        return (await api.get(`/catalog/products/${id}`)).data;
-      } catch {
-        return MOCK_PRODUCT;
-      }
-    },
+    queryFn: async () => (await api.get(`/catalog/products/${id}`)).data,
     enabled: !!id,
   });
 
-  const product = data ?? MOCK_PRODUCT;
+  // Buyer's own body params — drive the default size pick so the hero image
+  // shows the mannequin+scarf render matching the viewer's height.
+  const { data: body } = useQuery<BodyParamsResponse | null>({
+    queryKey: ['body-params'],
+    queryFn: async () => {
+      try {
+        const { data } = await api.get<BodyParamsResponse>('/onboarding/body');
+        return data;
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 60_000,
+  });
 
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedSize, setSelectedSize] = useState(1);
   const [liked, setLiked] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
+  const [canFaceSwap, setCanFaceSwap] = useState(false);
+  const [personalizedUrl, setPersonalizedUrl] = useState<string | null>(null);
+  const [swapping, setSwapping] = useState(false);
+
+  // Check whether we have a cached selfie for the "Mendagi ko'rinishi"
+  // button; if the user never finished face onboarding, the button hides.
+  useEffect(() => {
+    hasLocalFace().then(setCanFaceSwap).catch(() => setCanFaceSwap(false));
+  }, []);
+
+  // Auto-run the face-swap as soon as the product opens, so the buyer
+  // lands on the page already seeing THEMSELVES wearing the hijab — no
+  // extra tap needed.
+  const autoSwappedForVariantRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!canFaceSwap) return;
+    if (!data?.variants?.length) return;
+    if (swapping || personalizedUrl) return;
+    const firstVariant = data.variants[0];
+    if (!firstVariant) return;
+    if (autoSwappedForVariantRef.current === firstVariant.id) return;
+    autoSwappedForVariantRef.current = firstVariant.id;
+    void tryItOnMe(firstVariant.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canFaceSwap, data?.id]);
 
   const addToCart = useMutation({
     mutationFn: async (variantId: string) => {
@@ -87,9 +135,61 @@ export default function ProductScreen() {
     },
   });
 
-  const productColors = product.colors ?? MOCK_PRODUCT.colors;
-  const productSizes = product.sizes ?? MOCK_PRODUCT.sizes;
+  const tryItOnMe = async (variantId: string) => {
+    setSwapping(true);
+    try {
+      const form = new FormData();
+      form.append('variantId', variantId);
+      // Pass the buyer's body profile so the backend picks the matching
+      // mannequin render from the 9-variant grid before face-swapping.
+      if (buyerBodyType) form.append('bodyType', buyerBodyType);
+      if (buyerHeightCm != null) form.append('heightCm', String(buyerHeightCm));
+      form.append('face', {
+        uri: localFaceUri(),
+        name: 'face.jpg',
+        type: 'image/jpeg',
+      } as unknown as Blob);
+      const { data } = await api.post('/tryon/faceswap', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60_000,
+      });
+      setPersonalizedUrl(data.resultUrl);
+    } catch (e: any) {
+      Alert.alert(errorTitle(), errorMessage(e));
+    } finally {
+      setSwapping(false);
+    }
+  };
+
+  // Nothing to render while the request is in flight or the product is
+  // missing; surfacing a mock here would hide stale/broken ids and let the
+  // user tap "Buy" on fake variants.
+  if (isLoading) return <LoadingState />;
+  if (isError || !data) return <ErrorState onBack={() => safeBack()} />;
+  const product = data;
+
+  const productColors = product.colors ?? [];
+  const productSizes = product.sizes ?? [];
   const currentColor = productColors[selectedColor];
+
+  // Pick the variant that matches the buyer's own size (from onboarding body
+  // params). Falls back to M, then to the first variant if nothing matches.
+  const buyerSize = (body?.preferredSize ?? 'M').toLowerCase();
+  const matchByBuyerSize =
+    product.variants?.find((v) => (v.size ?? '').toLowerCase() === buyerSize) ??
+    product.variants?.find((v) => (v.size ?? '').toLowerCase() === 'm') ??
+    product.variants?.[0];
+  const currentVariant = matchByBuyerSize;
+  // Pick the body-matched (bodyType × height-band) render from the 9-variant
+  // grid produced by the extension. Falls back to the per-size legacy render
+  // → then the seller cover. The face-swap preview wins over everything.
+  const bodyMatchedUrl = pickBodyMatchedUrl(
+    product.resultVariants,
+    buyerBodyType,
+    buyerHeightCm,
+  );
+  const heroImageUrl =
+    personalizedUrl ?? bodyMatchedUrl ?? currentVariant?.renderedUrl ?? product.coverUrl;
 
   return (
     <Screen>
@@ -100,9 +200,9 @@ export default function ProductScreen() {
         >
           {/* Product Image Area */}
           <View style={{ width: '100%', height: 400, position: 'relative' }}>
-            {product.coverUrl ? (
+            {heroImageUrl ? (
               <Image
-                source={{ uri: product.coverUrl }}
+                source={{ uri: heroImageUrl }}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
               />
@@ -110,13 +210,66 @@ export default function ProductScreen() {
               <View
                 style={{
                   flex: 1,
-                  background: undefined,
                   backgroundColor: IMAGE_BG[activeImage % IMAGE_BG.length],
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
                 <Ionicons name="ribbon-outline" size={64} color="rgba(255,255,255,0.35)" />
+              </View>
+            )}
+
+            {/* "Mendagi ko'rinishi" face-swap trigger — only when the user
+                finished face onboarding and the product has a variant to
+                swap against. Hides itself after a successful swap so the
+                hero image stays as the personalized render. */}
+            {canFaceSwap && currentVariant && !personalizedUrl && (
+              <Pressable
+                onPress={() => tryItOnMe(currentVariant.id)}
+                disabled={swapping}
+                style={{
+                  position: 'absolute',
+                  bottom: 16,
+                  right: 16,
+                  backgroundColor: colors.oliveDeep,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderRadius: 20,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  opacity: swapping ? 0.7 : 1,
+                }}
+              >
+                {swapping ? (
+                  <ActivityIndicator color={colors.goldSoft} size="small" />
+                ) : (
+                  <Ionicons name="person" size={16} color={colors.goldSoft} />
+                )}
+                <Text variant="caption" style={{ fontSize: 12, fontWeight: '600', color: colors.goldSoft }}>
+                  {swapping ? 'Qoyilyapti…' : 'Mendagi ko\'rinishi'}
+                </Text>
+              </Pressable>
+            )}
+            {personalizedUrl && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 56,
+                  left: 16,
+                  backgroundColor: 'rgba(54,57,36,0.85)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Ionicons name="sparkles" size={12} color={colors.goldSoft} />
+                <Text variant="caption" style={{ fontSize: 11, fontWeight: '600', color: colors.goldSoft }}>
+                  Sizning ko'rinishingiz
+                </Text>
               </View>
             )}
 
@@ -133,7 +286,7 @@ export default function ProductScreen() {
               }}
             >
               <Pressable
-                onPress={() => router.back()}
+                onPress={() => safeBack()}
                 hitSlop={12}
                 style={{
                   width: 36,
@@ -148,6 +301,17 @@ export default function ProductScreen() {
               </Pressable>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable
+                  onPress={() => {
+                    const title = product?.title?.uz ?? product?.title?.ru ?? '24:31';
+                    const url = product?.coverUrl ?? '';
+                    // Native share sheet works out of the box across iOS/Android
+                    // without needing an extra permission or module.
+                    Share.share({
+                      title,
+                      message: url ? `${title}\n${url}` : title,
+                      url,
+                    }).catch(() => {});
+                  }}
                   hitSlop={8}
                   style={{
                     width: 36,
@@ -331,7 +495,14 @@ export default function ProductScreen() {
                 <Text variant="bodySmall" color="ink" style={{ fontSize: 13, fontWeight: '500' }}>
                   O'lcham
                 </Text>
-                <Pressable>
+                <Pressable
+                  onPress={() =>
+                    Alert.alert(
+                      "O'lcham jadvali",
+                      "Ro'mol: 110×110 sm · 115×115 sm\nKo'ylak: S / M / L / XL\nSumka va aksessuarlar: one-size",
+                    )
+                  }
+                >
                   <Text variant="bodySmall" style={{ fontSize: 12, color: colors.gold }}>
                     O'lcham jadvali
                   </Text>
@@ -416,7 +587,7 @@ export default function ProductScreen() {
                 color="muted"
                 style={{ fontSize: 13, lineHeight: 21 }}
               >
-                {product.description ?? MOCK_PRODUCT.description}
+                {product.description ?? ''}
               </Text>
             </View>
 
@@ -518,6 +689,45 @@ export default function ProductScreen() {
             </Text>
           </Pressable>
         </View>
+      </View>
+    </Screen>
+  );
+}
+
+function LoadingState() {
+  const { colors } = useTheme();
+  return (
+    <Screen>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={colors.oliveDeep} />
+      </View>
+    </Screen>
+  );
+}
+
+function ErrorState({ onBack }: { onBack: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Screen>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 }}>
+        <Ionicons name="cloud-offline-outline" size={48} color={colors.muted} />
+        <Text variant="body" color="ink" style={{ fontSize: 15, fontWeight: '600', textAlign: 'center' }}>
+          Mahsulotni yuklab bo'lmadi
+        </Text>
+        <Text variant="caption" color="muted" style={{ fontSize: 12, textAlign: 'center' }}>
+          Tarmoqni tekshiring va qaytadan urining.
+        </Text>
+        <Pressable
+          onPress={onBack}
+          style={{
+            marginTop: 8, paddingHorizontal: 16, paddingVertical: 10,
+            borderRadius: 10, backgroundColor: colors.oliveDeep,
+          }}
+        >
+          <Text variant="bodySmall" style={{ fontSize: 13, fontWeight: '600', color: colors.goldSoft }}>
+            Orqaga
+          </Text>
+        </Pressable>
       </View>
     </Screen>
   );

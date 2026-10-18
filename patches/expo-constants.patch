@@ -1,0 +1,13 @@
+diff --git a/ios/EXConstants.podspec b/ios/EXConstants.podspec
+index 4b8b2db9fa2f4af352d21e58f133e8a806149253..2baaa22483909f026a0e62f2ce1c9648697721b2 100644
+--- a/ios/EXConstants.podspec
++++ b/ios/EXConstants.podspec
+@@ -36,7 +36,7 @@ Pod::Spec.new do |s|
+ 
+   script_phase = {
+     :name => 'Generate app.config for prebuilt Constants.manifest',
+-    :script => 'bash -l -c "$PODS_TARGET_SRCROOT/../scripts/get-app-config-ios.sh"',
++    :script => 'bash -l -c "\"$PODS_TARGET_SRCROOT/../scripts/get-app-config-ios.sh\""',
+     :execution_position => :before_compile
+   }
+   # :always_out_of_date is only available in CocoaPods 1.13.0 and later

@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "N24:31",
+    "name": "24:31",
     "slug": "n2431",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "n2431",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "cover",
@@ -46,13 +46,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "N24:31 kamerani yuzingizni skanerlash uchun ishlatadi."
+          "cameraPermission": "24:31 kamerani yuzingizni skanerlash uchun ishlatadi."
         }
       ],
       [
         "react-native-vision-camera",
         {
-          "cameraPermissionText": "N24:31 real-time try-on uchun kameraga ruxsat so'raydi.",
+          "cameraPermissionText": "24:31 real-time try-on uchun kameraga ruxsat so'raydi.",
           "enableFrameProcessors": true
         }
       ],
@@ -77,6 +77,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "http://192.168.1.6:4000/api/v1"
     }
   }
 }

@@ -6,7 +6,7 @@ export const resources = {
   uz: { translation: uz },
 } as const;
 
-export const defaultLanguage = 'ru' as const;
+export const defaultLanguage = 'uz' as const;
 
 export const supportedLanguages = ['uz', 'ru'] as const;
 

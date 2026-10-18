@@ -1,0 +1,78 @@
+diff --git a/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+index 2678b19063e6d7b42c31181f9450918228328391..b9af2f6206b3aaa57bfb6329b3e822c445a3a0ef 100644
+--- a/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
++++ b/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+@@ -197,14 +197,27 @@ id convertJSIValueToObjCObject(jsi::Runtime &runtime, const jsi::Value &value, s
+  */
+ static jsi::JSError convertNSExceptionToJSError(jsi::Runtime &runtime, NSException *exception)
+ {
+-  std::string reason = [exception.reason UTF8String];
++  // nil-guards: on iOS 26 + iPhone 11 we've seen NSExceptions whose reason /
++  // name / callStack* properties are nil, which turns [nil UTF8String] into
++  // NULL and makes std::string(NULL) + jsi::Object::setProperty crash Hermes
++  // from inside the TurboModule exception handler. The upstream fix is in
++  // react-native main; this patch backports the defensive guards to 0.76.
++  const char *reasonChars = exception.reason ? [exception.reason UTF8String] : nullptr;
++  std::string reason = reasonChars ? reasonChars : "Unknown NSException reason";
++
++  const char *nameChars = exception.name ? [exception.name UTF8String] : nullptr;
++  std::string name = nameChars ? nameChars : "NSException";
+ 
+   jsi::Object cause(runtime);
+-  cause.setProperty(runtime, "name", [exception.name UTF8String]);
++  cause.setProperty(runtime, "name", name);
+   cause.setProperty(runtime, "message", reason);
+-  cause.setProperty(runtime, "stackSymbols", convertNSArrayToJSIArray(runtime, exception.callStackSymbols));
+-  cause.setProperty(
+-      runtime, "stackReturnAddresses", convertNSArrayToJSIArray(runtime, exception.callStackReturnAddresses));
++  if (exception.callStackSymbols) {
++    cause.setProperty(runtime, "stackSymbols", convertNSArrayToJSIArray(runtime, exception.callStackSymbols));
++  }
++  if (exception.callStackReturnAddresses) {
++    cause.setProperty(
++        runtime, "stackReturnAddresses", convertNSArrayToJSIArray(runtime, exception.callStackReturnAddresses));
++  }
+ 
+   jsi::Value error = createJSRuntimeError(runtime, "Exception in HostFunction: " + reason);
+   error.asObject(runtime).setProperty(runtime, "cause", std::move(cause));
+diff --git a/scripts/react_native_pods_utils/script_phases.rb b/scripts/react_native_pods_utils/script_phases.rb
+index f5dd2ed708312f957afbd54b1db022aaa0423ec4..57c9c036dacf4484b28f46326b41e8e084fae20e 100644
+--- a/scripts/react_native_pods_utils/script_phases.rb
++++ b/scripts/react_native_pods_utils/script_phases.rb
+@@ -44,7 +44,7 @@ def get_script_template(react_native_path, export_vars={})
+ 
+         SCRIPT_PHASES_SCRIPT="$RCT_SCRIPT_RN_DIR/scripts/react_native_pods_utils/script_phases.sh"
+         WITH_ENVIRONMENT="$RCT_SCRIPT_RN_DIR/scripts/xcode/with-environment.sh"
+-        /bin/sh -c "$WITH_ENVIRONMENT $SCRIPT_PHASES_SCRIPT"
++        /bin/sh -c "\\"$WITH_ENVIRONMENT\\" \\"$SCRIPT_PHASES_SCRIPT\\""
+         EOS
+     result = ERB.new(template, trim_mode: '->').result(binding)
+     return result
+diff --git a/scripts/xcode/with-environment.sh b/scripts/xcode/with-environment.sh
+index c6bd62c87fc811077c882070ef71533d4fe781cf..3a925080aab33676475970fb8c1e3bcc50eaf03f 100755
+--- a/scripts/xcode/with-environment.sh
++++ b/scripts/xcode/with-environment.sh
+@@ -41,7 +41,9 @@ else
+     source "${REACT_NATIVE_PATH}/scripts/find-node-for-xcode.sh"
+ fi
+ 
+-# Execute argument, if present
++# Execute argument, if present. Quoted so a path containing spaces
++# (common when the project checkout lives under e.g. "/Users/.../Hijob ai …")
++# runs as a single command instead of being word-split by bash.
+ if [ -n "$1" ]; then
+-  $1
++  "$1"
+ fi
+diff --git a/sdks/hermes-engine/utils/replace_hermes_version.js b/sdks/hermes-engine/utils/replace_hermes_version.js
+--- a/sdks/hermes-engine/utils/replace_hermes_version.js
++++ b/sdks/hermes-engine/utils/replace_hermes_version.js
+@@ -62,7 +62,7 @@ function replaceHermesConfiguration(configuration, version, podsRoot) {
+   fs.mkdirSync(finalLocation, {recursive: true});
+ 
+   console.log('Extracting the tarball');
+-  execSync(`tar -xf ${tarballURLPath} -C ${finalLocation}`);
++  execSync(`tar -xf "${tarballURLPath}" -C "${finalLocation}"`);
+ }
+ 
+ function updateLastBuildConfiguration(configuration) {

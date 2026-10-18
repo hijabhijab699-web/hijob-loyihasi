@@ -17,6 +17,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 import type { SkiaTyingStyle } from '../../src/components/ScarfSkiaPreview';
 import { fabricKindFromAttribute, type FabricKind } from '../../src/lib/fabric-shaders';
+import { safeBack } from '../../src/lib/safe-back';
 
 interface Variant {
   id: string;
@@ -54,7 +55,7 @@ export default function LiveTryOnScreen() {
         colorHex={active?.colorHex ?? '#8A8D5B'}
         tyingStyle={tyingStyle}
         fabric={active?.fabric ?? 'solid'}
-        onClose={() => router.back()}
+        onClose={() => safeBack()}
         onCapture={(uri) => {
           // Hand the captured still to the main try-on flow so /preview,
           // add-to-cart, etc. all keep working with the frozen frame.

@@ -7,6 +7,7 @@ import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
+import { safeBack } from '../../src/lib/safe-back';
 
 interface OrderSummary {
   id: string;
@@ -42,6 +43,8 @@ const STATUS_TONE: Record<string, 'gold' | 'success' | 'muted' | 'danger'> = {
 export default function OrdersList() {
   const { colors, theme } = useTheme();
   const router = useRouter();
+  const { i18n } = useTranslation();
+  const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
 
   const { data, isLoading } = useQuery<OrderSummary[]>({
     queryKey: ['orders'],
@@ -60,23 +63,23 @@ export default function OrdersList() {
           gap: 12,
         }}
       >
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable onPress={() => safeBack()} hitSlop={12}>
           <Ionicons name="arrow-back" size={26} color={colors.ink} />
         </Pressable>
-        <Text variant="displayMedium" color="oliveDeep">Buyurtmalar</Text>
+        <Text variant="displayMedium" color="oliveDeep">{isRu ? 'Заказы' : 'Buyurtmalar'}</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         {isLoading && (
           <Text variant="body" color="muted" style={{ textAlign: 'center', padding: 40 }}>
-            Yuklanmoqda…
+            {isRu ? 'Загрузка…' : 'Yuklanmoqda…'}
           </Text>
         )}
 
         {data && data.length === 0 && (
           <View style={{ padding: 40, alignItems: 'center', gap: 8 }}>
             <Ionicons name="receipt-outline" size={48} color={colors.muted} />
-            <Text variant="titleMedium" color="muted">Hali buyurtma yo'q</Text>
+            <Text variant="titleMedium" color="muted">{isRu ? 'Пока нет заказов' : "Hali buyurtma yo'q"}</Text>
           </View>
         )}
 

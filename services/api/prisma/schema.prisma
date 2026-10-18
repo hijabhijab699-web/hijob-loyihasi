@@ -127,8 +127,52 @@ model User {
   addresses     Address[]
   refreshTokens RefreshToken[]
   pushTokens    PushToken[]
+  notifications Notification[]
 
   @@map("users")
+}
+
+enum NotificationKind {
+  order_update
+  style_job_done
+  promo
+  system
+}
+
+// Admin-uploaded base mannequin templates — one per size bucket. The dev
+// AI pipeline picks the one matching the buyer's bodyParams.height and
+// hands it to GPT alongside the hijob so the drape lands on a mannequin
+// of the right proportions.
+model MannequinTemplate {
+  id         String   @id @default(uuid()) @db.Uuid
+  sizeKey    String   @unique @map("size_key") @db.VarChar(16) // child-s / child-m / xs / s / m / l / xl / xxl
+  label      String   @db.VarChar(80)
+  minHeightCm Int     @map("min_height_cm")
+  maxHeightCm Int     @map("max_height_cm")
+  imageUrl   String   @map("image_url")
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([active, minHeightCm])
+  @@map("mannequin_templates")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  kind      NotificationKind
+  title     String           @db.VarChar(160)
+  body      String
+  data      Json?
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
 }
 
 model RefreshToken {
@@ -303,9 +347,17 @@ model ProductStyleJob {
   // Garment template parameters (which style, which colour hex).
   tyingStyle    String         @default("classical") @map("tying_style") @db.VarChar(20)
   colorHex      String         @default("#8A8D5B") @map("color_hex") @db.VarChar(9)
+  // Which size silhouette this render targets (S / M / L / XL). Null for
+  // one-size items (classic hijab 110x110). The mannequin pool uses this to
+  // pick a size-matched reference image before composition.
+  targetSize    String?        @map("target_size") @db.VarChar(10)
   // Output — populated when status flips to "done". Mirrors into
   // Product.styledImageUrl on success.
   resultUrl     String?        @map("result_url")
+  // 9-variant grid results, keyed by sizeKey (slim-short … full-tall).
+  // Null for legacy single-shot jobs. When present, the buyer side picks
+  // the matching variant based on their body type + height band.
+  resultVariants Json?         @map("result_variants")
   errorMessage  String?        @map("error_message")
   attempts      Int            @default(0)
   createdAt     DateTime       @default(now()) @map("created_at")

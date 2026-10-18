@@ -40,6 +40,19 @@ export class SellerController {
     return this.seller.getAnalytics(user.id);
   }
 
+  // Compact stats shape consumed by the mobile seller dashboard. Different
+  // from /analytics so the mobile card row stays stable even if analytics
+  // grows new fields.
+  @Get('stats')
+  stats(@CurrentUser() user: CurrentUserInfo) {
+    return this.seller.getStats(user.id);
+  }
+
+  @Get('orders')
+  orders(@CurrentUser() user: CurrentUserInfo) {
+    return this.seller.listOrders(user.id);
+  }
+
   @Post('products')
   create(@CurrentUser() user: CurrentUserInfo, @Body() dto: CreateProductDto) {
     return this.seller.createProduct(user.id, dto);

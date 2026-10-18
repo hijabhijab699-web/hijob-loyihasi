@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Image, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
+import { safeBack } from '../../src/lib/safe-back';
 
 interface OrderDetail {
   id: string;
@@ -34,14 +35,46 @@ export default function OrderDetailScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
 
-  const { data } = useQuery<OrderDetail>({
+  const { data, isLoading, isError, refetch } = useQuery<OrderDetail>({
     queryKey: ['orders', id],
     queryFn: async () => (await api.get(`/orders/${id}`)).data,
     enabled: !!id,
     refetchInterval: 15_000,
   });
 
-  if (!data) return <Screen />;
+  if (isLoading) {
+    return (
+      <Screen>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          <ActivityIndicator color={colors.oliveDeep} />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <Screen>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 24 }}>
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.muted} />
+          <Text variant="body" color="muted" style={{ textAlign: 'center' }}>
+            Buyurtma yuklanmadi
+          </Text>
+          <Pressable
+            onPress={() => refetch()}
+            style={{ marginTop: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: colors.oliveDeep }}
+          >
+            <Text variant="bodySmall" style={{ color: colors.goldSoft, fontWeight: '600' }}>
+              Qaytadan urinish
+            </Text>
+          </Pressable>
+          <Pressable onPress={() => safeBack()} style={{ marginTop: 4 }}>
+            <Text variant="caption" color="muted">← Orqaga</Text>
+          </Pressable>
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -56,7 +89,7 @@ export default function OrderDetailScreen() {
             gap: 12,
           }}
         >
-          <Pressable onPress={() => router.back()} hitSlop={12}>
+          <Pressable onPress={() => safeBack()} hitSlop={12}>
             <Ionicons name="arrow-back" size={26} color={colors.ink} />
           </Pressable>
           <View>

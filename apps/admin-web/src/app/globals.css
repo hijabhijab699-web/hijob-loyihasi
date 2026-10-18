@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body {
+  background: #FDFAF3;
+  color: #363924;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+@layer components {
+  .card {
+    @apply bg-surface border border-rule rounded-xl shadow-card;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-oliveDeep text-goldSoft text-sm font-semibold hover:bg-oliveDark transition disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface border border-rule text-ink text-sm font-medium hover:bg-surface2 transition;
+  }
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-semibold hover:bg-danger/20 transition;
+  }
+  .btn-success {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-success/10 text-success text-xs font-semibold hover:bg-success/20 transition;
+  }
+  .input {
+    @apply w-full bg-bg border border-rule rounded-lg px-3 py-2 text-sm text-ink focus:border-oliveDeep focus:outline-none;
+  }
+  .table-wrap {
+    @apply w-full bg-surface border border-rule rounded-xl overflow-hidden;
+  }
+}

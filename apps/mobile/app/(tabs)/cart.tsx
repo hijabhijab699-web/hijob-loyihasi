@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,39 +27,11 @@ interface CartResponse {
   itemCount: number;
 }
 
-const MOCK_ITEMS = [
-  {
-    id: '1',
-    productTitle: "Ipak ro'mol Premium",
-    productImage: '',
-    sellerBrand: 'Amani',
-    color: 'Qizil',
-    colorHex: '#C0504D',
-    size: 'M',
-    priceUsd: 45,
-    quantity: 2,
-    availableColors: [],
-    availableSizes: [],
-  },
-  {
-    id: '2',
-    productTitle: "Shoyi ko'ylak Elegant",
-    productImage: '',
-    sellerBrand: 'Zahra',
-    color: 'Oq',
-    colorHex: '#F0EBDA',
-    size: 'S',
-    priceUsd: 89,
-    quantity: 1,
-    availableColors: [],
-    availableSizes: [],
-  },
-];
-
 export default function CartScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors, theme } = useTheme();
   const qc = useQueryClient();
+  const router = useRouter();
   const [deliveryMethod, setDeliveryMethod] = useState<'courier' | 'pickup' | 'proba'>('courier');
   const [promoCode, setPromoCode] = useState('');
 
@@ -81,7 +54,43 @@ export default function CartScreen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cart'] }),
   });
 
-  const items = data?.items ?? MOCK_ITEMS;
+  const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
+
+  // Clear the whole cart. Backend doesn't expose a bulk-delete endpoint, so
+  // fan out individual DELETEs — small cart sizes keep this cheap.
+  const clearCart = () => {
+    if (!items?.length) return;
+    Alert.alert(
+      isRu ? 'Очистить корзину?' : 'Savatni tozalashmi?',
+      isRu ? 'Все товары будут удалены.' : "Barcha mahsulotlar o'chiriladi.",
+      [
+        { text: isRu ? 'Отмена' : 'Bekor qilish', style: 'cancel' },
+        {
+          text: isRu ? 'Очистить' : 'Tozalash',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await Promise.all(items.map((it) => api.delete(`/cart/${it.id}`)));
+            } finally {
+              qc.invalidateQueries({ queryKey: ['cart'] });
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const applyPromo = () => {
+    if (!promoCode.trim()) return;
+    // Backend promo codes aren't implemented yet; be upfront with the user
+    // rather than silently swallowing the tap.
+    Alert.alert(
+      isRu ? 'Промокоды пока недоступны' : "Promo kodlar hali mavjud emas",
+      isRu ? 'Эта функция в разработке.' : "Bu funksiya ishlab chiqilmoqda.",
+    );
+  };
+
+  const items = data?.items ?? [];
   const itemCount = data?.itemCount ?? items.reduce((sum, i) => sum + i.quantity, 0);
   const subtotal = data?.subtotalUsd ?? items.reduce((sum, i) => sum + i.priceUsd * i.quantity, 0);
 
@@ -109,16 +118,16 @@ export default function CartScreen() {
             color="oliveDeep"
             style={{ fontSize: 26, fontWeight: '700' }}
           >
-            Savat
+            {isRu ? 'Корзина' : 'Savat'}
           </Text>
           <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
-            {itemCount} ta mahsulot
+            {itemCount} {isRu ? 'товара' : 'ta mahsulot'}
           </Text>
         </View>
         {items.length > 0 && (
-          <Pressable style={{ paddingBottom: 4 }}>
+          <Pressable onPress={clearCart} style={{ paddingBottom: 4 }}>
             <Text variant="bodySmall" style={{ color: colors.danger, fontSize: 12 }}>
-              Tozalash
+              {isRu ? 'Очистить' : 'Tozalash'}
             </Text>
           </Pressable>
         )}
@@ -289,7 +298,7 @@ export default function CartScreen() {
                 color="ink"
                 style={{ fontSize: 14, fontWeight: '600', marginBottom: 14 }}
               >
-                Yetkazish usuli
+                {isRu ? 'Способ доставки' : 'Yetkazish usuli'}
               </Text>
 
               {/* Courier (delivery) */}
@@ -514,6 +523,7 @@ export default function CartScreen() {
                 />
               </View>
               <Pressable
+                onPress={applyPromo}
                 style={{
                   height: 44,
                   paddingHorizontal: 20,
@@ -521,6 +531,7 @@ export default function CartScreen() {
                   borderRadius: 12,
                   alignItems: 'center',
                   justifyContent: 'center',
+                  opacity: promoCode.trim() ? 1 : 0.5,
                 }}
               >
                 <Text
@@ -531,7 +542,7 @@ export default function CartScreen() {
                     color: colors.goldSoft,
                   }}
                 >
-                  Qo'llash
+                  {isRu ? 'Применить' : "Qo'llash"}
                 </Text>
               </Pressable>
             </View>
@@ -619,7 +630,13 @@ export default function CartScreen() {
 
             {/* Checkout Button */}
             <Pressable
-              onPress={() => Alert.alert('TODO', 'Payment integration')}
+              onPress={() => {
+                if (!items || items.length === 0) return;
+                router.push({
+                  pathname: '/checkout',
+                  params: { deliveryMethod },
+                });
+              }}
               style={({ pressed }) => ({
                 height: 54,
                 borderRadius: 14,

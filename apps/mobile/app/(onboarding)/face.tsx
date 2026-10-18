@@ -1,13 +1,20 @@
 import { useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, View, Text as RNText } from 'react-native';
+import { Image } from 'expo-image';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Ellipse, Line, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Line, Path, Rect, Stop } from 'react-native-svg';
+import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
+import { saveLocalFace } from '../../src/lib/face-local-cache';
 import { api } from '../../src/api/client';
 import { useAuth } from '../../src/store/auth';
+import { errorMessage, errorTitle } from '../../src/lib/api-errors';
+import { safeBack } from '../../src/lib/safe-back';
+
+const FACE_IMG = require('../../assets/demo-face.jpg');
 
 export default function FaceCaptureScreen() {
   const { colors, theme, scheme } = useTheme();
@@ -36,6 +43,10 @@ export default function FaceCaptureScreen() {
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.9 });
       if (!photo?.uri) return;
+      // Keep a local copy before upload so the buyer-side "Mendagi
+      // ko'rinishi" face-swap button can reuse this selfie without
+      // round-tripping the encrypted server copy.
+      await saveLocalFace(photo.uri);
       const form = new FormData();
       form.append('front', {
         uri: photo.uri,
@@ -49,7 +60,7 @@ export default function FaceCaptureScreen() {
       await refreshMe();
       router.replace('/(tabs)/home');
     } catch (e: any) {
-      Alert.alert('Xatolik', e?.response?.data?.message ?? 'Tarmoq xatosi');
+      Alert.alert(errorTitle(), errorMessage(e));
     } finally {
       setProcessing(false);
     }
@@ -63,7 +74,6 @@ export default function FaceCaptureScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: '#000' }}>
         <CameraView ref={cameraRef} style={{ flex: 1 }} facing="front" />
-        {/* Overlay */}
         <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
           <Svg width={260} height={320} viewBox="0 0 260 320">
             <Ellipse cx={130} cy={160} rx={110} ry={140} stroke={colors.gold} strokeWidth={3} fill="none" strokeDasharray="8 6" />
@@ -114,13 +124,45 @@ export default function FaceCaptureScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+
+      {/* Background decorative leaves */}
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+        <Svg width="100%" height="100%" viewBox="0 0 390 844" fill="none">
+          <G opacity={0.1} transform="translate(320, 60) rotate(30)">
+            <Path d="M0 35C8 18 26 5 44 0C40 12 30 26 18 35C9 42 4 37 0 35Z" fill={colors.olive} />
+            <Path d="M4 40C13 26 30 17 48 15C42 26 33 35 19 40C10 44 6 41 4 40Z" fill={colors.oliveSoft} />
+          </G>
+          <G opacity={0.07} transform="translate(-15, 120) rotate(-20)">
+            <Path d="M0 28C7 14 22 4 38 0C34 10 25 22 14 28C7 33 2 30 0 28Z" fill={colors.olive} />
+          </G>
+          <G opacity={0.12} transform="translate(-25, 380) rotate(-25)">
+            <Path d="M0 45C10 22 32 8 55 0C50 15 38 30 22 42C12 50 4 46 0 45Z" fill={colors.oliveDark} />
+            <Path d="M6 50C16 30 38 18 58 14C52 26 40 38 24 48C14 54 8 50 6 50Z" fill={colors.olive} />
+          </G>
+          <G opacity={0.1} transform="translate(340, 400) rotate(15)">
+            <Path d="M0 40C10 20 28 6 48 0C44 14 34 28 20 38C10 46 4 42 0 40Z" fill={colors.oliveDark} />
+            <Path d="M5 44C14 28 34 16 52 12C46 24 36 36 22 44C12 50 7 46 5 44Z" fill={colors.oliveSoft} />
+          </G>
+          <G opacity={0.06} transform="translate(30, 700) rotate(-10)">
+            <Path d="M0 22C5 11 16 4 28 0C25 8 18 16 10 22C5 26 2 24 0 22Z" fill={colors.olive} />
+          </G>
+          <G opacity={0.08} transform="translate(350, 680) rotate(35)">
+            <Path d="M0 20C5 10 15 3 25 0C22 8 16 16 8 20C4 22 1 21 0 20Z" fill={colors.oliveSoft} />
+          </G>
+          <Rect x={345} y={280} width={5} height={5} rx={0.8} transform="rotate(45, 347.5, 282.5)" fill={colors.gold} opacity={0.35} />
+          <Rect x={40} y={320} width={4} height={4} rx={0.5} transform="rotate(45, 42, 322)" fill={colors.gold} opacity={0.25} />
+          <Circle cx={355} cy={200} r={1.5} fill={colors.gold} opacity={0.3} />
+          <Circle cx={35} cy={250} r={1.5} fill={colors.gold} opacity={0.2} />
+        </Svg>
+      </View>
+
       <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => safeBack()}
             style={{
-              width: 36, height: 36, borderRadius: 18,
+              width: 40, height: 40, borderRadius: 20,
               backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.rule,
               alignItems: 'center', justifyContent: 'center',
             }}
@@ -130,7 +172,6 @@ export default function FaceCaptureScreen() {
             </Svg>
           </Pressable>
 
-          {/* Progress */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 11, color: colors.muted }}>
               3 / 3
@@ -144,89 +185,129 @@ export default function FaceCaptureScreen() {
         </View>
 
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 24, flexGrow: 1, alignItems: 'center' }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24, flexGrow: 1, alignItems: 'center' }}
           showsVerticalScrollIndicator={false}
         >
           {/* Title */}
-          <RNText style={{ fontFamily: theme.fontFamilies.display, fontSize: 26, fontWeight: '700', color: colors.oliveDeep, marginBottom: 6, textAlign: 'center' }}>
+          <RNText style={{ fontFamily: theme.fontFamilies.display, fontSize: 26, fontWeight: '700', color: colors.oliveDeep, marginBottom: 4, textAlign: 'center' }}>
             Yuz skaneri
           </RNText>
-          <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 14, color: colors.muted, lineHeight: 20, marginBottom: 32, textAlign: 'center' }}>
+
+          {/* Gold diamond accent */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 6 }}>
+            <View style={{ width: 16, height: 1, backgroundColor: colors.gold, opacity: 0.6 }} />
+            <Svg width={6} height={6} viewBox="0 0 6 6">
+              <Rect x={3} y={0} width={4.24} height={4.24} rx={0.5} transform="rotate(45, 3, 0)" fill={colors.gold} opacity={0.7} />
+            </Svg>
+            <View style={{ width: 16, height: 1, backgroundColor: colors.gold, opacity: 0.6 }} />
+          </View>
+
+          <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 13, color: colors.muted, lineHeight: 18, marginBottom: 24, textAlign: 'center' }}>
             Virtual primerka uchun yuzingizni skanerlang
           </RNText>
 
-          {/* Face Scan Area */}
-          <View
-            style={{
-              width: 260, height: 320, borderRadius: 130,
-              borderWidth: 2, borderStyle: 'dashed', borderColor: colors.olive,
-              backgroundColor: colors.surface,
-              alignItems: 'center', justifyContent: 'center',
-              marginBottom: 28, position: 'relative',
-            }}
-          >
-            {/* Face Outline */}
-            <Svg width={120} height={160} fill="none" strokeLinecap="round" strokeLinejoin="round">
-              <Ellipse cx={60} cy={70} rx={48} ry={60} stroke={colors.oliveSoft} strokeWidth={1.5} />
-              <Ellipse cx={40} cy={58} rx={8} ry={4} stroke={colors.olive} strokeWidth={1.5} />
-              <Ellipse cx={80} cy={58} rx={8} ry={4} stroke={colors.olive} strokeWidth={1.5} />
-              <Path d="M56 72 Q60 82 64 72" stroke={colors.olive} strokeWidth={1.5} />
-              <Path d="M44 90 Q60 100 76 90" stroke={colors.olive} strokeWidth={1.5} />
-              <Line x1={12} y1={70} x2={108} y2={70} stroke={colors.gold} strokeWidth={2} strokeDasharray="6 4" opacity={0.6} />
-            </Svg>
-            <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 12, color: colors.olive, fontWeight: '500', marginTop: 12 }}>
-              Yuzingizni ramkaga joylashtiring
-            </RNText>
+          {/* Face Scan Area with Photo */}
+          <View style={{ width: 230, height: 230, marginBottom: 20, position: 'relative' }}>
+            {/* Decorative leaves around circle */}
+            <View pointerEvents="none" style={{ position: 'absolute', top: -18, left: -22, width: 274, height: 266 }}>
+              <Svg width={274} height={266} viewBox="0 0 274 266" fill="none">
+                <G opacity={0.35} transform="translate(15, 20) rotate(-40)">
+                  <Path d="M0 18C4 9 14 3 22 0C20 6 14 12 8 18C4 22 1 19 0 18Z" fill={colors.olive} />
+                  <Path d="M2 22C6 14 16 8 24 6C21 12 15 18 9 22C5 24 3 23 2 22Z" fill={colors.oliveSoft} />
+                </G>
+                <G opacity={0.3} transform="translate(230, 15) rotate(35)">
+                  <Path d="M0 16C4 8 12 3 20 0C18 5 13 11 7 16C3 20 1 17 0 16Z" fill={colors.olive} />
+                  <Path d="M2 20C6 12 14 7 22 5C19 11 14 16 8 20C4 22 2 21 2 20Z" fill={colors.oliveSoft} />
+                </G>
+                <G opacity={0.25} transform="translate(8, 200) rotate(-55)">
+                  <Path d="M0 20C5 10 16 4 26 0C23 7 17 14 9 20C5 24 1 21 0 20Z" fill={colors.oliveDark} />
+                  <Path d="M3 24C8 14 18 8 28 6C24 12 18 20 10 24C6 26 3 25 3 24Z" fill={colors.olive} />
+                </G>
+                <G opacity={0.3} transform="translate(238, 210) rotate(50)">
+                  <Path d="M0 18C4 9 14 3 22 0C20 6 14 12 8 18C4 22 1 19 0 18Z" fill={colors.oliveDark} />
+                  <Path d="M2 22C6 13 16 7 24 5C21 11 15 18 8 22C4 24 2 23 2 22Z" fill={colors.oliveSoft} />
+                </G>
+              </Svg>
+            </View>
 
-            {/* Corner Markers */}
-            <View style={{ position: 'absolute', top: 16, left: 24, width: 20, height: 20, borderTopWidth: 3, borderLeftWidth: 3, borderColor: colors.gold, borderTopLeftRadius: 4 }} />
-            <View style={{ position: 'absolute', top: 16, right: 24, width: 20, height: 20, borderTopWidth: 3, borderRightWidth: 3, borderColor: colors.gold, borderTopRightRadius: 4 }} />
-            <View style={{ position: 'absolute', bottom: 16, left: 24, width: 20, height: 20, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: colors.gold, borderBottomLeftRadius: 4 }} />
-            <View style={{ position: 'absolute', bottom: 16, right: 24, width: 20, height: 20, borderBottomWidth: 3, borderRightWidth: 3, borderColor: colors.gold, borderBottomRightRadius: 4 }} />
+            {/* Dashed circle */}
+            <View style={{
+              width: 230, height: 230, borderRadius: 115,
+              borderWidth: 2, borderStyle: 'dashed', borderColor: colors.olive,
+              alignItems: 'center', justifyContent: 'center',
+              position: 'relative',
+            }}>
+              {/* Photo inside circle */}
+              <View style={{ width: 210, height: 210, borderRadius: 105, overflow: 'hidden' }}>
+                <Image
+                  source={FACE_IMG}
+                  style={{ width: 210, height: 210 }}
+                  contentFit="cover"
+                  
+                />
+                {/* Scan line overlay */}
+                <View style={{
+                  position: 'absolute', top: '50%', left: 0, right: 0, height: 2, marginTop: -1,
+                  backgroundColor: colors.gold, opacity: 0.7,
+                }} />
+                <View style={{
+                  position: 'absolute', top: '50%', left: 0, right: 0, height: 12, marginTop: -6,
+                  backgroundColor: colors.gold, opacity: 0.1,
+                }} />
+              </View>
+
+              {/* Corner bracket markers */}
+              <View style={{ position: 'absolute', top: 20, left: 20, width: 24, height: 24, borderTopWidth: 3, borderLeftWidth: 3, borderColor: colors.gold, borderTopLeftRadius: 4 }} />
+              <View style={{ position: 'absolute', top: 20, right: 20, width: 24, height: 24, borderTopWidth: 3, borderRightWidth: 3, borderColor: colors.gold, borderTopRightRadius: 4 }} />
+              <View style={{ position: 'absolute', bottom: 20, left: 20, width: 24, height: 24, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: colors.gold, borderBottomLeftRadius: 4 }} />
+              <View style={{ position: 'absolute', bottom: 20, right: 20, width: 24, height: 24, borderBottomWidth: 3, borderRightWidth: 3, borderColor: colors.gold, borderBottomRightRadius: 4 }} />
+            </View>
           </View>
 
-          {/* Instructions Card */}
-          <View
-            style={{
-              width: '100%', backgroundColor: colors.surface, borderRadius: 16,
-              padding: 18, borderWidth: 1, borderColor: colors.rule, gap: 14, marginBottom: 20,
-            }}
-          >
-            <InstructionRow
+          {/* Instruction text */}
+          <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 13, color: colors.olive, fontWeight: '500', marginBottom: 20, textAlign: 'center' }}>
+            Yuzingizni ramkaga joylashtiring
+          </RNText>
+
+          {/* Instruction Cards */}
+          <View style={{ width: '100%', gap: 10, marginBottom: 20 }}>
+            <InstructionCard
               icon={
-                <Svg width={16} height={16} fill="none" stroke={colors.oliveDeep} strokeWidth={1.5} strokeLinecap="round">
-                  <Circle cx={8} cy={8} r={5} />
-                  <Path d="M8 5v3" />
-                  <Circle cx={8} cy={11} r={0.5} fill={colors.oliveDeep} />
+                <Svg width={18} height={18} fill="none" stroke={colors.oliveDeep} strokeWidth={1.5} strokeLinecap="round">
+                  <Circle cx={9} cy={9} r={4} />
+                  <Path d="M9 2v2M9 14v2M2 9h2M14 9h2M4.2 4.2l1.4 1.4M12.4 12.4l1.4 1.4M4.2 13.8l1.4-1.4M12.4 5.6l1.4-1.4" />
                 </Svg>
               }
               title="Yaxshi yoritilgan joy"
               desc="Tabiiy yorug'likda suratga tushing"
+              status="ok"
               colors={colors}
               theme={theme}
             />
-            <InstructionRow
+            <InstructionCard
               icon={
-                <Svg width={16} height={16} fill="none" stroke={colors.oliveDeep} strokeWidth={1.5} strokeLinecap="round">
-                  <Rect x={3} y={3} width={10} height={10} rx={2} />
-                  <Circle cx={8} cy={7} r={2} />
-                  <Path d="M4 13l2.5-3 1.5 1.5 2-2.5 3 4" />
+                <Svg width={18} height={18} fill="none" stroke={colors.oliveDeep} strokeWidth={1.5} strokeLinecap="round">
+                  <Circle cx={9} cy={9} r={7} />
+                  <Circle cx={9} cy={9} r={3} />
+                  <Circle cx={9} cy={9} r={1} fill={colors.oliveDeep} />
                 </Svg>
               }
               title="To'g'ri qarash"
               desc="Kameraga to'g'ri qarang"
+              status="ok"
               colors={colors}
               theme={theme}
             />
-            <InstructionRow
+            <InstructionCard
               icon={
-                <Svg width={16} height={16} fill="none" stroke={colors.oliveDeep} strokeWidth={1.5} strokeLinecap="round">
-                  <Circle cx={8} cy={8} r={6} />
-                  <Path d="M8 4v4l2.5 2.5" />
+                <Svg width={18} height={18} fill="none" stroke={colors.oliveDeep} strokeWidth={1.5} strokeLinecap="round">
+                  <Path d="M9 1v4M9 13v4M1 9h4M13 9h4" />
+                  <Circle cx={9} cy={9} r={2} />
                 </Svg>
               }
               title="Qimirlamang"
               desc="3 soniya davomida harakatsiz turing"
+              status="error"
               colors={colors}
               theme={theme}
             />
@@ -243,7 +324,6 @@ export default function FaceCaptureScreen() {
             </RNText>
           </View>
 
-          {/* Spacer */}
           <View style={{ flex: 1 }} />
 
           {/* Actions */}
@@ -252,16 +332,20 @@ export default function FaceCaptureScreen() {
               onPress={startScan}
               style={{
                 width: '100%', paddingVertical: 16, backgroundColor: colors.oliveDeep,
-                borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
               }}
             >
-              <Svg width={18} height={18} fill="none" stroke={colors.goldSoft} strokeWidth={2} strokeLinecap="round">
-                <Circle cx={9} cy={9} r={7} />
-                <Circle cx={9} cy={9} r={3} />
+              <Svg width={20} height={20} fill="none" stroke={colors.goldSoft} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <Rect x={3} y={3} width={14} height={14} rx={3} />
+                <Circle cx={10} cy={10} r={3} />
+                <Path d="M14 3v-1h2M3 6H2V4" />
               </Svg>
               <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 15, fontWeight: '600', color: colors.goldSoft }}>
                 Skanerlash
               </RNText>
+              <Svg width={16} height={16} fill="none" stroke={colors.goldSoft} strokeWidth={2.5} strokeLinecap="round">
+                <Path d="M6 3l6 5-6 5" />
+              </Svg>
             </Pressable>
 
             <Pressable onPress={skip} style={{ alignItems: 'center', paddingVertical: 8 }}>
@@ -276,15 +360,58 @@ export default function FaceCaptureScreen() {
   );
 }
 
-function InstructionRow({ icon, title, desc, colors, theme }: { icon: React.ReactNode; title: string; desc: string; colors: any; theme: any }) {
+function InstructionCard({
+  icon, title, desc, status, colors, theme,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  status: 'ok' | 'error';
+  colors: any;
+  theme: any;
+}) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${colors.oliveDeep}10`, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{
+      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.rule,
+      borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12,
+    }}>
+      <View style={{
+        width: 36, height: 36, borderRadius: 12,
+        backgroundColor: `${colors.oliveDeep}10`,
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
         {icon}
       </View>
-      <View style={{ flex: 1 }}>
-        <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 13, fontWeight: '600', color: colors.ink, marginBottom: 2 }}>{title}</RNText>
-        <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 11, color: colors.muted }}>{desc}</RNText>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 13, fontWeight: '600', color: colors.ink, marginBottom: 1 }}>
+          {title}
+        </RNText>
+        <RNText style={{ fontFamily: theme.fontFamilies.body, fontSize: 11, color: colors.muted }}>
+          {desc}
+        </RNText>
+      </View>
+      {/* Thumbnail with status badge */}
+      <View style={{ position: 'relative', flexShrink: 0 }}>
+        <View style={{ width: 38, height: 38, borderRadius: 19, overflow: 'hidden', borderWidth: 1.5, borderColor: colors.rule }}>
+          <Image source={FACE_IMG} style={{ width: 38, height: 38 }} contentFit="cover"  />
+        </View>
+        <View style={{
+          position: 'absolute', bottom: -2, right: -2,
+          width: 16, height: 16, borderRadius: 8,
+          backgroundColor: status === 'ok' ? '#7A8A5B' : '#B85450',
+          alignItems: 'center', justifyContent: 'center',
+          borderWidth: 2, borderColor: colors.surface,
+        }}>
+          {status === 'ok' ? (
+            <Svg width={8} height={8} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M1.5 4 L3.5 6 L6.5 2" />
+            </Svg>
+          ) : (
+            <Svg width={8} height={8} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round">
+              <Path d="M2 2l4 4M6 2l-4 4" />
+            </Svg>
+          )}
+        </View>
       </View>
     </View>
   );

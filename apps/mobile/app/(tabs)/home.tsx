@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Pressable, ScrollView, View, Image, Animated, Dimensions } from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Alert, Pressable, ScrollView, View, Image, Animated, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { Logo } from '../../src/components/Logo';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { useAuth } from '../../src/store/auth';
 import { api } from '../../src/api/client';
+import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SIDE = 20;
@@ -27,21 +28,6 @@ interface HomeFeed {
     variants: Array<{ id: string }>;
   }>;
 }
-
-const MOCK_STORES = [
-  { id: 's1', brandName: 'Amani', logoUrl: null },
-  { id: 's2', brandName: 'Zahra Collection', logoUrl: null },
-  { id: 's3', brandName: 'Noor Hijab', logoUrl: null },
-  { id: 's4', brandName: 'Hija House', logoUrl: null },
-  { id: 's5', brandName: 'Sabr', logoUrl: null },
-];
-
-const MOCK_ARRIVALS = [
-  { id: '1', title: { ru: 'Хиджаб «Нежность»', uz: 'Hijob «Noziklik»' }, basePriceUsd: 22, coverUrl: '', seller: { brandName: 'Amani', rating: 4.8 }, variants: [{ id: 'v1' }] },
-  { id: '2', title: { ru: 'Хиджаб «Олива»', uz: 'Hijob «Zaytun»' }, basePriceUsd: 24, coverUrl: '', seller: { brandName: 'Zahra', rating: 4.6 }, variants: [{ id: 'v1' }] },
-  { id: '3', title: { ru: 'Шарф «Классика»', uz: "Ro'mol «Klassik»" }, basePriceUsd: 35, coverUrl: '', seller: { brandName: 'Noor', rating: 4.9 }, variants: [{ id: 'v1' }] },
-  { id: '4', title: { ru: 'Платок «Жемчуг»', uz: "Ro'mol «Marvarid»" }, basePriceUsd: 28, coverUrl: '', seller: { brandName: 'Hija', rating: 4.7 }, variants: [{ id: 'v1' }] },
-];
 
 const STORE_COLORS = ['#C9A96E', '#8A8D5B', '#B85450', '#5F7A94', '#D9A24B'];
 
@@ -61,19 +47,70 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const lang = i18n.language as 'ru' | 'uz';
 
-  const { data } = useQuery<HomeFeed>({
+  const queryClient = useQueryClient();
+
+  // Surface network/API failures to the UI instead of silently swapping in
+  // mock rows — a mocked home feed hides real breakage (bad token, backend
+  // down, schema drift) behind an impression of working data.
+  const { data, isLoading, isError, refetch } = useQuery<HomeFeed>({
     queryKey: ['home'],
-    queryFn: async () => {
-      try {
-        return (await api.get('/catalog/home')).data;
-      } catch {
-        return { stores: MOCK_STORES, categories: [], newArrivals: MOCK_ARRIVALS };
-      }
-    },
+    queryFn: async () => (await api.get('/catalog/home')).data,
   });
 
-  const stores = data?.stores?.length ? data.stores : MOCK_STORES;
-  const arrivals = data?.newArrivals?.length ? data.newArrivals : MOCK_ARRIVALS;
+  const addWishlist = useMutation({
+    mutationFn: async (productId: string) =>
+      (await api.post(`/wishlist/${productId}`)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile-wishlist-count'] });
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+    },
+    onError: (e) => Alert.alert(errorTitle(), errorMessage(e)),
+  });
+
+  const addCart = useMutation({
+    mutationFn: async (variantId: string) =>
+      (await api.post('/cart', { variantId, quantity: 1 })).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+      Alert.alert(
+        lang === 'ru' ? 'Готово' : "Qo'shildi",
+        lang === 'ru' ? 'Товар добавлен в корзину' : "Mahsulot savatga qo'shildi",
+      );
+    },
+    onError: (e) => Alert.alert(errorTitle(), errorMessage(e)),
+  });
+
+  const stores = data?.stores ?? [];
+  const arrivals = data?.newArrivals ?? [];
+
+  // Backend offline / token invalid — tell the user instead of leaving them
+  // with an empty "Welcome" shell and no visible stores or arrivals.
+  if (isError) {
+    return (
+      <Screen gradient>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 }}>
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.muted} />
+          <Text variant="body" color="ink" style={{ fontSize: 15, fontWeight: '600', textAlign: 'center' }}>
+            {lang === 'ru' ? 'Не удалось загрузить ленту' : "Ma'lumotlar yuklanmadi"}
+          </Text>
+          <Text variant="caption" color="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+            {lang === 'ru' ? 'Проверьте подключение и попробуйте ещё раз.' : "Internet ulanishini tekshirib, qayta urining."}
+          </Text>
+          <Pressable
+            onPress={() => refetch()}
+            style={{
+              marginTop: 8, paddingHorizontal: 20, paddingVertical: 12,
+              borderRadius: 12, backgroundColor: colors.oliveDeep,
+            }}
+          >
+            <Text variant="bodySmall" style={{ fontSize: 13, fontWeight: '600', color: colors.goldSoft }}>
+              {lang === 'ru' ? 'Повторить' : 'Qaytadan urinish'}
+            </Text>
+          </Pressable>
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen gradient>
@@ -90,6 +127,7 @@ export default function HomeScreen() {
         >
           <View style={{ width: 40 }}>
             <Pressable
+              onPress={() => router.push('/settings')}
               hitSlop={12}
               style={{
                 width: 40,
@@ -106,10 +144,11 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          <Logo size={52} label={false} />
+          <Logo size={44} />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Pressable
+              onPress={() => router.push('/search')}
               hitSlop={8}
               style={{
                 width: 40,
@@ -125,6 +164,7 @@ export default function HomeScreen() {
               <Ionicons name="search-outline" size={18} color={colors.ink} />
             </Pressable>
             <Pressable
+              onPress={() => router.push('/notifications')}
               hitSlop={8}
               style={{
                 width: 40,
@@ -138,19 +178,6 @@ export default function HomeScreen() {
               }}
             >
               <Ionicons name="notifications-outline" size={18} color={colors.ink} />
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: colors.danger,
-                  borderWidth: 2,
-                  borderColor: colors.bg,
-                }}
-              />
             </Pressable>
           </View>
         </View>
@@ -271,7 +298,13 @@ export default function HomeScreen() {
             {stores.map((store, idx) => {
               const ringColor = STORE_COLORS[idx % STORE_COLORS.length];
               return (
-                <Pressable key={store.id} style={{ alignItems: 'center', gap: 6, width: 72 }}>
+                <Pressable
+                  key={store.id}
+                  onPress={() =>
+                    router.push({ pathname: '/(tabs)/catalog', params: { seller: store.id } })
+                  }
+                  style={{ alignItems: 'center', gap: 6, width: 72 }}
+                >
                   {/* Ring */}
                   <View
                     style={{
@@ -327,7 +360,10 @@ export default function HomeScreen() {
             })}
 
             {/* Add store */}
-            <Pressable style={{ alignItems: 'center', gap: 6, width: 72 }}>
+            <Pressable
+              onPress={() => router.push('/(tabs)/catalog')}
+              style={{ alignItems: 'center', gap: 6, width: 72 }}
+            >
               <View
                 style={{
                   width: 64,
@@ -398,7 +434,7 @@ export default function HomeScreen() {
                     fontSize: 11,
                   }}
                 >
-                  {t(`home.categories.${cat.id}`)}
+                  {t(`home.categories.${cat.id}` as never, { defaultValue: cat.id })}
                 </Text>
               </Pressable>
             ))}
@@ -467,6 +503,10 @@ export default function HomeScreen() {
                     )}
                     {/* Wishlist */}
                     <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        addWishlist.mutate(p.id);
+                      }}
                       hitSlop={8}
                       style={{
                         position: 'absolute',
@@ -565,7 +605,13 @@ export default function HomeScreen() {
                       >
                         ${p.basePriceUsd}
                       </Text>
-                      <View
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation?.();
+                          const vid = p.variants?.[0]?.id;
+                          if (vid) addCart.mutate(vid);
+                        }}
+                        hitSlop={6}
                         style={{
                           width: 30,
                           height: 30,
@@ -576,7 +622,7 @@ export default function HomeScreen() {
                         }}
                       >
                         <Ionicons name="add" size={16} color="#fff" />
-                      </View>
+                      </Pressable>
                     </View>
                   </View>
                 </Pressable>

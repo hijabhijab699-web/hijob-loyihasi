@@ -37,16 +37,32 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
     // MVP dev mode: skip OTP, mark phone verified immediately.
-    const user = await this.prisma.user.create({
-      data: {
-        username,
-        phone: dto.phone,
-        fullName: dto.fullName,
-        role: dto.role,
-        language: dto.language ?? 'ru',
-        passwordHash,
-        phoneVerified: true,
-      },
+    // Role=seller also provisions an unverified Seller profile so the new
+    // merchant can immediately upload products / mannequins without a
+    // separate onboarding step. brandName defaults to the full name; the
+    // seller can rename it later from the dashboard.
+    const user = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          username,
+          phone: dto.phone,
+          fullName: dto.fullName,
+          role: dto.role,
+          language: dto.language ?? 'ru',
+          passwordHash,
+          phoneVerified: true,
+        },
+      });
+      if (dto.role === 'seller') {
+        await tx.seller.create({
+          data: {
+            userId: u.id,
+            brandName: (dto.fullName || username || 'Yangi do\'kon').slice(0, 120),
+            verified: false,
+          },
+        });
+      }
+      return u;
     });
 
     return this.issueTokens(user);

@@ -1,44 +1,44 @@
 import { useState } from 'react';
-import { FlatList, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Image, Pressable, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 
-type ProductStatus = 'live' | 'draft' | 'pending';
+// Backend product status enum (prisma ProductStatus). "published" is what the
+// UI used to call "live"; "archived" and "rejected" are grouped under
+// "pending" so the filter chip set stays manageable.
+type BackendStatus = 'draft' | 'pending' | 'published' | 'archived' | 'rejected';
+type FilterKey = 'all' | 'draft' | 'pending' | 'published';
 
 interface SellerProduct {
   id: string;
-  name: string;
-  price: number;
-  status: ProductStatus;
+  titleRu: string;
+  titleUz: string | null;
+  basePriceUsd: number;
+  coverUrl: string | null;
+  status: BackendStatus;
   variantCount: number;
-  stock: number;
-  imageUrl?: string;
+  totalStock: number;
 }
 
-const MOCK_PRODUCTS: SellerProduct[] = [
-  { id: '1', name: "Ipak ro'mol Premium", price: 45, status: 'live', variantCount: 3, stock: 48 },
-  { id: '2', name: "Shoyi ko'ylak Elegant", price: 89, status: 'live', variantCount: 5, stock: 22 },
-  { id: '3', name: 'Charm sumka Classic', price: 120, status: 'pending', variantCount: 2, stock: 15 },
-  { id: '4', name: "Taqinchoq to'plami", price: 35, status: 'draft', variantCount: 4, stock: 60 },
-  { id: '5', name: "Paxta ro'mol Natural", price: 28, status: 'live', variantCount: 6, stock: 130 },
-];
-
-const FILTERS: { key: ProductStatus | 'all'; label: string }[] = [
+const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'Barchasi' },
-  { key: 'live', label: 'Live' },
+  { key: 'published', label: 'Live' },
   { key: 'draft', label: 'Draft' },
   { key: 'pending', label: 'Kutmoqda' },
 ];
 
-const STATUS_STYLE: Record<ProductStatus, { bg: string; color: string; label: string }> = {
-  live: { bg: 'rgba(122,138,91,0.12)', color: '#7A8A5B', label: 'Live' },
+const STATUS_STYLE: Record<BackendStatus, { bg: string; color: string; label: string }> = {
+  published: { bg: 'rgba(122,138,91,0.12)', color: '#7A8A5B', label: 'Live' },
   draft: { bg: 'rgba(133,126,110,0.1)', color: '#857E6E', label: 'Draft' },
   pending: { bg: 'rgba(217,162,75,0.12)', color: '#D9A24B', label: 'Kutmoqda' },
+  archived: { bg: 'rgba(133,126,110,0.1)', color: '#857E6E', label: 'Arxiv' },
+  rejected: { bg: 'rgba(184,84,80,0.08)', color: '#B85450', label: 'Rad' },
 };
 
 const PLACEHOLDER_BG = ['#EDE5D0', '#D9D0BE', '#E4CE9A', '#D9D0BE', '#EDE5D0'];
@@ -46,25 +46,23 @@ const PLACEHOLDER_BG = ['#EDE5D0', '#D9D0BE', '#E4CE9A', '#D9D0BE', '#EDE5D0'];
 export default function SellerProductsScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
-  const [filter, setFilter] = useState<ProductStatus | 'all'>('all');
+  const { i18n } = useTranslation();
+  const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
+  const [filter, setFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
 
+  // Backend returns the full list; we filter client-side so switching tabs
+  // is instant and the badge counts stay in sync with real data.
   const { data: products } = useQuery<SellerProduct[]>({
-    queryKey: ['seller', 'products', filter],
-    queryFn: async () => {
-      try {
-        const params = filter !== 'all' ? { status: filter } : {};
-        return (await api.get('/seller/products', { params })).data;
-      } catch {
-        return MOCK_PRODUCTS;
-      }
-    },
+    queryKey: ['seller', 'products'],
+    queryFn: async () => (await api.get<SellerProduct[]>('/seller/products')).data,
+    staleTime: 15_000,
   });
 
-  const items = (products ?? MOCK_PRODUCTS).filter(
+  const items = (products ?? []).filter(
     (p) =>
       (filter === 'all' || p.status === filter) &&
-      (!search || p.name.toLowerCase().includes(search.toLowerCase())),
+      (!search || p.titleRu.toLowerCase().includes(search.toLowerCase())),
   );
 
   return (
@@ -90,10 +88,10 @@ export default function SellerProductsScreen() {
               fontWeight: '700',
             }}
           >
-            Mahsulotlar
+            {isRu ? 'Товары' : 'Mahsulotlar'}
           </Text>
           <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
-            {items.length} ta mahsulot
+            {items.length} {isRu ? 'товара' : 'ta mahsulot'}
           </Text>
         </View>
         <Pressable
@@ -130,7 +128,7 @@ export default function SellerProductsScreen() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Qidirish..."
+            placeholder={isRu ? 'Поиск...' : 'Qidirish...'}
             placeholderTextColor={colors.muted}
             style={{ flex: 1, fontSize: 14, color: colors.ink, padding: 0 }}
           />
@@ -162,7 +160,11 @@ export default function SellerProductsScreen() {
                   color: active ? colors.goldSoft : colors.muted,
                 }}
               >
-                {f.label}
+                {f.key === 'all'
+                  ? (isRu ? 'Все' : 'Barchasi')
+                  : f.key === 'pending'
+                  ? (isRu ? 'Ожидает' : 'Kutmoqda')
+                  : f.label}
               </Text>
             </Pressable>
           );
@@ -179,12 +181,12 @@ export default function SellerProductsScreen() {
           <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
             <Ionicons name="pricetag-outline" size={48} color={colors.muted} />
             <Text variant="body" color="muted">
-              Mahsulot topilmadi
+              {isRu ? 'Товары не найдены' : 'Mahsulot topilmadi'}
             </Text>
           </View>
         }
         renderItem={({ item, index }) => {
-          const st = STATUS_STYLE[item.status];
+          const st = STATUS_STYLE[item.status] ?? STATUS_STYLE.draft;
           return (
             <Pressable
               onPress={() => router.push(`/seller/product/${item.id}` as any)}
@@ -209,9 +211,14 @@ export default function SellerProductsScreen() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
+                  overflow: 'hidden',
                 }}
               >
-                <Ionicons name="ribbon-outline" size={24} color="rgba(255,255,255,0.35)" />
+                {item.coverUrl ? (
+                  <Image source={{ uri: item.coverUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                ) : (
+                  <Ionicons name="ribbon-outline" size={24} color="rgba(255,255,255,0.35)" />
+                )}
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text
@@ -220,7 +227,7 @@ export default function SellerProductsScreen() {
                   numberOfLines={1}
                   style={{ fontSize: 14, fontWeight: '500' }}
                 >
-                  {item.name}
+                  {item.titleRu || item.titleUz || "Nomsiz mahsulot"}
                 </Text>
                 <View
                   style={{
@@ -239,7 +246,7 @@ export default function SellerProductsScreen() {
                       fontWeight: '600',
                     }}
                   >
-                    ${item.price}
+                    ${item.basePriceUsd.toFixed(2)}
                   </Text>
                   <Text variant="caption" color="muted" style={{ fontSize: 11 }}>
                     · {item.variantCount} variant
@@ -269,7 +276,7 @@ export default function SellerProductsScreen() {
                     </Text>
                   </View>
                   <Text variant="caption" color="muted" style={{ fontSize: 10 }}>
-                    Zaxira: {item.stock}
+                    Zaxira: {item.totalStock}
                   </Text>
                 </View>
               </View>

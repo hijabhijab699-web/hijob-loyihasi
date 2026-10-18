@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <title>N24:31 Dev AI — Sozlamalar</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, system-ui, sans-serif;
+      max-width: 520px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #363924;
+      background: #FDFAF3;
+    }
+    h1 { font-family: Georgia, "Playfair Display", serif; font-size: 24px; margin-bottom: 6px; }
+    .sub { color: #857E6E; font-size: 13px; margin-bottom: 28px; }
+    label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #857E6E; margin-bottom: 6px; }
+    input {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid #E4DEC8; border-radius: 8px;
+      font-size: 14px; background: #FFF;
+      margin-bottom: 16px; font-family: inherit;
+    }
+    input:focus { outline: none; border-color: #363924; }
+    button {
+      padding: 10px 16px;
+      background: #363924; color: #EDE5D0;
+      border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .status { font-size: 12px; margin-top: 10px; }
+    .status.ok { color: #7A8A5B; }
+    .status.err { color: #B85450; }
+    .user-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; background: #EDE5D0; border-radius: 20px;
+      font-size: 13px; margin-top: 10px;
+    }
+    .user-chip strong { color: #363924; }
+    hr { border: none; border-top: 1px solid #E4DEC8; margin: 24px 0; }
+  </style>
+</head>
+<body>
+  <h1>N24:31 Dev AI panel</h1>
+  <p class="sub">Admin tizimiga kirib pending style-job'larga ulaning.</p>
+
+  <label>API server URL</label>
+  <input id="api-base" type="url" placeholder="http://localhost:4000/api/v1" />
+
+  <hr />
+
+  <div id="logged-out">
+    <label>Login (telefon yoki @username)</label>
+    <input id="identifier" type="text" placeholder="@admin yoki +998XXXXXXXXX" />
+    <label>Parol</label>
+    <input id="password" type="password" />
+    <div class="row">
+      <button id="login">Kirish</button>
+      <span id="status" class="status"></span>
+    </div>
+  </div>
+
+  <div id="logged-in" style="display:none">
+    <div class="user-chip">
+      <span>✓</span>
+      <span>Kirilgan: <strong id="who"></strong></span>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button id="logout">Chiqish</button>
+      <span id="logout-status" class="status"></span>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

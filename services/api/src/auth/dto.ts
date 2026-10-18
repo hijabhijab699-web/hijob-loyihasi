@@ -17,8 +17,10 @@ export class RegisterDto {
   @Matches(UZ_PHONE_REGEX, { message: 'Phone must be +998XXXXXXXXX' })
   phone!: string;
 
+  // 6 chars matches the mobile client's own validation. The old 8-char
+  // minimum silently 400'd registrations that passed the client check.
   @IsString()
-  @MinLength(8)
+  @MinLength(6)
   password!: string;
 
   @IsIn(['buyer', 'seller'])
@@ -35,7 +37,7 @@ export class LoginDto {
   identifier!: string; // phone or @username
 
   @IsString()
-  @MinLength(8)
+  @MinLength(6)
   password!: string;
 }
 

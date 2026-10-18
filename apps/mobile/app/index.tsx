@@ -18,11 +18,13 @@ export default function Splash() {
 
   if (!isLoading) {
     if (!isAuthed) return <Redirect href="/(auth)/welcome" />;
+    // Sellers skip buyer-only onboarding (face + body are for the try-on
+    // flow). They go straight to the seller dashboard after register/login.
+    if (user?.role === 'seller') return <Redirect href="/(seller-tabs)/dashboard" />;
     const needsFace = !user?.onboarding?.faceCaptured;
     const needsBody = !user?.onboarding?.bodyProvided;
-    if (needsFace) return <Redirect href="/(onboarding)/face" />;
     if (needsBody) return <Redirect href="/(onboarding)/body" />;
-    if (user?.role === 'seller') return <Redirect href="/(seller-tabs)/dashboard" />;
+    if (needsFace) return <Redirect href="/(onboarding)/face" />;
     return <Redirect href="/(tabs)/home" />;
   }
 
@@ -34,7 +36,7 @@ export default function Splash() {
       style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
     >
       <View style={{ alignItems: 'center', gap: 32 }}>
-        <Logo size={160} label />
+        <Logo size={160} />
         <ActivityIndicator color={colors.goldSoft} />
       </View>
     </LinearGradient>

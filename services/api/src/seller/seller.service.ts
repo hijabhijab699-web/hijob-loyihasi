@@ -203,6 +203,93 @@ export class SellerService {
     };
   }
 
+  // Compact dashboard stats. activeOrders counts orders that still need the
+  // seller's attention (confirmed/preparing/shipping); delivered/cancelled are
+  // excluded so the counter represents real work-in-flight.
+  async getStats(userId: string) {
+    const seller = await this.requireSeller(userId);
+    const [productCount, orderAgg, activeOrdersCount, tryOnCount] = await Promise.all([
+      this.prisma.product.count({ where: { sellerId: seller.id } }),
+      this.prisma.orderItem.aggregate({
+        where: { variant: { product: { sellerId: seller.id } } },
+        _sum: { quantity: true, priceSnapshot: true },
+      }),
+      this.prisma.order.count({
+        where: {
+          orderStatus: { in: ['pending', 'confirmed', 'processing', 'shipped', 'proba_scheduled'] as any },
+          items: { some: { variant: { product: { sellerId: seller.id } } } },
+        },
+      }),
+      this.prisma.tryOnSession.count({
+        where: { variant: { product: { sellerId: seller.id } } },
+      }),
+    ]);
+    return {
+      totalProducts: productCount,
+      activeOrders: activeOrdersCount,
+      revenue: Number(orderAgg._sum.priceSnapshot ?? 0),
+      tryOnCount,
+    };
+  }
+
+  // Orders list filtered by the seller: an order is "the seller's" if any of
+  // its line items references one of their variants. Items from other sellers
+  // are excluded from the response so each seller only sees their own line.
+  async listOrders(userId: string) {
+    const seller = await this.requireSeller(userId);
+    const orders = await this.prisma.order.findMany({
+      where: {
+        items: { some: { variant: { product: { sellerId: seller.id } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        items: {
+          where: { variant: { product: { sellerId: seller.id } } },
+          include: {
+            variant: { include: { product: { select: { titleRu: true, coverUrl: true } } } },
+          },
+        },
+        user: { select: { fullName: true, username: true, phone: true } },
+      },
+      take: 100,
+    });
+
+    return orders.map((o) => ({
+      id: o.id,
+      code: o.id.slice(0, 8).toUpperCase(),
+      customerName: o.user.fullName || `@${o.user.username}`,
+      time: o.createdAt.toISOString(),
+      status: this.mapOrderStatus(o.orderStatus),
+      total: o.items.reduce((sum, it) => sum + Number(it.priceSnapshot) * it.quantity, 0),
+      tracking: null as string | null,
+      items: o.items.map((it) => ({
+        name: it.titleSnapshot ?? it.variant.product.titleRu,
+        color: it.colorSnapshot ?? it.variant.color,
+        size: it.sizeSnapshot ?? it.variant.size,
+        qty: it.quantity,
+        imageUrl: it.imageSnapshot ?? it.variant.product.coverUrl,
+      })),
+    }));
+  }
+
+  // Collapses the backend's richer order lifecycle into the four buckets the
+  // mobile seller tab shows: new, preparing, shipping, delivered. Unmatched
+  // values fall back to 'new' so a lifecycle change never breaks the UI.
+  private mapOrderStatus(status: string): 'new' | 'preparing' | 'shipping' | 'delivered' {
+    switch (status) {
+      case 'confirmed':
+      case 'processing':
+        return 'preparing';
+      case 'shipped':
+      case 'proba_scheduled':
+        return 'shipping';
+      case 'delivered':
+        return 'delivered';
+      default:
+        return 'new';
+    }
+  }
+
   async listProducts(userId: string) {
     const seller = await this.requireSeller(userId);
     const rows = await this.prisma.product.findMany({

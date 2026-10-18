@@ -1,4 +1,9 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 interface FaceTemplateResponse {
@@ -74,5 +79,51 @@ export class MlFaceClient {
       `extracted face template in ${elapsed}ms (warnings=${template.warnings.length})`,
     );
     return template;
+  }
+
+  /**
+   * Crop just the face out of a selfie onto a transparent-background PNG.
+   * Uses MediaPipe's FACE_OVAL polygon so hair, ears and background are
+   * removed — the result is a feathered oval ready to drop over a mannequin.
+   */
+  async faceOnlyPng(front: Express.Multer.File): Promise<Buffer> {
+    const form = new FormData();
+    form.append(
+      'image',
+      new Blob([new Uint8Array(front.buffer)], { type: front.mimetype }),
+      front.originalname || 'selfie.jpg',
+    );
+    const started = Date.now();
+    const res = await fetch(`${this.baseUrl}/face/face-only`, {
+      method: 'POST',
+      body: form,
+    });
+    const elapsed = Date.now() - started;
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      // 422 is a validation failure the user can fix — tilted head, face too
+      // small/close, off-centre, no face detected. Surface the specific
+      // code so mobile can show the right "qaytadan oling" message.
+      if (res.status === 422) {
+        let code = 'FACE_INVALID';
+        try {
+          const parsed = JSON.parse(body) as { detail?: string };
+          if (typeof parsed.detail === 'string') code = parsed.detail;
+        } catch {
+          // detail wasn't JSON — fall back to the generic code
+        }
+        this.logger.warn(`ml-face /face-only rejected selfie: ${code}`);
+        throw new BadRequestException({ code });
+      }
+      this.logger.error(`ml-face /face-only returned ${res.status}: ${body}`);
+      throw new InternalServerErrorException({
+        code: 'FACE_ONLY_FAILED',
+        upstream: res.status,
+        detail: body,
+      });
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    this.logger.log(`face-only PNG in ${elapsed}ms (${(buf.length / 1024).toFixed(1)} KB)`);
+    return buf;
   }
 }

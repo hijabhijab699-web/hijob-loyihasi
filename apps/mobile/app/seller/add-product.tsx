@@ -1,363 +1,607 @@
-import { useState } from 'react';
+/**
+ * Seller "Yangi mahsulot" (new product) form.
+ *
+ * Posts a payload shaped exactly like NestJS's `CreateProductDto`:
+ *   { titleRu, titleUz?, descriptionRu?, categoryId, basePriceUsd,
+ *     coverUrl, attributes?, variants: [{color, colorHex, size, stock,
+ *     sku, priceUsd?, images?}] }
+ *
+ * Images are uploaded first through `/seller/uploads` (multipart) and the
+ * returned public URLs are embedded in `coverUrl` / `variants[].images`.
+ */
+import { useCallback, useMemo, useState } from 'react';
+import {
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
+import { errorMessage, errorTitle } from '../../src/lib/api-errors';
+import { safeBack } from '../../src/lib/safe-back';
+
+type CategoryId = 'scarves' | 'dresses' | 'bags' | 'accessories';
+
+const CATEGORIES: Array<{ id: CategoryId; labelUz: string; labelRu: string }> = [
+  { id: 'scarves', labelUz: "Ro'mollar / hijoblar", labelRu: 'Платки / хиджабы' },
+  { id: 'dresses', labelUz: "Ko'ylaklar / abayalar", labelRu: 'Платья / абайи' },
+  { id: 'bags', labelUz: 'Sumkalar', labelRu: 'Сумки' },
+  { id: 'accessories', labelUz: 'Aksessuarlar', labelRu: 'Аксессуары' },
+];
+
+// Hijab-common palette the seller can tap through. Hex must be #RRGGBB to
+// satisfy the backend regex. Adding a custom colour means typing the hex.
+const COLOR_SWATCHES: Array<{ hex: string; label: string }> = [
+  { hex: '#1A1A1A', label: 'Qora' },
+  { hex: '#FBF7EA', label: 'Oq' },
+  { hex: '#9A3C3C', label: 'Qizil' },
+  { hex: '#2D3B5C', label: 'Ko\'k' },
+  { hex: '#4B7A4B', label: 'Yashil' },
+  { hex: '#B38B4A', label: 'Oltin' },
+  { hex: '#8E8E76', label: 'Zaytun' },
+  { hex: '#D4C3A0', label: 'Qum' },
+  { hex: '#B85C4A', label: 'Terakot' },
+  { hex: '#B097C6', label: 'Lavanda' },
+];
+
+const SIZE_PRESETS: Record<CategoryId, string[]> = {
+  scarves: ['one-size', '110x110', '140x140'],
+  dresses: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+  bags: ['one-size'],
+  accessories: ['one-size'],
+};
 
 interface Variant {
   color: string;
   colorHex: string;
-  sizes: string;
-  stock: number;
+  size: string;
+  stock: string; // kept as string for TextInput, parsed on submit
+  sku: string;
+  priceUsd: string; // optional, blank = fall back to basePriceUsd
+  images: string[];
 }
 
-const MOCK_VARIANTS: Variant[] = [
-  { color: 'Qizil', colorHex: '#B85450', sizes: 'S, M, L, XL', stock: 20 },
-  { color: 'Qora', colorHex: '#2A2820', sizes: 'S, M, L', stock: 15 },
-];
+const emptyVariant = (categoryId: CategoryId): Variant => ({
+  color: 'Qora',
+  colorHex: '#1A1A1A',
+  size: SIZE_PRESETS[categoryId][0] || 'one-size',
+  stock: '10',
+  sku: '',
+  priceUsd: '',
+  images: [],
+});
+
+const slugify = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 24) || 'product';
 
 export default function AddProductScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
 
-  const [nameUz, setNameUz] = useState('');
-  const [nameRu, setNameRu] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [variants] = useState<Variant[]>(MOCK_VARIANTS);
+  const [titleRu, setTitleRu] = useState('');
+  const [titleUz, setTitleUz] = useState('');
+  const [descriptionRu, setDescriptionRu] = useState('');
+  const [categoryId, setCategoryId] = useState<CategoryId>('scarves');
+  const [basePriceUsd, setBasePriceUsd] = useState('');
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [variants, setVariants] = useState<Variant[]>([emptyVariant('scarves')]);
+  const [showCategory, setShowCategory] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
-  const submit = useMutation({
+  const canSubmit = useMemo(() => {
+    if (titleRu.trim().length < 3) return false;
+    if (!coverUrl) return false;
+    const price = Number(basePriceUsd);
+    if (!Number.isFinite(price) || price < 1) return false;
+    if (variants.length === 0) return false;
+    for (const v of variants) {
+      if (!v.color.trim()) return false;
+      if (!/^#[0-9A-Fa-f]{6}$/.test(v.colorHex)) return false;
+      if (!v.size.trim()) return false;
+      const stock = Number(v.stock);
+      if (!Number.isInteger(stock) || stock < 0) return false;
+    }
+    return true;
+  }, [titleRu, coverUrl, basePriceUsd, variants]);
+
+  const uploadImages = useCallback(
+    async (uris: string[]): Promise<string[]> => {
+      const form = new FormData();
+      uris.forEach((uri, i) => {
+        const name = uri.split('/').pop() || `img-${i}.jpg`;
+        const ext = name.split('.').pop()?.toLowerCase() ?? 'jpg';
+        const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+        form.append('files', {
+          uri,
+          name,
+          type: mime,
+        } as unknown as Blob);
+      });
+      const { data } = await api.post('/seller/uploads', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60_000,
+      });
+      // Backend returns { files: [{ name, key, url, ... }] }.
+      const files = (data?.files ?? data) as Array<{ url: string }>;
+      if (!Array.isArray(files)) throw new Error('Upload response did not include file list');
+      return files.map((d) => d.url);
+    },
+    [],
+  );
+
+  const pickCover = useCallback(async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Ruxsat kerak', "Rasm tanlash uchun galereyaga ruxsat bering.");
+      return;
+    }
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9,
+      allowsEditing: false,
+    });
+    if (picked.canceled || !picked.assets?.[0]) return;
+    setUploadingCover(true);
+    try {
+      const [url] = await uploadImages([picked.assets[0].uri]);
+      if (url) setCoverUrl(url);
+    } catch (e: unknown) {
+      Alert.alert('Yuklab bo\'lmadi', (e as Error).message ?? 'xatolik');
+    } finally {
+      setUploadingCover(false);
+    }
+  }, [uploadImages]);
+
+  const pickVariantImages = useCallback(
+    async (index: number) => {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return;
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.9,
+        allowsMultipleSelection: true,
+        selectionLimit: 5,
+      });
+      if (picked.canceled || !picked.assets?.length) return;
+      try {
+        const urls = await uploadImages(picked.assets.map((a) => a.uri));
+        setVariants((vs) =>
+          vs.map((v, i) => (i === index ? { ...v, images: [...v.images, ...urls] } : v)),
+        );
+      } catch (e: unknown) {
+        Alert.alert('Yuklab bo\'lmadi', (e as Error).message ?? 'xatolik');
+      }
+    },
+    [uploadImages],
+  );
+
+  const updateVariant = (index: number, patch: Partial<Variant>) =>
+    setVariants((vs) => vs.map((v, i) => (i === index ? { ...v, ...patch } : v)));
+
+  const removeVariant = (index: number) =>
+    setVariants((vs) => (vs.length <= 1 ? vs : vs.filter((_, i) => i !== index)));
+
+  const addVariant = () => setVariants((vs) => [...vs, emptyVariant(categoryId)]);
+
+  const createMutation = useMutation({
     mutationFn: async () => {
-      await api.post('/seller/products', { nameUz, nameRu, description, price });
+      const payload = {
+        titleRu: titleRu.trim(),
+        titleUz: titleUz.trim() || undefined,
+        descriptionRu: descriptionRu.trim() || undefined,
+        categoryId,
+        basePriceUsd: Number(basePriceUsd),
+        coverUrl: coverUrl!,
+        variants: variants.map((v, i) => ({
+          color: v.color.trim(),
+          colorHex: v.colorHex,
+          size: v.size.trim(),
+          stock: Number(v.stock || 0),
+          sku: (v.sku.trim() || `${slugify(titleRu)}-${v.size}-${i + 1}`).toUpperCase(),
+          priceUsd: v.priceUsd ? Number(v.priceUsd) : undefined,
+          images: v.images.length ? v.images : undefined,
+        })),
+      };
+      const { data } = await api.post('/seller/products', payload);
+      return data as { id: string };
     },
     onSuccess: () => {
-      Alert.alert('Saqlandi', "Mahsulot muvaffaqiyatli qo'shildi");
-      router.back();
+      Alert.alert('Tayyor', 'Mahsulot qo\'shildi (draft). Tasdiqdan keyin ko\'rinadi.', [
+        { text: 'OK', onPress: () => router.replace('/(seller-tabs)/products') },
+      ]);
+    },
+    onError: (e: unknown) => {
+      Alert.alert(errorTitle(), errorMessage(e));
     },
   });
 
-  const inputStyle = {
-    width: '100%' as const,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.rule,
-    borderRadius: 10,
-    fontSize: 14,
-    color: colors.ink,
-  };
+  const currentCategoryLabel =
+    CATEGORIES.find((c) => c.id === categoryId)?.labelUz ?? categoryId;
 
   return (
     <Screen>
-      {/* Header */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 12,
-          paddingHorizontal: 20,
-          paddingTop: 8,
-          paddingBottom: 16,
-        }}
-      >
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={12}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.rule,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Ionicons name="chevron-back" size={18} color={colors.ink} />
-        </Pressable>
-        <Text
-          variant="displayLarge"
-          color="oliveDeep"
-          style={{
-            fontFamily: theme.fontFamilies.display,
-            fontSize: 22,
-            fontWeight: '700',
-          }}
-        >
-          Yangi mahsulot
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable onPress={() => safeBack()} hitSlop={12}>
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
+          </Pressable>
+          <Text variant="titleMedium" color="ink">
+            Yangi mahsulot
+          </Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        {/* Cover image */}
+        <Text variant="label" color="muted" style={styles.sectionLabel}>
+          Asosiy rasm
         </Text>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 16 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Image Upload */}
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: 16,
-            padding: 20,
-            borderWidth: 1,
-            borderColor: colors.rule,
-          }}
+        <Pressable
+          onPress={pickCover}
+          style={[
+            styles.coverBox,
+            { backgroundColor: colors.surface2, borderColor: colors.rule },
+          ]}
         >
-          <Text
-            variant="bodySmall"
-            color="oliveDeep"
-            style={{ fontSize: 13, fontWeight: '600', marginBottom: 12 }}
-          >
-            Rasmlar
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {/* Main image placeholder */}
-            <Pressable
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: 12,
-                borderWidth: 2,
-                borderStyle: 'dashed',
-                borderColor: colors.rule,
-                backgroundColor: colors.surfaceAlt,
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-              }}
-            >
-              <Ionicons name="image-outline" size={28} color={colors.muted} />
-              <Text variant="caption" color="muted" style={{ fontSize: 10 }}>
-                Asosiy
+          {uploadingCover ? (
+            <ActivityIndicator color={colors.gold} />
+          ) : coverUrl ? (
+            <Image source={{ uri: coverUrl }} style={styles.coverImage} />
+          ) : (
+            <View style={{ alignItems: 'center' }}>
+              <Ionicons name="image-outline" size={36} color={colors.muted} />
+              <Text variant="caption" color="muted" style={{ marginTop: 6 }}>
+                Rasm tanlash
               </Text>
-            </Pressable>
-            {/* Additional slots */}
-            {[1, 2].map((i) => (
-              <Pressable
-                key={i}
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 12,
-                  borderWidth: 2,
-                  borderStyle: 'dashed',
-                  borderColor: colors.rule,
-                  backgroundColor: colors.surfaceAlt,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="add" size={24} color={colors.rule} />
-              </Pressable>
-            ))}
-          </View>
-        </View>
+            </View>
+          )}
+        </Pressable>
 
-        {/* Product Info */}
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: 16,
-            padding: 20,
-            borderWidth: 1,
-            borderColor: colors.rule,
-            gap: 14,
-          }}
+        {/* Titles + description */}
+        <Field label="Nomi (Rus)" value={titleRu} onChangeText={setTitleRu} placeholder="Хиджаб «Нежность»" />
+        <Field label="Nomi (O'zbek)" value={titleUz} onChangeText={setTitleUz} placeholder="Hijob «Nazokat»" />
+        <Field
+          label="Tavsif"
+          value={descriptionRu}
+          onChangeText={setDescriptionRu}
+          placeholder="Yumshoq shifon mato, 110×110 sm"
+          multiline
+        />
+
+        {/* Category picker */}
+        <Text variant="label" color="muted" style={styles.sectionLabel}>
+          Kategoriya
+        </Text>
+        <Pressable
+          onPress={() => setShowCategory(true)}
+          style={[
+            styles.picker,
+            { backgroundColor: colors.surface2, borderColor: colors.rule },
+          ]}
         >
-          <Text
-            variant="bodySmall"
-            color="oliveDeep"
-            style={{ fontSize: 13, fontWeight: '600' }}
-          >
-            Asosiy ma'lumot
+          <Text variant="body" color="ink">
+            {currentCategoryLabel}
           </Text>
+          <Ionicons name="chevron-down" size={18} color={colors.muted} />
+        </Pressable>
 
-          {/* Name Uz */}
-          <View>
-            <Text variant="caption" color="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Nomi (o'zbekcha)
-            </Text>
-            <TextInput
-              value={nameUz}
-              onChangeText={setNameUz}
-              placeholder="Masalan: Ipak ro'mol Premium"
-              placeholderTextColor={colors.muted}
-              style={inputStyle}
-            />
-          </View>
-
-          {/* Name Ru */}
-          <View>
-            <Text variant="caption" color="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Nomi (ruscha)
-            </Text>
-            <TextInput
-              value={nameRu}
-              onChangeText={setNameRu}
-              placeholder="Например: Шёлковый платок Премиум"
-              placeholderTextColor={colors.muted}
-              style={inputStyle}
-            />
-          </View>
-
-          {/* Description */}
-          <View>
-            <Text variant="caption" color="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Tavsif
-            </Text>
-            <TextInput
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Mahsulot haqida batafsil..."
-              placeholderTextColor={colors.muted}
-              multiline
-              style={{
-                ...inputStyle,
-                minHeight: 72,
-                textAlignVertical: 'top',
-              }}
-            />
-          </View>
-
-          {/* Category + Price row */}
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text variant="caption" color="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                Kategoriya
-              </Text>
-              <Pressable
-                style={{
-                  paddingVertical: 12,
-                  paddingHorizontal: 14,
-                  backgroundColor: colors.surfaceAlt,
-                  borderWidth: 1,
-                  borderColor: colors.rule,
-                  borderRadius: 10,
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <Text variant="bodySmall" color="ink" style={{ fontSize: 14 }}>
-                  Ro'mollar
-                </Text>
-                <Ionicons name="chevron-down" size={14} color={colors.muted} />
-              </Pressable>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="caption" color="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                Narx (USD)
-              </Text>
-              <TextInput
-                value={price}
-                onChangeText={setPrice}
-                placeholder="$0.00"
-                placeholderTextColor={colors.muted}
-                keyboardType="numeric"
-                style={inputStyle}
-              />
-            </View>
-          </View>
-        </View>
+        {/* Price */}
+        <Field
+          label="Narx (USD)"
+          value={basePriceUsd}
+          onChangeText={(t) => setBasePriceUsd(t.replace(/[^0-9.]/g, ''))}
+          placeholder="22"
+          keyboardType="decimal-pad"
+        />
 
         {/* Variants */}
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: 16,
-            padding: 20,
-            borderWidth: 1,
-            borderColor: colors.rule,
-            gap: 14,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Text
-              variant="bodySmall"
-              color="oliveDeep"
-              style={{ fontSize: 13, fontWeight: '600' }}
-            >
-              Variantlar
+        <View style={styles.variantsHeader}>
+          <Text variant="label" color="muted">
+            Variantlar ({variants.length})
+          </Text>
+          <Pressable onPress={addVariant} hitSlop={10}>
+            <Text variant="label" color="gold" style={{ fontWeight: '600' }}>
+              + Qo'shish
             </Text>
-            <Pressable>
-              <Text variant="bodySmall" style={{ fontSize: 12, fontWeight: '500', color: colors.gold }}>
-                + Qo'shish
-              </Text>
-            </Pressable>
-          </View>
-
-          {variants.map((v) => (
-            <View
-              key={v.color}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-                padding: 12,
-                backgroundColor: colors.surfaceAlt,
-                borderRadius: 10,
-              }}
-            >
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 12,
-                  backgroundColor: v.colorHex,
-                  flexShrink: 0,
-                }}
-              />
-              <View style={{ flex: 1 }}>
-                <Text
-                  variant="bodySmall"
-                  color="ink"
-                  style={{ fontSize: 13, fontWeight: '500' }}
-                >
-                  {v.color}
-                </Text>
-                <Text variant="caption" color="muted" style={{ fontSize: 11 }}>
-                  {v.sizes} · Zaxira: {v.stock}
-                </Text>
-              </View>
-              <Ionicons name="open-outline" size={16} color={colors.muted} />
-            </View>
-          ))}
+          </Pressable>
         </View>
 
-        {/* Submit Button */}
-        <Pressable
-          onPress={() => submit.mutate()}
-          style={({ pressed }) => ({
-            backgroundColor: colors.oliveDeep,
-            borderRadius: 14,
-            padding: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            opacity: pressed ? 0.9 : 1,
-          })}
-        >
-          <Ionicons name="checkmark" size={18} color={colors.goldSoft} />
-          <Text
-            variant="body"
-            style={{ fontSize: 15, fontWeight: '600', color: colors.goldSoft }}
+        {variants.map((v, i) => (
+          <View
+            key={i}
+            style={[styles.variantCard, { backgroundColor: colors.surface, borderColor: colors.rule }]}
           >
-            Saqlash
-          </Text>
+            <View style={styles.variantHeaderRow}>
+              <Text variant="label" color="ink" style={{ fontWeight: '600' }}>
+                Variant {i + 1}
+              </Text>
+              {variants.length > 1 && (
+                <Pressable onPress={() => removeVariant(i)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                </Pressable>
+              )}
+            </View>
+
+            {/* Color swatches */}
+            <Text variant="caption" color="muted" style={{ marginBottom: 6 }}>
+              Rang
+            </Text>
+            <View style={styles.swatchRow}>
+              {COLOR_SWATCHES.map((sw) => {
+                const active = v.colorHex === sw.hex;
+                return (
+                  <Pressable
+                    key={sw.hex}
+                    onPress={() => updateVariant(i, { color: sw.label, colorHex: sw.hex })}
+                    style={[
+                      styles.swatch,
+                      { backgroundColor: sw.hex, borderColor: active ? colors.gold : colors.rule, borderWidth: active ? 3 : 1 },
+                    ]}
+                  />
+                );
+              })}
+            </View>
+
+            {/* Size pills */}
+            <Text variant="caption" color="muted" style={{ marginTop: 10, marginBottom: 6 }}>
+              O'lcham
+            </Text>
+            <View style={styles.sizeRow}>
+              {SIZE_PRESETS[categoryId].map((s) => {
+                const active = v.size === s;
+                return (
+                  <Pressable
+                    key={s}
+                    onPress={() => updateVariant(i, { size: s })}
+                    style={[
+                      styles.sizePill,
+                      {
+                        backgroundColor: active ? colors.oliveDeep : colors.surface2,
+                        borderColor: active ? colors.oliveDeep : colors.rule,
+                      },
+                    ]}
+                  >
+                    <Text
+                      variant="caption"
+                      color={active ? 'surface' : 'ink'}
+                      style={{ fontWeight: '600' }}
+                    >
+                      {s}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Stock + optional price */}
+            <View style={styles.row2}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Field
+                  label="Zaxira"
+                  value={v.stock}
+                  onChangeText={(t) => updateVariant(i, { stock: t.replace(/[^0-9]/g, '') })}
+                  keyboardType="number-pad"
+                  compact
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Field
+                  label="Narx (ixt.)"
+                  value={v.priceUsd}
+                  onChangeText={(t) => updateVariant(i, { priceUsd: t.replace(/[^0-9.]/g, '') })}
+                  keyboardType="decimal-pad"
+                  placeholder="asos narx"
+                  compact
+                />
+              </View>
+            </View>
+
+            {/* Images */}
+            <Text variant="caption" color="muted" style={{ marginTop: 10, marginBottom: 6 }}>
+              Variant rasmlari
+            </Text>
+            <View style={styles.imageRow}>
+              {v.images.map((url) => (
+                <Image key={url} source={{ uri: url }} style={styles.variantThumb} />
+              ))}
+              <Pressable
+                onPress={() => pickVariantImages(i)}
+                style={[styles.variantThumbAdd, { borderColor: colors.rule, backgroundColor: colors.surface2 }]}
+              >
+                <Ionicons name="add" size={28} color={colors.muted} />
+              </Pressable>
+            </View>
+          </View>
+        ))}
+
+        {/* Submit */}
+        <Pressable
+          onPress={() => canSubmit && createMutation.mutate()}
+          disabled={!canSubmit || createMutation.isPending}
+          style={[
+            styles.submit,
+            {
+              backgroundColor: canSubmit ? colors.oliveDeep : colors.muted,
+              opacity: createMutation.isPending ? 0.6 : 1,
+            },
+          ]}
+        >
+          {createMutation.isPending ? (
+            <ActivityIndicator color={colors.surface} />
+          ) : (
+            <Text variant="body" color="surface" style={{ fontWeight: '700' }}>
+              Mahsulotni saqlash
+            </Text>
+          )}
         </Pressable>
+
+        <Text variant="caption" color="muted" style={{ textAlign: 'center', marginTop: 10, marginBottom: 20 }}>
+          Saqlash tugmasi faol bo'lishi uchun: nom, kategoriya, narx, asosiy rasm va kamida bitta variant kerak.
+        </Text>
       </ScrollView>
+
+      {/* Category modal */}
+      <Modal visible={showCategory} transparent animationType="fade" onRequestClose={() => setShowCategory(false)}>
+        <Pressable style={styles.modalScrim} onPress={() => setShowCategory(false)}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <Text variant="titleSmall" color="ink" style={{ marginBottom: 8 }}>
+              Kategoriya tanlang
+            </Text>
+            {CATEGORIES.map((c) => {
+              const active = c.id === categoryId;
+              return (
+                <Pressable
+                  key={c.id}
+                  onPress={() => {
+                    setCategoryId(c.id);
+                    setVariants((vs) =>
+                      vs.map((v) =>
+                        SIZE_PRESETS[c.id].includes(v.size) ? v : { ...v, size: SIZE_PRESETS[c.id][0]! },
+                      ),
+                    );
+                    setShowCategory(false);
+                  }}
+                  style={[styles.modalRow, { borderColor: colors.rule }]}
+                >
+                  <View>
+                    <Text variant="body" color="ink">{c.labelUz}</Text>
+                    <Text variant="caption" color="muted">{c.labelRu}</Text>
+                  </View>
+                  {active && <Ionicons name="checkmark-circle" size={22} color={colors.gold} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }
+
+function Field({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  keyboardType,
+  multiline,
+  compact,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder?: string;
+  keyboardType?: 'default' | 'number-pad' | 'decimal-pad';
+  multiline?: boolean;
+  compact?: boolean;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ marginTop: compact ? 0 : 14 }}>
+      <Text variant="caption" color="muted" style={{ marginBottom: 6 }}>
+        {label}
+      </Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.muted}
+        keyboardType={keyboardType ?? 'default'}
+        multiline={multiline}
+        style={[
+          styles.input,
+          {
+            backgroundColor: colors.surface2,
+            borderColor: colors.rule,
+            color: colors.ink,
+            minHeight: multiline ? 80 : 44,
+            textAlignVertical: multiline ? 'top' : 'center',
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  scroll: { padding: 20, paddingBottom: 60 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  sectionLabel: { marginTop: 14, marginBottom: 6 },
+  coverBox: {
+    height: 200,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  coverImage: { width: '100%', height: '100%' },
+  input: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+  },
+  picker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  variantsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 10 },
+  variantCard: { borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 12 },
+  variantHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  swatchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  swatch: { width: 32, height: 32, borderRadius: 16 },
+  sizeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  sizePill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1 },
+  row2: { flexDirection: 'row', marginTop: 10 },
+  imageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  variantThumb: { width: 64, height: 64, borderRadius: 8 },
+  variantThumbAdd: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submit: {
+    marginTop: 24,
+    paddingVertical: 15,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalScrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalSheet: { padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 40 },
+  modalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+});

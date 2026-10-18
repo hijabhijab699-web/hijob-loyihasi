@@ -35,6 +35,10 @@ export class CatalogFiltersDto {
   sort?: 'popularity' | 'priceLow' | 'priceHigh' | 'new';
 
   @IsOptional()
+  @IsString()
+  q?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

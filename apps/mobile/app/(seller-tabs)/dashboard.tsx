@@ -1,6 +1,7 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
@@ -15,91 +16,101 @@ interface SellerStats {
   tryOnCount: number;
 }
 
-const MOCK_STATS: SellerStats = {
-  totalProducts: 24,
-  activeOrders: 8,
-  revenue: 1200,
-  tryOnCount: 156,
+type OrderStatus = 'new' | 'preparing' | 'shipping' | 'delivered';
+
+interface RecentOrder {
+  id: string;
+  code: string;
+  customerName: string;
+  time: string;
+  status: OrderStatus;
+  total: number;
+  items: Array<{ name: string; qty: number; imageUrl?: string | null }>;
+}
+
+const STATUS_BADGES: Record<OrderStatus, { label: string; bg: string; color: string }> = {
+  new: { label: 'Yangi', bg: 'rgba(217,162,75,0.12)', color: '#D9A24B' },
+  preparing: { label: 'Tayyorlanmoqda', bg: 'rgba(122,138,91,0.12)', color: '#7A8A5B' },
+  shipping: { label: "Yo'lda", bg: 'rgba(95,122,148,0.12)', color: '#5F7A94' },
+  delivered: { label: 'Yetkazildi', bg: 'rgba(54,57,36,0.08)', color: '#363924' },
 };
 
-const MOCK_ORDERS = [
-  {
-    id: '1',
-    title: "Ipak ro'mol — Qizil",
-    qty: 2,
-    time: 'Bugun 14:30',
-    status: 'Yangi' as const,
-    statusBg: 'rgba(217,162,75,0.12)',
-    statusColor: '#D9A24B',
-  },
-  {
-    id: '2',
-    title: "Shoyi ko'ylak — Oq",
-    qty: 1,
-    time: 'Kecha 18:05',
-    status: 'Tayyor' as const,
-    statusBg: 'rgba(122,138,91,0.12)',
-    statusColor: '#7A8A5B',
-  },
-  {
-    id: '3',
-    title: 'Charm sumka — Jigar',
-    qty: 1,
-    time: '28-sen',
-    status: "Yo'lda" as const,
-    statusBg: 'rgba(95,122,148,0.12)',
-    statusColor: '#5F7A94',
-  },
-];
+// Zero-state stats so the dashboard can render while /seller/stats loads
+// or during a network outage. Real values replace this once the query lands.
+const EMPTY_STATS: SellerStats = {
+  totalProducts: 0,
+  activeOrders: 0,
+  revenue: 0,
+  tryOnCount: 0,
+};
 
-const TOP_PRODUCTS = [
-  { name: "Ipak ro'mol", price: '$45', bg: ['#EDE5D0', '#D9D0BE'] },
-  { name: "Shoyi ko'ylak", price: '$89', bg: ['#D9D0BE', '#EDE5D0'] },
-];
+interface SellerProductPreview {
+  id: string;
+  titleRu: string;
+  titleUz: string | null;
+  basePriceUsd: number;
+  coverUrl: string | null;
+}
+
+const PLACEHOLDER_BG = ['#EDE5D0', '#D9D0BE'];
 
 export default function SellerDashboard() {
   const { colors, theme } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
+  const { i18n } = useTranslation();
+  const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
 
   const { data: stats } = useQuery<SellerStats>({
     queryKey: ['seller', 'stats'],
-    queryFn: async () => {
-      try {
-        return (await api.get('/seller/stats')).data;
-      } catch {
-        return MOCK_STATS;
-      }
-    },
+    queryFn: async () => (await api.get('/seller/stats')).data,
+    staleTime: 30_000,
   });
 
-  const s = stats ?? MOCK_STATS;
+  // Preview of the 3 most recent orders; the dedicated Orders tab shows the
+  // full list from the same endpoint.
+  const { data: recentOrders } = useQuery<RecentOrder[]>({
+    queryKey: ['seller', 'orders', 'recent'],
+    queryFn: async () => (await api.get<RecentOrder[]>('/seller/orders')).data.slice(0, 3),
+    staleTime: 30_000,
+  });
+
+  // Seller's own first 2 products for the "Top mahsulotlar" strip; this
+  // replaces the hard-coded placeholder names that showed stock titles even
+  // for brand-new sellers.
+  const { data: topProducts } = useQuery<SellerProductPreview[]>({
+    queryKey: ['seller', 'products', 'top'],
+    queryFn: async () => (await api.get<SellerProductPreview[]>('/seller/products')).data.slice(0, 2),
+    staleTime: 30_000,
+  });
+
+  const s = stats ?? EMPTY_STATS;
   const revenue = s.revenue >= 1000 ? `$${(s.revenue / 1000).toFixed(1)}k` : `$${s.revenue}`;
 
   const STAT_CARDS = [
     {
-      label: 'Mahsulotlar',
+      label: isRu ? 'Товары' : 'Mahsulotlar',
       value: String(s.totalProducts),
       icon: 'grid-outline' as const,
       iconColor: colors.oliveDeep,
       iconBg: 'rgba(54,57,36,0.08)',
     },
     {
-      label: 'Buyurtmalar',
+      label: isRu ? 'Заказы' : 'Buyurtmalar',
       value: String(s.activeOrders),
       icon: 'cube-outline' as const,
       iconColor: '#A88848',
       iconBg: 'rgba(201,169,110,0.15)',
     },
     {
-      label: 'Daromad',
+      label: isRu ? 'Доход' : 'Daromad',
       value: revenue,
       icon: 'trending-up-outline' as const,
       iconColor: '#7A8A5B',
       iconBg: 'rgba(122,138,91,0.12)',
     },
     {
-      label: 'Primerka',
+      label: isRu ? 'Примерки' : 'Primerka',
       value: String(s.tryOnCount),
       icon: 'body-outline' as const,
       iconColor: colors.oliveDeep,
@@ -134,13 +145,14 @@ export default function SellerDashboard() {
                 fontWeight: '700',
               }}
             >
-              Bosh sahifa
+              {isRu ? 'Главная' : 'Bosh sahifa'}
             </Text>
             <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
-              Do'koningiz holati
+              {isRu ? 'Состояние вашего магазина' : "Do'koningiz holati"}
             </Text>
           </View>
           <Pressable
+            onPress={() => router.push('/(seller-tabs)/profile')}
             style={{
               width: 40,
               height: 40,
@@ -242,7 +254,7 @@ export default function SellerDashboard() {
             color="oliveDeep"
             style={{ fontSize: 13, fontWeight: '600', marginBottom: 12 }}
           >
-            Tezkor amallar
+            {isRu ? 'Быстрые действия' : 'Tezkor amallar'}
           </Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Pressable
@@ -262,7 +274,7 @@ export default function SellerDashboard() {
                 variant="caption"
                 style={{ fontSize: 11, fontWeight: '500', color: colors.goldSoft }}
               >
-                Yangi mahsulot
+                {isRu ? 'Новый товар' : 'Yangi mahsulot'}
               </Text>
             </Pressable>
             <Pressable
@@ -282,7 +294,7 @@ export default function SellerDashboard() {
                 variant="caption"
                 style={{ fontSize: 11, fontWeight: '500', color: colors.oliveDeep }}
               >
-                Buyurtmalar
+                {isRu ? 'Заказы' : 'Buyurtmalar'}
               </Text>
             </Pressable>
             <Pressable
@@ -302,7 +314,7 @@ export default function SellerDashboard() {
                 variant="caption"
                 style={{ fontSize: 11, fontWeight: '500', color: colors.oliveDeep }}
               >
-                Statistika
+                {isRu ? 'Статистика' : 'Statistika'}
               </Text>
             </Pressable>
           </View>
@@ -333,64 +345,78 @@ export default function SellerDashboard() {
               color="oliveDeep"
               style={{ fontSize: 13, fontWeight: '600' }}
             >
-              So'nggi buyurtmalar
+              {isRu ? 'Последние заказы' : "So'nggi buyurtmalar"}
             </Text>
             <Pressable onPress={() => router.push('/(seller-tabs)/orders' as any)}>
               <Text variant="bodySmall" style={{ fontSize: 12, color: colors.gold }}>
-                Barchasi →
+                {isRu ? 'Все →' : 'Barchasi →'}
               </Text>
             </Pressable>
           </View>
           <View style={{ gap: 10 }}>
-            {MOCK_ORDERS.map((order) => (
-              <View
-                key={order.id}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: 10,
-                  backgroundColor: colors.surfaceAlt,
-                  borderRadius: 10,
-                }}
-              >
+            {(recentOrders && recentOrders.length > 0) ? recentOrders.map((order) => {
+              const badge = STATUS_BADGES[order.status];
+              const firstItem = order.items[0];
+              const subtitle = firstItem
+                ? `${firstItem.qty} dona · ${new Date(order.time).toLocaleDateString()}`
+                : new Date(order.time).toLocaleDateString();
+              return (
                 <View
+                  key={order.id}
                   style={{
-                    width: 44,
-                    height: 44,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: 10,
+                    backgroundColor: colors.surfaceAlt,
                     borderRadius: 10,
-                    backgroundColor: '#EDE5D0',
-                  }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text
-                    variant="bodySmall"
-                    color="ink"
-                    style={{ fontSize: 13, fontWeight: '500' }}
-                  >
-                    {order.title}
-                  </Text>
-                  <Text variant="caption" color="muted" style={{ fontSize: 11 }}>
-                    {order.qty} dona · {order.time}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    backgroundColor: order.statusBg,
-                    borderRadius: 20,
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
                   }}
                 >
-                  <Text
-                    variant="caption"
-                    style={{ fontSize: 11, fontWeight: '500', color: order.statusColor }}
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 10,
+                      backgroundColor: '#EDE5D0',
+                    }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      variant="bodySmall"
+                      color="ink"
+                      style={{ fontSize: 13, fontWeight: '500' }}
+                      numberOfLines={1}
+                    >
+                      {firstItem?.name ?? order.customerName}
+                    </Text>
+                    <Text variant="caption" color="muted" style={{ fontSize: 11 }}>
+                      {subtitle}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      backgroundColor: badge.bg,
+                      borderRadius: 20,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                    }}
                   >
-                    {order.status}
-                  </Text>
+                    <Text
+                      variant="caption"
+                      style={{ fontSize: 11, fontWeight: '500', color: badge.color }}
+                    >
+                      {badge.label}
+                    </Text>
+                  </View>
                 </View>
+              );
+            }) : (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
+                  {isRu ? 'Пока нет заказов' : "Hali buyurtmalar yo'q"}
+                </Text>
               </View>
-            ))}
+            )}
           </View>
         </View>
 
@@ -418,54 +444,68 @@ export default function SellerDashboard() {
               color="oliveDeep"
               style={{ fontSize: 13, fontWeight: '600' }}
             >
-              Top mahsulotlar
+              {isRu ? 'Топ товары' : 'Top mahsulotlar'}
             </Text>
             <Pressable onPress={() => router.push('/(seller-tabs)/products' as any)}>
               <Text variant="bodySmall" style={{ fontSize: 12, color: colors.gold }}>
-                Barchasi →
+                {isRu ? 'Все →' : 'Barchasi →'}
               </Text>
             </Pressable>
           </View>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {TOP_PRODUCTS.map((prod, i) => (
-              <View
-                key={prod.name}
-                style={{
-                  flex: 1,
-                  backgroundColor: colors.surfaceAlt,
-                  borderRadius: 12,
-                  overflow: 'hidden',
-                }}
-              >
-                <View
+          {(topProducts && topProducts.length > 0) ? (
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {topProducts.map((prod, i) => (
+                <Pressable
+                  key={prod.id}
+                  onPress={() => router.push(`/seller/product/${prod.id}` as any)}
                   style={{
-                    height: 100,
-                    backgroundColor: prod.bg[0],
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    flex: 1,
+                    backgroundColor: colors.surfaceAlt,
+                    borderRadius: 12,
+                    overflow: 'hidden',
                   }}
                 >
-                  <Ionicons name="ribbon-outline" size={32} color="rgba(255,255,255,0.3)" />
-                </View>
-                <View style={{ padding: 10 }}>
-                  <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
-                    {prod.name}
-                  </Text>
-                  <Text
-                    variant="bodySmall"
-                    color="oliveDeep"
+                  <View
                     style={{
-                      fontFamily: theme.fontFamilies.display,
-                      fontSize: 14,
-                      fontWeight: '600',
+                      height: 100,
+                      backgroundColor: PLACEHOLDER_BG[i % PLACEHOLDER_BG.length],
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
                     }}
                   >
-                    {prod.price}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
+                    {prod.coverUrl ? (
+                      <Image source={{ uri: prod.coverUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    ) : (
+                      <Ionicons name="ribbon-outline" size={32} color="rgba(255,255,255,0.3)" />
+                    )}
+                  </View>
+                  <View style={{ padding: 10 }}>
+                    <Text variant="caption" color="muted" style={{ fontSize: 12 }} numberOfLines={1}>
+                      {prod.titleRu || prod.titleUz || "Nomsiz"}
+                    </Text>
+                    <Text
+                      variant="bodySmall"
+                      color="oliveDeep"
+                      style={{
+                        fontFamily: theme.fontFamilies.display,
+                        fontSize: 14,
+                        fontWeight: '600',
+                      }}
+                    >
+                      ${prod.basePriceUsd.toFixed(2)}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
+                {isRu ? 'Товары ещё не добавлены' : "Hali mahsulot qo'shilmagan"}
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </Screen>

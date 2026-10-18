@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MlCompositorClient } from './ml-compositor.client';
 import { StorageService } from '../storage/storage.service';
@@ -16,7 +17,19 @@ const IMAGE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 interface CachedImage {
   bytes: Buffer;
+  mimetype: string;
   expiresAt: number;
+}
+
+/** Magic-number sniff so we never lie about Content-Type when the stream
+ * endpoint ships bytes back. PNG + JPEG is enough — the fallback branch of
+ * createFaceSwap returns PNG mannequin bytes, every other path returns JPEG,
+ * and iOS silently drops the wrong mime. */
+function sniffMime(buf: Buffer): string {
+  if (buf.length >= 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+    return 'image/png';
+  }
+  return 'image/jpeg';
 }
 
 @Injectable()
@@ -34,14 +47,14 @@ export class TryOnService {
     this.publicBase = config.get<string>('API_URL') ?? 'http://localhost:4000';
   }
 
-  getCachedImage(sessionId: string): Buffer | null {
+  getCachedImage(sessionId: string): { bytes: Buffer; mimetype: string } | null {
     const entry = this.imageCache.get(sessionId);
     if (!entry) return null;
     if (entry.expiresAt < Date.now()) {
       this.imageCache.delete(sessionId);
       return null;
     }
-    return entry.bytes;
+    return { bytes: entry.bytes, mimetype: entry.mimetype };
   }
 
   /**
@@ -131,6 +144,7 @@ export class TryOnService {
     // without holding a big base64 payload in the JSON response.
     this.imageCache.set(session.id, {
       bytes: jpeg,
+      mimetype: sniffMime(jpeg),
       expiresAt: Date.now() + IMAGE_CACHE_TTL_MS,
     });
 
@@ -163,10 +177,43 @@ export class TryOnService {
    * the buyer's selfie to ml-compositor's ``/compose/faceswap`` route, and
    * cache the result the same way the TPS compose flow does.
    */
+  private heightBand(cm: number | null): 'short' | 'mid' | 'tall' {
+    if (!cm || cm <= 160) return 'short';
+    if (cm <= 170) return 'mid';
+    return 'tall';
+  }
+
+  /** Pick the body-matched (bodyType × height band) render from the latest
+   * done style-job's resultVariants map. Returns null when the product has
+   * no multi-variant job yet (legacy items). */
+  private async pickBodyMatchedMannequin(
+    productId: string,
+    bodyType: 'slim' | 'medium' | 'full',
+    heightCm: number | null,
+  ): Promise<string | null> {
+    const job = await this.prisma.productStyleJob.findFirst({
+      where: { productId, status: 'done', resultVariants: { not: Prisma.JsonNull } },
+      orderBy: { finishedAt: 'desc' },
+      select: { resultVariants: true },
+    });
+    const variants = job?.resultVariants as Record<string, string> | null | undefined;
+    if (!variants) return null;
+    const band = this.heightBand(heightCm);
+    return (
+      variants[`${bodyType}-${band}`] ??
+      variants[`${bodyType}-mid`] ??
+      variants['medium-mid'] ??
+      Object.values(variants)[0] ??
+      null
+    );
+  }
+
   async createFaceSwap(
     userId: string,
     variantId: string,
     faceImage: Express.Multer.File,
+    bodyType: 'slim' | 'medium' | 'full' = 'medium',
+    heightCm: number | null = null,
   ) {
     const started = Date.now();
 
@@ -180,7 +227,16 @@ export class TryOnService {
     });
     if (!variant) throw new NotFoundException('VARIANT_NOT_FOUND');
 
-    const mannequinUrl = variant.product.styledImageUrl ?? variant.product.coverUrl;
+    // Prefer the body-matched (bodyType × height-band) variant from the
+    // latest done style-job. Falls back to the product's single
+    // styledImageUrl → cover, so legacy items keep working.
+    const bodyMatchedUrl = await this.pickBodyMatchedMannequin(
+      variant.product.id,
+      bodyType,
+      heightCm,
+    );
+    const mannequinUrl =
+      bodyMatchedUrl ?? variant.product.styledImageUrl ?? variant.product.coverUrl;
     if (!mannequinUrl) throw new BadRequestException('STYLED_IMAGE_MISSING');
 
     // The styledImageUrl is a public URL. In local mode it points at our own
@@ -197,10 +253,60 @@ export class TryOnService {
       throw new BadRequestException('STYLED_IMAGE_UNREACHABLE');
     }
 
-    const jpeg = await this.compositor.composeFaceSwap(
-      { buffer: mannequinBytes, mimetype: mannequinMime, filename: 'mannequin.jpg' },
-      faceImage,
-    );
+    // Try ML face-swap. If the mannequin has no face (our new faceless
+    // mannequin renders — the "oval blank where the face would be" prompt
+    // tells GPT not to paint one), the ML service returns 422
+    // NO_MANNEQUIN_FACE. In that case fall back to the raw mannequin
+    // image: the buyer still sees themselves in context (same body +
+    // same hijab render matched to their body-type×height) even if the
+    // face overlay didn't paint over the plastic head.
+    // Try FaceFusion first (occlusion-aware swap + GFPGAN enhancer) —
+    // visibly cleaner result. Fall back to the raw InsightFace path on
+    // any failure OTHER than NO_MANNEQUIN_FACE. If BOTH report no face
+    // on the mannequin we return the raw render as before so the buyer
+    // still sees their body-matched hijab even if the face overlay
+    // couldn't paint onto a plastic head.
+    let jpeg: Buffer;
+    // `swapped` tells the mobile client whether the buyer's face actually
+    // landed on the mannequin, or whether we're returning the raw render
+    // because no face could be detected / composed. In fallback mode the
+    // Primerka overlay will draw its own face-on-top preview; in swap
+    // mode the server image IS the final look and no overlay is drawn.
+    let swapped = false;
+    const mannequinFile = {
+      buffer: mannequinBytes,
+      mimetype: mannequinMime,
+      filename: 'mannequin.jpg',
+    };
+    const isNoFace = (err: unknown): boolean => {
+      const s = JSON.stringify((err as { response?: unknown })?.response ?? err);
+      return /NO_MANNEQUIN_FACE|FACESWAP_UNPROCESSABLE/i.test(s);
+    };
+    try {
+      jpeg = await this.compositor.composeFacefusion(mannequinFile, faceImage);
+      swapped = true;
+    } catch (ffErr) {
+      if (isNoFace(ffErr)) {
+        this.logger.log(
+          `faceswap fallback: mannequin has no detectable face, returning raw render (${mannequinUrl})`,
+        );
+        jpeg = mannequinBytes;
+      } else {
+        this.logger.warn(
+          `facefusion failed, falling back to InsightFace: ${(ffErr as Error).message}`,
+        );
+        try {
+          jpeg = await this.compositor.composeFaceSwap(mannequinFile, faceImage);
+          swapped = true;
+        } catch (ifErr) {
+          if (isNoFace(ifErr)) {
+            jpeg = mannequinBytes;
+          } else {
+            throw ifErr;
+          }
+        }
+      }
+    }
 
     const session = await this.prisma.tryOnSession.create({
       data: {
@@ -213,6 +319,7 @@ export class TryOnService {
 
     this.imageCache.set(session.id, {
       bytes: jpeg,
+      mimetype: sniffMime(jpeg),
       expiresAt: Date.now() + IMAGE_CACHE_TTL_MS,
     });
 
@@ -229,6 +336,7 @@ export class TryOnService {
     return {
       sessionId: session.id,
       resultUrl,
+      swapped,
       latencyMs: session.latencyMs ?? 0,
       expiresAt: new Date(Date.now() + IMAGE_CACHE_TTL_MS).toISOString(),
     };

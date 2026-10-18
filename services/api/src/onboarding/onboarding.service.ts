@@ -16,6 +16,23 @@ export class OnboardingService {
     private readonly storage: StorageService,
   ) {}
 
+  /**
+   * Return just the face as a transparent-background PNG. Used by the Primerka
+   * tab to drop the buyer's face onto a mannequin without pulling in hair or
+   * background. Also stores the PNG under the user's prefix so the mobile
+   * client can keep showing it after the request completes.
+   */
+  async extractFaceOnly(userId: string, front: Express.Multer.File) {
+    const png = await this.mlFace.faceOnlyPng(front);
+    const saved = await this.storage.save(
+      `face/overlay/${userId}`,
+      png,
+      'image/png',
+      'face-overlay.png',
+    );
+    return { url: saved.url, bytes: png.length };
+  }
+
   async uploadFace(
     userId: string,
     files: {

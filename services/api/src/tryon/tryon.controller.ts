@@ -53,12 +53,19 @@ export class TryOnController {
   @UseInterceptors(FileInterceptor('face', { limits: { fileSize: MAX_IMAGE_BYTES } }))
   faceswap(
     @CurrentUser() user: CurrentUserInfo,
-    @Body() dto: { variantId: string },
+    @Body() dto: { variantId: string; bodyType?: string; heightCm?: string | number },
     @UploadedFile() face: Express.Multer.File,
   ) {
     if (!face) throw new BadRequestException('FACE_IMAGE_REQUIRED');
     if (!dto?.variantId) throw new BadRequestException('VARIANT_ID_REQUIRED');
-    return this.tryon.createFaceSwap(user.id, dto.variantId, face);
+    const bodyType = dto.bodyType === 'slim' || dto.bodyType === 'full' ? dto.bodyType : 'medium';
+    const heightCm =
+      typeof dto.heightCm === 'string'
+        ? Number(dto.heightCm) || null
+        : typeof dto.heightCm === 'number'
+        ? dto.heightCm
+        : null;
+    return this.tryon.createFaceSwap(user.id, dto.variantId, face, bodyType, heightCm);
   }
 
   /**
@@ -67,11 +74,14 @@ export class TryOnController {
    */
   @Get('preview/:sessionId/image')
   async streamImage(@Param('sessionId') sessionId: string, @Res() res: Response) {
-    const bytes = this.tryon.getCachedImage(sessionId);
-    if (!bytes) throw new NotFoundException('IMAGE_EXPIRED_OR_MISSING');
-    res.setHeader('Content-Type', 'image/jpeg');
+    const cached = this.tryon.getCachedImage(sessionId);
+    if (!cached) throw new NotFoundException('IMAGE_EXPIRED_OR_MISSING');
+    // Mannequin fallback (NO_MANNEQUIN_FACE path) returns raw PNG bytes;
+    // compose + faceswap paths return JPEG. iOS silently drops the image
+    // when the Content-Type lies, so sniff the real mime.
+    res.setHeader('Content-Type', cached.mimetype);
     res.setHeader('Cache-Control', 'private, max-age=300');
-    res.send(bytes);
+    res.send(cached.bytes);
   }
 
   @Get('history')

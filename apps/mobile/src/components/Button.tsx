@@ -80,7 +80,7 @@ export function Button({
     height,
     borderRadius: radius,
     paddingHorizontal,
-    alignSelf: fullWidth ? 'stretch' : 'flex-start',
+    alignSelf: (fullWidth ? 'stretch' : 'flex-start') as 'stretch' | 'flex-start',
     overflow: 'hidden' as const,
   };
 

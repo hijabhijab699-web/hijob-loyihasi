@@ -23,6 +23,13 @@ async function bootstrap() {
   // on the CDN so we skip this and never touch the filesystem.
   const storage = app.get(StorageService);
   if (storage.servesStatic) {
+    // Static files bypass Nest's CORS middleware; add permissive headers
+    // on /uploads/* so <img> and fetch() from any origin can read them.
+    app.use('/uploads', (_req: any, res: any, next: any) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      next();
+    });
     app.useStaticAssets(storage.getRoot(), { prefix: '/uploads/' });
   }
 

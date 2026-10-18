@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckoutDto } from './dto';
 import { DeliveryType, DeliverySpeed, PaymentMethod } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const DELIVERY_FEES: Record<DeliveryType, Record<DeliverySpeed | 'default', number>> = {
   delivery: { today: 5, tomorrow: 3, scheduled: 4, default: 5 },
@@ -11,7 +12,10 @@ const DELIVERY_FEES: Record<DeliveryType, Record<DeliverySpeed | 'default', numb
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async checkout(userId: string, dto: CheckoutDto) {
     return this.prisma.$transaction(async (tx) => {
@@ -91,12 +95,26 @@ export class OrdersService {
         where: { userId, variantId: { in: variantIds } },
       });
 
-      return {
+      const result = {
         orderId: order.id,
         totalUsd: total,
         // TODO: integrate Payme/Click. For MVP return placeholder.
         paymentUrl: `https://payme.dev/checkout/${order.id}`,
       };
+      return result;
+    }).then(async (result) => {
+      // In-app inbox entry fires outside the transaction so a failed
+      // notification write never rolls back the order itself.
+      await this.notifications
+        .create({
+          userId,
+          kind: 'order_update',
+          title: 'Buyurtma qabul qilindi',
+          body: `#${result.orderId.slice(0, 8).toUpperCase()} — $${result.totalUsd.toFixed(2)}`,
+          data: { orderId: result.orderId, kind: 'created' },
+        })
+        .catch(() => undefined);
+      return result;
     });
   }
 

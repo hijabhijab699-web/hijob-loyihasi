@@ -1,0 +1,1087 @@
+/**
+ * ChatGPT content script — pure DOM worker.
+ *
+ * The background service worker owns the queue loop and sends us a DRESS
+ * request per task:
+ *   { type: 'DRESS', prompt, hijabBase64, hijabMime, timeoutMs }
+ *
+ * We:
+ *   1. Fill the composer with the prompt
+ *   2. Attach the hijob file (via DataTransfer on the file input)
+ *   3. Click send
+ *   4. Watch for the assistant's generated image
+ *   5. Reply with the image URL (or base64 if we can read it directly)
+ *
+ * We also respond to PING so the background can confirm the script is
+ * attached, and DIAGNOSE for the popup's debug button.
+ */
+
+(() => {
+  console.log('[N24:31] content v1.3.2 ready', { url: location.href });
+
+  // ─── Message handler (one-shot: PING, DIAGNOSE) ────────────────────
+
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    try {
+      if (msg?.type === 'PING') {
+        sendResponse({ ok: true, href: location.href });
+        return;
+      }
+      if (msg?.type === 'DIAGNOSE') {
+        sendResponse({ ok: true, report: diagnose() });
+        return;
+      }
+      sendResponse({ ok: false, error: 'unknown message' });
+    } catch (e) {
+      sendResponse({ ok: false, error: String(e?.message ?? e) });
+    }
+    // No `return true` — we only handle sync replies here. DRESS flows
+    // through the long-lived port below.
+  });
+
+  // ─── Port handler (long-lived: DRESS) ──────────────────────────────
+  //
+  // DRESS can take 3 min while GPT renders. In Manifest V3 the background
+  // service worker is killed after ~30s of idle time, which would close an
+  // in-flight sendMessage channel and surface "message channel closed before
+  // a response was received". A port keeps the SW alive for its entire
+  // lifetime, so we route the long task through this port instead.
+  chrome.runtime.onConnect.addListener((port) => {
+    if (port.name !== 'n2431-dress') return;
+    port.onMessage.addListener(async (msg) => {
+      try {
+        if (msg?.type === 'DRESS') {
+          showTicker(msg);
+          const url = await runDress(msg);
+          tick('💾 Rasm o\'qilmoqda va 3×3 ga qirqilyapti…');
+          const slices = await sliceGrid(url, msg.gridKeys, msg.rows ?? 3, msg.cols ?? 3, msg.scene);
+          hideTicker();
+          port.postMessage({ ok: true, slices });
+          return;
+        }
+        if (msg?.type === 'BASE_GRID') {
+          showTicker(msg);
+          const url = await runBaseGrid(msg);
+          tick('💾 Rasm o\'qilmoqda va 3×3 ga qirqilyapti…');
+          const slices = await sliceGrid(url, msg.gridKeys, msg.rows ?? 3, msg.cols ?? 3);
+          hideTicker();
+          port.postMessage({ ok: true, slices });
+          return;
+        }
+        if (msg?.type === 'SLICE_LAST') {
+          // Grab the LATEST image already in the current ChatGPT chat
+          // without triggering a new generation. Lets a seller manually
+          // craft the perfect 3×3 in ChatGPT (regen until it looks good),
+          // then one-click upload that exact image.
+          showTicker(msg);
+          tick('🔎 Oxirgi rasm izlanmoqda…');
+          const url = pickLatestChatImage();
+          if (!url) throw new Error('ChatGPT suhbatida rasm topilmadi');
+          tick('💾 Rasm o\'qilmoqda va 3×3 ga qirqilyapti…');
+          const slices = await sliceGrid(url, msg.gridKeys, msg.rows ?? 3, msg.cols ?? 3);
+          hideTicker();
+          port.postMessage({ ok: true, slices });
+          return;
+        }
+        port.postMessage({ ok: false, error: 'unknown port message' });
+      } catch (e) {
+        hideTicker();
+        try {
+          port.postMessage({ ok: false, error: String(e?.message ?? e) });
+        } catch {
+          // port already closed on the other end
+        }
+      }
+    });
+  });
+
+  // ─── Core: run one DRESS task ──────────────────────────────────────
+
+  async function runDress({ prompt, hijabBase64, hijabMime, timeoutMs = 180_000 }) {
+    tick('⏳ ChatGPT textarea izlanmoqda…');
+    if (!(await waitForComposer(15_000))) throw new Error('composer topilmadi');
+
+    tick('✏️ Prompt yozilmoqda…');
+    if (!(await fillPrompt(prompt))) throw new Error('prompt yozib bo\'lmadi');
+
+    tick('📎 Hijob biriktirilmoqda…');
+    const bin = Uint8Array.from(atob(hijabBase64), (c) => c.charCodeAt(0));
+    const file = new File([new Blob([bin], { type: hijabMime })], 'hijob.jpg', { type: hijabMime });
+    if (!(await attachFile(file))) throw new Error('fayl biriktirib bo\'lmadi');
+
+    tick('⏳ Attachment preview kutilmoqda…');
+    await waitForAttachment(10_000);
+
+    // Pixel fingerprint of the hijab we're sending. After send ChatGPT
+    // re-renders it in the user bubble under a NEW server URL (not the
+    // composer's blob:), so the `before` set alone can't exclude it — we
+    // compare pixels instead and never hand the hijab back as the result.
+    const hijabPrint = await fingerprintBlob(file).catch(() => null);
+
+    // Snapshot every image on the page BEFORE send — anything already
+    // visible (old chat images, composer preview) is not a new result.
+    const before = snapshotImageSrcs();
+
+    tick('▶️ Send bosilmoqda…');
+    if (!(await clickSend())) throw new Error('send tugmasi topilmadi');
+
+    tick('⏳ GPT javobini kutmoqda…');
+    const url = await waitForAssistantImage(before, timeoutMs, hijabPrint);
+    if (!url) throw new Error(`GPT ${timeoutMs/1000}s ichida rasm chiqarmadi`);
+
+    tick('✓ Rasm olindi');
+    return url;
+  }
+
+  // Text-only prompt (no attachment), used for the one-off base-mannequin
+  // 3×3 grid generation. Mirrors runDress but skips the file attach step.
+  async function runBaseGrid({ prompt, timeoutMs = 420_000 }) {
+    tick('⏳ ChatGPT textarea izlanmoqda…');
+    if (!(await waitForComposer(15_000))) throw new Error('composer topilmadi');
+
+    tick('✏️ Prompt yozilmoqda…');
+    if (!(await fillPrompt(prompt))) throw new Error('prompt yozib bo\'lmadi');
+
+    const before = snapshotImageSrcs();
+
+    tick('▶️ Send bosilmoqda…');
+    if (!(await clickSend())) throw new Error('send tugmasi topilmadi');
+
+    tick('⏳ GPT 3×3 grid rasmini chizmoqda…');
+    const url = await waitForAssistantImage(before, timeoutMs);
+    if (!url) throw new Error(`GPT ${timeoutMs/1000}s ichida rasm chiqarmadi`);
+
+    tick('✓ Rasm olindi');
+    return url;
+  }
+
+  // Captures src/currentSrc of every <img> on the page right now. Used as a
+  // "before" baseline — anything in this set is NOT a new generated result.
+  function snapshotImageSrcs() {
+    const set = new Set();
+    for (const img of document.querySelectorAll('img')) {
+      const src = img.currentSrc || img.src;
+      if (src) set.add(src);
+    }
+    return set;
+  }
+
+  // Slice the generated composite image into rows×cols cells (default 3×3)
+  // and return one base64 PNG per cell, zipped with the gridKeys array so the
+  // caller knows which sizeKey each slice belongs to. When the source image
+  // has an alpha channel (per prompt — "transparent PNG"), each slice is
+  // auto-trimmed to the opaque bounding box so there's no empty gutter.
+  async function sliceGrid(url, gridKeys, rows = 3, cols = 3, scene = null) {
+    const expected = rows * cols;
+    if (!Array.isArray(gridKeys) || gridKeys.length !== expected) {
+      throw new Error(`gridKeys length ${gridKeys?.length} != ${expected}`);
+    }
+    const img = await loadImage(url);
+
+    // GPT never draws a perfectly even grid — a figure in row 3 can start a
+    // few px above the 2/3 line, so an equal cut leaves its hijab top glued
+    // to the bottom of the cell above. Cut along the real dark gutters
+    // between figures instead, then wipe any neighbour scraps left over.
+    const { xs, ys, bg } = findGridCuts(img, rows, cols);
+    console.log('[N24:31] grid cuts', { xs, ys, bg });
+    const cells = [];
+    for (let i = 0; i < expected; i++) {
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      const x0 = xs[col];
+      const y0 = ys[row];
+      const cellW = xs[col + 1] - x0;
+      const cellH = ys[row + 1] - y0;
+      const cell = document.createElement('canvas');
+      cell.width = cellW;
+      cell.height = cellH;
+      const ctx = cell.getContext('2d');
+      if (!ctx) throw new Error('canvas 2d context');
+      ctx.drawImage(img, x0, y0, cellW, cellH, 0, 0, cellW, cellH);
+      const box = bg ? isolateMainFigure(cell, bg) : null;
+      cells.push({ sizeKey: gridKeys[i], cell, box });
+    }
+
+    // Fitting-room mode: needs the scene, a readable backdrop colour and a
+    // figure box in every cell; otherwise fall back to plain slices.
+    if (scene && bg && cells.every((c) => c.box)) {
+      const sceneUrl = URL.createObjectURL(
+        new Blob([Uint8Array.from(atob(scene.base64), (ch) => ch.charCodeAt(0))], { type: scene.mime }),
+      );
+      try {
+        const sceneImg = await loadImage(sceneUrl);
+        const figures = cells.map((c) => keyOut(c.cell, c.box, bg));
+        const tallest = Math.max(...figures.map((f) => f.height));
+        const scale = (TALLEST_H * SCENE_H) / tallest;
+        return cells.map((c, i) =>
+          canvasToSlice(c.sizeKey, placeOnScene(figures[i], sceneImg, scale), 'image/jpeg', 0.9),
+        );
+      } finally {
+        URL.revokeObjectURL(sceneUrl);
+      }
+    }
+
+    return cells.map((c) => canvasToSlice(c.sizeKey, trimTransparent(c.cell) ?? c.cell, 'image/png'));
+  }
+
+  // ─── Gutter-aware grid cutting ─────────────────────────────────────
+
+  const FG_DIST = 60; // sum of |ΔR|+|ΔG|+|ΔB| above which a pixel is "figure"
+
+  function isFg(d, i, bg) {
+    return Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]) > FG_DIST;
+  }
+
+  // Background = average of the four 8×8 corner patches (the prompt asks
+  // for a solid flat background, so corners are always empty).
+  function sampleBackground(d, w, h) {
+    const s = [0, 0, 0];
+    let n = 0;
+    const p = 8;
+    for (const [cx, cy] of [[0, 0], [w - p, 0], [0, h - p], [w - p, h - p]]) {
+      for (let y = cy; y < cy + p; y++) {
+        for (let x = cx; x < cx + p; x++) {
+          const i = (y * w + x) * 4;
+          s[0] += d[i]; s[1] += d[i + 1]; s[2] += d[i + 2];
+          n++;
+        }
+      }
+    }
+    return s.map((v) => Math.round(v / n));
+  }
+
+  // Returns cut positions [0, c1, …, W] / [0, r1, …, H]. Each inner cut
+  // goes through the middle of the widest empty band near its expected
+  // equal-split position. Falls back to equal cuts if pixels are
+  // unreadable (tainted canvas).
+  function findGridCuts(img, rows, cols) {
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    const equal = (len, n) => Array.from({ length: n + 1 }, (_, k) => Math.round((len * k) / n));
+    let d;
+    try {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      d = ctx.getImageData(0, 0, w, h).data;
+    } catch {
+      return { xs: equal(w, cols), ys: equal(h, rows), bg: null };
+    }
+    const bg = sampleBackground(d, w, h);
+    const rowProf = new Uint32Array(h);
+    const colProf = new Uint32Array(w);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (isFg(d, (y * w + x) * 4, bg)) { rowProf[y]++; colProf[x]++; }
+      }
+    }
+    return { xs: cutsAlong(colProf, cols), ys: cutsAlong(rowProf, rows), bg };
+  }
+
+  function cutsAlong(prof, n) {
+    const len = prof.length;
+    const cuts = [0];
+    for (let k = 1; k < n; k++) {
+      const expected = Math.round((len * k) / n);
+      const win = Math.round((len / n) * 0.3);
+      const lo = Math.max(cuts[cuts.length - 1] + 1, expected - win);
+      const hi = Math.min(len - 1, expected + win);
+      let min = Infinity;
+      for (let i = lo; i <= hi; i++) min = Math.min(min, prof[i]);
+      const tol = min + 3;
+      // Widest run of near-empty lines; ties go to the one nearest the
+      // expected split.
+      let best = null;
+      for (let i = lo; i <= hi; ) {
+        if (prof[i] > tol) { i++; continue; }
+        let j = i;
+        while (j + 1 <= hi && prof[j + 1] <= tol) j++;
+        const run = { mid: Math.round((i + j) / 2), size: j - i + 1 };
+        if (
+          !best || run.size > best.size ||
+          (run.size === best.size && Math.abs(run.mid - expected) < Math.abs(best.mid - expected))
+        ) best = run;
+        i = j + 1;
+      }
+      cuts.push(best ? best.mid : expected);
+    }
+    cuts.push(len);
+    return cuts;
+  }
+
+  // Keep only the dominant figure in a cell: find the heaviest contiguous
+  // band of figure pixels along each axis and paint everything outside it
+  // with the background colour, so a neighbour's sleeve or hijab tip that
+  // crossed the gutter doesn't ride along. Returns the padded figure box
+  // ({x0, y0, x1, y1}, end-exclusive) or null.
+  function isolateMainFigure(cell, bg) {
+    const w = cell.width;
+    const h = cell.height;
+    const ctx = cell.getContext('2d', { willReadFrequently: true });
+    let d;
+    try { d = ctx.getImageData(0, 0, w, h).data; } catch { return null; }
+    const rowProf = new Uint32Array(h);
+    const colProf = new Uint32Array(w);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (isFg(d, (y * w + x) * 4, bg)) { rowProf[y]++; colProf[x]++; }
+      }
+    }
+    const ry = mainBand(rowProf);
+    const rx = mainBand(colProf);
+    if (!ry || !rx) return null;
+    const pad = 6;
+    const y0 = Math.max(0, ry[0] - pad);
+    const y1 = Math.min(h, ry[1] + 1 + pad);
+    const x0 = Math.max(0, rx[0] - pad);
+    const x1 = Math.min(w, rx[1] + 1 + pad);
+    ctx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
+    ctx.fillRect(0, 0, w, y0);
+    ctx.fillRect(0, y1, w, h - y1);
+    ctx.fillRect(0, y0, x0, y1 - y0);
+    ctx.fillRect(x1, y0, w - x1, y1 - y0);
+    return { x0, y0, x1, y1 };
+  }
+
+  // ─── Fitting-room compositing ──────────────────────────────────────
+  //
+  // Every slice is keyed off its flat backdrop and stood on the floor of
+  // the same fitting-room photo. One scale is shared by all 9 cells so the
+  // short/mid/tall height difference GPT drew survives the move.
+
+  const SCENE_W = 720;
+  const SCENE_H = 960;
+  const FLOOR_Y = 0.95; // feet line, fraction of scene height
+  const TALLEST_H = 0.84; // tallest figure's height, fraction of scene height
+  const KEY_LO = 40; // colour distance (sum |Δ|) fully background below this
+  const KEY_HI = 120; // … fully figure above this
+
+  // Figure box → canvas of the same size with the backdrop keyed to alpha.
+  function keyOut(cell, box, bg) {
+    const w = box.x1 - box.x0;
+    const h = box.y1 - box.y0;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(cell, box.x0, box.y0, w, h, 0, 0, w, h);
+    const id = ctx.getImageData(0, 0, w, h);
+    const d = id.data;
+    const n = w * h;
+    const greenKey = bg[1] > bg[0] + 40 && bg[1] > bg[2] + 40;
+    const magentaKey = bg[0] > bg[1] + 40 && bg[2] > bg[1] + 40;
+
+    // Raw key alpha per pixel.
+    const alpha = new Float32Array(n);
+    for (let p = 0; p < n; p++) {
+      const i = p * 4;
+      const dist = Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]);
+      alpha[p] = Math.min(1, Math.max(0, (dist - KEY_LO) / (KEY_HI - KEY_LO)));
+    }
+
+    // On a dark backdrop only pixels connected to the box edge count, so
+    // dark pupils stay opaque. A chroma colour never occurs on the figure,
+    // so there enclosed pockets (arm–body gap, between the feet) go too.
+    const reached = new Uint8Array(n);
+    const stack = [];
+    const seed = (p) => { if (!reached[p] && alpha[p] < 1) { reached[p] = 1; stack.push(p); } };
+    for (let x = 0; x < w; x++) { seed(x); seed((h - 1) * w + x); }
+    for (let y = 0; y < h; y++) { seed(y * w); seed(y * w + w - 1); }
+    while (stack.length) {
+      const p = stack.pop();
+      const x = p % w;
+      if (x > 0) seed(p - 1);
+      if (x < w - 1) seed(p + 1);
+      if (p >= w) seed(p - w);
+      if (p < n - w) seed(p + w);
+    }
+    // Larger enclosed pockets of backdrop (arm–body gap) go too; tiny ones
+    // (pupils, a few px across) stay.
+    const minPocket = Math.max(40, Math.round(n * 0.0015));
+    const seen = new Uint8Array(n);
+    for (let p = 0; p < n; p++) {
+      if (reached[p] || seen[p] || alpha[p] >= 0.5) continue;
+      const comp = [p];
+      seen[p] = 1;
+      for (let k = 0; k < comp.length; k++) {
+        const q = comp[k];
+        const x = q % w;
+        for (const r of [x > 0 ? q - 1 : -1, x < w - 1 ? q + 1 : -1, q >= w ? q - w : -1, q < n - w ? q + w : -1]) {
+          if (r >= 0 && !seen[r] && !reached[r] && alpha[r] < 0.5) { seen[r] = 1; comp.push(r); }
+        }
+      }
+      if (comp.length >= minPocket) for (const q of comp) reached[q] = 1;
+    }
+    const chromaKey = greenKey || magentaKey;
+    for (let p = 0; p < n; p++) {
+      if (!reached[p] && !(chromaKey && alpha[p] < 0.5)) alpha[p] = 1;
+    }
+
+    // 1px choke: drop the thin halo of backdrop-tinted edge pixels.
+    const choked = new Float32Array(n);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let m = alpha[y * w + x];
+        if (m > 0) {
+          for (let dy = -1; dy <= 1 && m > 0; dy++) {
+            const yy = y + dy;
+            if (yy < 0 || yy >= h) continue;
+            for (let dx = -1; dx <= 1; dx++) {
+              const xx = x + dx;
+              if (xx >= 0 && xx < w) m = Math.min(m, alpha[yy * w + xx]);
+            }
+          }
+        }
+        choked[y * w + x] = m;
+      }
+    }
+
+    for (let p = 0; p < n; p++) {
+      const i = p * 4;
+      const a = choked[p];
+      if (a === 0) { d[i + 3] = 0; continue; }
+      if (a < 1) {
+        // Remove the backdrop's share of the colour on soft edges.
+        for (let k = 0; k < 3; k++) {
+          d[i + k] = Math.min(255, Math.max(0, (d[i + k] - (1 - a) * bg[k]) / a));
+        }
+        d[i + 3] = Math.round(a * 255);
+      }
+      // Despill: green light bounced onto the figure. Safe on every pixel
+      // because green is only picked when the hijab isn't green.
+      if (greenKey) {
+        const cap = Math.max(d[i], d[i + 2]);
+        if (d[i + 1] > cap) d[i + 1] = cap;
+      } else if (magentaKey && a < 1) {
+        const ex = Math.min(d[i], d[i + 2]) - d[i + 1];
+        if (ex > 0) { d[i] -= ex; d[i + 2] -= ex; }
+      }
+    }
+    ctx.putImageData(id, 0, 0);
+    return c;
+  }
+
+  function drawCover(ctx, img, w, h) {
+    const s = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+    const sw = w / s;
+    const sh = h / s;
+    ctx.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, 0, 0, w, h);
+  }
+
+  function placeOnScene(figure, scene, scale) {
+    const out = document.createElement('canvas');
+    out.width = SCENE_W;
+    out.height = SCENE_H;
+    const ctx = out.getContext('2d');
+    drawCover(ctx, scene, SCENE_W, SCENE_H);
+    const fw = figure.width * scale;
+    const fh = figure.height * scale;
+    const cx = SCENE_W / 2;
+    const floor = FLOOR_Y * SCENE_H;
+    // Soft contact shadow so the figure stands on the carpet, not above it.
+    const r = fw * 0.55;
+    ctx.save();
+    ctx.translate(cx, floor);
+    ctx.scale(1, 0.14);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    g.addColorStop(0, 'rgba(45,32,20,0.45)');
+    g.addColorStop(1, 'rgba(45,32,20,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-r, -r, r * 2, r * 2);
+    ctx.restore();
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(figure, cx - fw / 2, floor - fh, fw, fh);
+    return out;
+  }
+
+  function canvasToSlice(sizeKey, canvas, mime, quality) {
+    const dataUrl = canvas.toDataURL(mime, quality);
+    const commaIdx = dataUrl.indexOf(',');
+    return { sizeKey, base64: commaIdx >= 0 ? dataUrl.slice(commaIdx + 1) : dataUrl, mime };
+  }
+
+  // [start, end] of the heaviest run of non-empty lines. Gaps up to 2% of
+  // the length are bridged so a thin dark seam inside the figure (e.g.
+  // between hem and shoes) doesn't split it.
+  function mainBand(prof) {
+    const len = prof.length;
+    const maxGap = Math.max(4, Math.round(len * 0.02));
+    const minLine = 2;
+    let best = null;
+    let cur = null;
+    let gap = 0;
+    for (let i = 0; i < len; i++) {
+      if (prof[i] >= minLine) {
+        if (!cur) cur = { start: i, end: i, mass: 0 };
+        cur.end = i;
+        cur.mass += prof[i];
+        gap = 0;
+      } else if (cur && ++gap > maxGap) {
+        if (!best || cur.mass > best.mass) best = cur;
+        cur = null;
+        gap = 0;
+      }
+    }
+    if (cur && (!best || cur.mass > best.mass)) best = cur;
+    return best ? [best.start, best.end] : null;
+  }
+
+  function loadImage(url) {
+    return new Promise((ok, nope) => {
+      const el = new Image();
+      el.crossOrigin = 'anonymous';
+      el.onload = () => ok(el);
+      el.onerror = () => nope(new Error('composite image load failed'));
+      el.src = url;
+    });
+  }
+
+  // ─── Image fingerprint (detect the hijab echo by pixels) ───────────
+  //
+  // 16×16 RGB thumbnail + aspect ratio. Two renders of the same file are
+  // near-identical; GPT's 3×3 mannequin grid on a dark background is far
+  // off. Throws on a tainted canvas — callers treat that as "unknown".
+
+  const PRINT_N = 16;
+  const SAME_IMAGE_DIST = 18; // mean abs RGB diff (0–255)
+
+  function fingerprintImage(img) {
+    const c = document.createElement('canvas');
+    c.width = PRINT_N;
+    c.height = PRINT_N;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, PRINT_N, PRINT_N);
+    const data = ctx.getImageData(0, 0, PRINT_N, PRINT_N).data;
+    const px = new Uint8Array(PRINT_N * PRINT_N * 3);
+    for (let i = 0, j = 0; i < data.length; i += 4) {
+      px[j++] = data[i];
+      px[j++] = data[i + 1];
+      px[j++] = data[i + 2];
+    }
+    return { px, aspect: img.naturalWidth / img.naturalHeight };
+  }
+
+  async function fingerprintBlob(blob) {
+    const url = URL.createObjectURL(blob);
+    try {
+      return fingerprintImage(await loadImage(url));
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  async function fingerprintUrl(url) {
+    return fingerprintImage(await loadImage(url));
+  }
+
+  function isSameImage(a, b) {
+    if (Math.abs(a.aspect - b.aspect) > 0.05) return false;
+    let sum = 0;
+    for (let i = 0; i < a.px.length; i++) sum += Math.abs(a.px[i] - b.px[i]);
+    return sum / a.px.length < SAME_IMAGE_DIST;
+  }
+
+  // Crop a canvas down to its opaque bounding box. Keeps a tiny 8px margin
+  // so the figure doesn't touch the edges. Returns null if the cell is
+  // fully opaque (no trim needed) or fully empty (shouldn't happen).
+  function trimTransparent(src) {
+    const w = src.width;
+    const h = src.height;
+    const ctx = src.getContext('2d');
+    if (!ctx) return null;
+    let data;
+    try {
+      data = ctx.getImageData(0, 0, w, h).data;
+    } catch {
+      return null;
+    }
+    let top = h, bottom = -1, left = w, right = -1;
+    const alphaThreshold = 20;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const a = data[(y * w + x) * 4 + 3];
+        if (a > alphaThreshold) {
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+          if (x < left) left = x;
+          if (x > right) right = x;
+        }
+      }
+    }
+    if (bottom < 0 || right < 0) return null; // empty
+    const margin = 8;
+    const x0 = Math.max(0, left - margin);
+    const y0 = Math.max(0, top - margin);
+    const x1 = Math.min(w, right + 1 + margin);
+    const y1 = Math.min(h, bottom + 1 + margin);
+    // If almost nothing was trimmed, skip the extra canvas work.
+    if (x0 === 0 && y0 === 0 && x1 === w && y1 === h) return null;
+    // Safety net: GPT occasionally returns a PNG where "white dress on
+    // transparent background" strips the dress too — leaving just the
+    // scarf opaque. The trim would then collapse the cell to a close-up
+    // of the hijab and lose the whole mannequin body. If we're about to
+    // throw away more than 50% of the cell area, assume GPT confused the
+    // alpha channel and keep the full cell instead.
+    const trimmedArea = (x1 - x0) * (y1 - y0);
+    const cellArea = w * h;
+    if (trimmedArea < cellArea * 0.5) {
+      // Diagnostic — not an error. Use log so Chrome's Errors tab doesn't
+      // flag it. Fires when GPT returned a PNG where "white dress on
+      // transparent background" accidentally made the dress transparent
+      // too; we skip the aggressive trim and keep the full cell.
+      console.log('[extension] trim >50% suppressed, keeping full cell');
+      return null;
+    }
+    const out = document.createElement('canvas');
+    out.width = x1 - x0;
+    out.height = y1 - y0;
+    const octx = out.getContext('2d');
+    if (!octx) return null;
+    octx.drawImage(src, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+    return out;
+  }
+
+  // ─── ChatGPT DOM selectors (old + new UI) ──────────────────────────
+
+  const SEND_LABEL = /send|отправ|yubor|jo'nat|إرسال/i;
+  const VOICE_LABEL = /voice|dictat|microphone|голос|диктов|микрофон|ovoz|صوت/i;
+
+  function composer() {
+    return (
+      document.querySelector('#prompt-textarea') ||
+      document.querySelector('textarea#mobile-composer-prompt') ||
+      document.querySelector('form textarea[placeholder]') ||
+      document.querySelector('form div[contenteditable="true"]') ||
+      document.querySelector('div.ProseMirror[contenteditable="true"]') ||
+      null
+    );
+  }
+
+  function composerForm() {
+    return composer()?.closest('form') ?? null;
+  }
+
+  async function waitForComposer(timeoutMs) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (composer()) return true;
+      await sleep(300);
+    }
+    return false;
+  }
+
+  async function fillPrompt(text) {
+    const el = composer();
+    if (!el) return false;
+    el.focus();
+    if (el.tagName === 'TEXTAREA') {
+      // Textarea route (new "octane" UI).
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+      if (setter) setter.call(el, text);
+      else el.value = text;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }
+    // ProseMirror / contenteditable
+    el.innerHTML = '';
+    const p = document.createElement('p');
+    p.textContent = text;
+    el.appendChild(p);
+    el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text }));
+    try {
+      el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: text }));
+    } catch {}
+    return true;
+  }
+
+  function findFileInputs() {
+    const scoped = composerForm()?.querySelector('input[type="file"][accept*="image"], input[type="file"]');
+    if (scoped) return [scoped];
+    const candidates = Array.from(document.querySelectorAll(
+      '#octane-mobile-composer-files-input, form input[type="file"][accept*="image"], input[type="file"]'
+    ));
+    return candidates.slice(0, 1);
+  }
+
+  function attachmentCount() {
+    const blobs = document.querySelectorAll('form img[src^="blob:"]');
+    if (blobs.length > 0) return blobs.length;
+    const thumbs = document.querySelectorAll(
+      'form [data-testid*="attachment"], form button[aria-label*="Remove"]',
+    );
+    return thumbs.length;
+  }
+
+  function transferOf(file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    return dt;
+  }
+
+  // Multi-strategy attach — ChatGPT's composer accepts drops on the <form>
+  // and pastes into the editor, but newer builds don't always react to the
+  // bare file-input change. We try all three until the preview appears.
+  async function attachFile(file) {
+    const composerEl = composer();
+    const formEl = composerForm() ?? composerEl?.closest('main') ?? document.body;
+    if (!composerEl || !formEl) return false;
+
+    const inputs = findFileInputs();
+    const startCount = attachmentCount();
+
+    const strategies = [
+      // 1) paste a File into the editor
+      () => {
+        try {
+          composerEl.focus();
+          composerEl.dispatchEvent(
+            new ClipboardEvent('paste', {
+              clipboardData: transferOf(file),
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+        } catch (e) {
+          console.warn('[N24:31] paste attach failed', e);
+        }
+      },
+      // 2) drag + drop onto the form
+      () => {
+        try {
+          const dt = transferOf(file);
+          for (const type of ['dragenter', 'dragover', 'drop']) {
+            formEl.dispatchEvent(
+              new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }),
+            );
+          }
+        } catch (e) {
+          console.warn('[N24:31] drop attach failed', e);
+        }
+      },
+      // 3) file input change
+      () => {
+        for (const input of inputs) {
+          try {
+            input.files = transferOf(file).files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          } catch (e) {
+            console.warn('[N24:31] input attach failed', e);
+          }
+        }
+      },
+    ];
+
+    for (let i = 0; i < strategies.length; i++) {
+      strategies[i]();
+      const ok = await waitForNewAttachment(startCount, 15_000);
+      if (ok) {
+        console.log('[N24:31] attach OK via strategy', i + 1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async function waitForNewAttachment(startCount, timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      if (attachmentCount() > startCount) return true;
+      await sleep(300);
+    }
+    return false;
+  }
+
+  async function waitForAttachment(timeoutMs) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (attachmentCount() > 0) return true;
+      await sleep(300);
+    }
+    return false;
+  }
+
+  function labelledButton(pattern) {
+    const scope = composerForm() ?? document;
+    for (const btn of scope.querySelectorAll('button')) {
+      const label = `${btn.getAttribute('aria-label') ?? ''} ${btn.title ?? ''}`;
+      if (pattern.test(label) && !VOICE_LABEL.test(label)) return btn;
+    }
+    return null;
+  }
+
+  function findSendButton() {
+    const direct =
+      document.querySelector('button[data-testid="send-button"]') ||
+      document.querySelector('button#composer-submit-button') ||
+      document.querySelector('button[aria-label="Send message"]');
+    if (direct) return direct;
+    return labelledButton(SEND_LABEL);
+  }
+
+  async function clickSend() {
+    // Wait for the button to become enabled (ChatGPT disables it while
+    // attachments are still uploading).
+    const deadline = Date.now() + 15_000;
+    while (Date.now() < deadline) {
+      const btn = findSendButton();
+      if (btn) {
+        const disabled = btn.disabled || btn.getAttribute('aria-disabled') === 'true';
+        if (!disabled) {
+          btn.click();
+          return true;
+        }
+      }
+      await sleep(300);
+    }
+    return false;
+  }
+
+  // Busy = ChatGPT is actively streaming a response. We look for the stop
+  // button (several labels across languages / UI revisions). This is the
+  // one signal that reliably means "generation is in flight".
+  function isBusy() {
+    return !!document.querySelector(
+      'button[data-testid="stop-button"], ' +
+      'button[aria-label="Stop generating"], ' +
+      'button[aria-label*="Stop streaming"], ' +
+      'button[aria-label*="Stop" i], ' +
+      'button[aria-label*="стоп" i], ' +
+      'button[aria-label*="Остановить"], ' +
+      'button[aria-label*="To\'xtat" i]',
+    );
+  }
+
+  // Find the LAST assistant turn element — this is where the generated
+  // image lands. ChatGPT's older UI uses `data-message-author-role`;
+  // the newer image-carousel UI wraps the whole reply in
+  // `article[data-testid^="conversation-turn"]`.
+  function lastAssistantTurn() {
+    const roleTurns = document.querySelectorAll('[data-message-author-role="assistant"]');
+    if (roleTurns.length > 0) return roleTurns[roleTurns.length - 1];
+    const articleTurns = document.querySelectorAll('article[data-testid^="conversation-turn"]');
+    for (let i = articleTurns.length - 1; i >= 0; i--) {
+      const t = articleTurns[i];
+      // Skip ones that explicitly belong to the user.
+      if (t.querySelector('[data-message-author-role="user"]')) continue;
+      return t;
+    }
+    return null;
+  }
+
+  // The whole turn wrapper of the LAST user message. ChatGPT renders the
+  // uploaded attachment inside this wrapper but often OUTSIDE the
+  // `[data-message-author-role="user"]` div itself, so we exclude the
+  // full wrapper, not just the role div.
+  function lastUserTurn() {
+    const users = document.querySelectorAll('[data-message-author-role="user"]');
+    const u = users[users.length - 1];
+    if (!u) return null;
+    return u.closest('article, [data-testid^="conversation-turn"]') ?? u;
+  }
+
+  // True when `img` sits strictly after the user turn in document order
+  // (i.e. in GPT's reply), never inside the user turn itself.
+  function isAfterUserTurn(img, userTurn) {
+    if (!userTurn) return true;
+    if (userTurn.contains(img)) return false;
+    return !!(userTurn.compareDocumentPosition(img) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }
+
+  // "Give me the single largest image already visible in the latest
+  // assistant turn (or anywhere on the page as fallback)." Used by the
+  // SLICE_LAST flow where the seller has already crafted the image they
+  // want in ChatGPT and the extension should just grab + slice it.
+  function pickLatestChatImage() {
+    const turn = lastAssistantTurn();
+    const scope = turn || document;
+    const cands = candidateImagesIn(scope)
+      .filter((img) => img.complete && img.naturalWidth > 0)
+      .map((img) => ({ img, area: img.naturalWidth * img.naturalHeight }))
+      .sort((a, b) => b.area - a.area);
+    if (!cands.length) return null;
+    const best = cands[0].img;
+    return best.currentSrc || best.src;
+  }
+
+  // Return big, non-chrome images from the given scope (default: the whole
+  // document). Excludes composer/form/nav/aside/header UI.
+  function candidateImagesIn(scope) {
+    const root = scope || document;
+    const out = [];
+    for (const img of root.querySelectorAll('img')) {
+      const src = img.currentSrc || img.src;
+      if (!src || src.startsWith('data:image/svg')) continue;
+      const w = img.naturalWidth || img.width || img.clientWidth || 0;
+      const h = img.naturalHeight || img.height || img.clientHeight || 0;
+      if (w < 400 || h < 400) continue;
+      if (img.closest('#n2431-ticker, form, nav, aside, header')) continue;
+      if (img.closest('[data-message-author-role="user"]')) continue;
+      out.push(img);
+    }
+    return out;
+  }
+
+  function lastAssistantText() {
+    const turn = lastAssistantTurn();
+    if (!turn) return '';
+    return (turn.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  }
+
+  async function waitForAssistantImage(before, timeoutMs, avoidPrint = null) {
+    const deadline = Date.now() + timeoutMs;
+
+    // Phase 1 — REQUIRE that GPT actually starts streaming. Without this
+    // the function would accept the hijab echo that ChatGPT instantly
+    // renders in the user bubble before GPT even begins to think.
+    const startDeadline = Date.now() + 90_000;
+    while (!isBusy() && Date.now() < startDeadline) await sleep(500);
+    if (!isBusy()) {
+      throw new Error(
+        "ChatGPT 90s ichida javob boshlamadi — sahifada 'Stop generating' tugmasi ko'rinmadi",
+      );
+    }
+
+    // Phase 2 — wait until generation finishes.
+    while (isBusy() && Date.now() < deadline) await sleep(1000);
+    if (isBusy()) return null;
+
+    // Phase 3 — pick the largest new image that sits AFTER our user turn
+    // (GPT's reply) and is not the hijab we sent. Scanning by document
+    // order instead of `lastAssistantTurn()` keeps working when the image
+    // block lives outside the assistant role div; the pixel check catches
+    // the hijab echo even if ChatGPT moves it somewhere unexpected.
+    const userTurn = lastUserTurn();
+    const echoes = new Set(); // srcs already identified as the hijab
+    let sawEcho = false;
+    const imageDeadline = Math.min(Date.now() + 45_000, deadline);
+    while (Date.now() < imageDeadline) {
+      const fresh = candidateImagesIn(document)
+        .filter((img) => {
+          const src = img.currentSrc || img.src;
+          return (
+            src && !before.has(src) && !echoes.has(src) &&
+            img.complete && img.naturalWidth > 0 &&
+            isAfterUserTurn(img, userTurn)
+          );
+        })
+        .map((img) => ({ img, area: img.naturalWidth * img.naturalHeight }))
+        .sort((a, b) => b.area - a.area);
+      for (const { img } of fresh) {
+        const url = img.currentSrc || img.src;
+        if (avoidPrint) {
+          const print = await fingerprintUrl(url).catch(() => null);
+          if (print && isSameImage(print, avoidPrint)) {
+            console.log('[N24:31] skipping hijab echo', url);
+            echoes.add(url);
+            sawEcho = true;
+            continue;
+          }
+        }
+        console.log('[N24:31] accepting result', {
+          url,
+          w: img.naturalWidth,
+          h: img.naturalHeight,
+          candidates: fresh.length,
+        });
+        return url;
+      }
+      await sleep(500);
+    }
+
+    if (sawEcho) {
+      throw new Error("GPT yangi rasm chizmadi — sahifada faqat yuborilgan hijob bor");
+    }
+    const reply = lastAssistantText();
+    if (reply) {
+      throw new Error(`AI rasm o'rniga matn qaytardi: «${reply}»`);
+    }
+    return null;
+  }
+
+  // ─── Diagnose (popup debug) ────────────────────────────────────────
+
+  function diagnose() {
+    const lines = [];
+    const c = composer();
+    lines.push(c ? `✓ composer: ${c.tagName}#${c.id || ''}` : '✗ composer topilmadi');
+    const files = findFileInputs();
+    lines.push(files.length ? `✓ file input: ${files.length} ta` : '✗ file input yo\'q');
+    const send = findSendButton();
+    lines.push(send ? `✓ send button: ${send.getAttribute('aria-label') || send.id || 'topildi'}` : '✗ send topilmadi');
+    return lines;
+  }
+
+  // ─── Ticker overlay (visible progress on ChatGPT page) ─────────────
+
+  let tickerEl = null;
+  function showTicker(msg) {
+    if (!tickerEl) {
+      tickerEl = document.createElement('div');
+      tickerEl.id = 'n2431-ticker';
+      document.documentElement.appendChild(tickerEl);
+    }
+    tick('Boshlanmoqda…');
+  }
+  function hideTicker() {
+    if (tickerEl) { tickerEl.remove(); tickerEl = null; }
+  }
+  function tick(text) {
+    if (!tickerEl) return;
+    tickerEl.textContent = `N24:31 · ${text}`;
+    console.log(`[N24:31] ${text}`);
+  }
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+  // Reads an image URL (blob: or https) and returns {base64, mime}. For
+  // blob: URLs we go through fetch directly (same-origin, works). For
+  // https we also use the DOM <img> as a fallback via canvas when fetch
+  // trips a cross-origin restriction.
+  async function readImageAsBase64(url) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`fetch ${res.status}`);
+      const blob = await res.blob();
+      if (!blob.size) throw new Error('empty blob');
+      const base64 = await blobToBase64(blob);
+      return { base64, mime: blob.type || 'image/jpeg' };
+    } catch (fetchErr) {
+      console.warn('[N24:31] direct fetch failed, trying canvas', fetchErr);
+      // Canvas fallback — find an <img> on the page with this src and
+      // re-encode via canvas. Works for same-origin images; may fail with
+      // a tainted canvas error on cross-origin ones.
+      const img = Array.from(document.querySelectorAll('img')).find(
+        (el) => (el.currentSrc || el.src) === url,
+      );
+      if (!img) throw fetchErr;
+      await new Promise((r) => {
+        if (img.complete && img.naturalWidth) return r();
+        img.addEventListener('load', r, { once: true });
+        img.addEventListener('error', r, { once: true });
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      const idx = dataUrl.indexOf(',');
+      return { base64: dataUrl.slice(idx + 1), mime: 'image/jpeg' };
+    }
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => {
+        const result = String(r.result);
+        const idx = result.indexOf(',');
+        resolve(idx >= 0 ? result.slice(idx + 1) : result);
+      };
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(blob);
+    });
+  }
+})();

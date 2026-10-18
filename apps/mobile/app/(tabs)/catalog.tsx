@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
@@ -9,6 +9,8 @@ import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
+import { errorMessage, errorTitle } from '../../src/lib/api-errors';
+import { safeBack } from '../../src/lib/safe-back';
 
 type CategoryId = 'scarves' | 'dresses' | 'bags' | 'accessories';
 
@@ -18,6 +20,9 @@ interface Product {
   basePriceUsd: number;
   coverUrl: string;
   seller: { brandName: string; rating: number; reviewsCount: number };
+  // Needed so the "+" quick-add can pick the first variant without a
+  // product-detail round trip.
+  variants?: Array<{ id: string }>;
 }
 
 const CATEGORY_ICONS: Record<CategoryId, string> = {
@@ -40,41 +45,53 @@ const COLORS: Array<{ key: string; hex: string }> = [
   { key: 'burgundy', hex: '#722F37' },
 ];
 
-const MOCK_PRODUCTS: Product[] = [
-  { id: '1', title: { ru: 'Silk Hijab Premium', uz: 'Silk Hijab Premium' }, basePriceUsd: 45, coverUrl: '', seller: { brandName: 'Amani', rating: 4.8, reviewsCount: 1200 } },
-  { id: '2', title: { ru: 'Cotton Voile Scarf', uz: 'Cotton Voile Scarf' }, basePriceUsd: 28, coverUrl: '', seller: { brandName: 'Zahra', rating: 4.6, reviewsCount: 890 } },
-  { id: '3', title: { ru: 'Chiffon Shawl', uz: 'Chiffon Shawl' }, basePriceUsd: 35, coverUrl: '', seller: { brandName: 'Noor', rating: 4.9, reviewsCount: 2100 } },
-  { id: '4', title: { ru: 'Jersey Hijab', uz: 'Jersey Hijab' }, basePriceUsd: 22, coverUrl: '', seller: { brandName: 'Hija', rating: 4.7, reviewsCount: 560 } },
-  { id: '5', title: { ru: 'Modal Blend Scarf', uz: 'Modal Blend Scarf' }, basePriceUsd: 38, coverUrl: '', seller: { brandName: 'Amani', rating: 4.8, reviewsCount: 1200 } },
-  { id: '6', title: { ru: 'Pashmina Wrap', uz: 'Pashmina Wrap' }, basePriceUsd: 55, coverUrl: '', seller: { brandName: 'Zahra', rating: 4.6, reviewsCount: 890 } },
-];
-
 export default function CatalogScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors, theme } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ category?: CategoryId }>();
+  const queryClient = useQueryClient();
+  const lang = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru';
 
   const [category, setCategory] = useState<CategoryId>(params.category ?? 'scarves');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ['products', category, selectedColor],
-    queryFn: async () => {
-      try {
-        return (
-          await api.get('/catalog/products', {
-            params: { category, ...(selectedColor && { color: selectedColor }), pageSize: 20 },
-          })
-        ).data;
-      } catch {
-        return { items: MOCK_PRODUCTS };
-      }
-    },
+    queryFn: async () =>
+      (await api.get('/catalog/products', {
+        params: { category, ...(selectedColor && { color: selectedColor }), pageSize: 20 },
+      })).data,
   });
 
-  const products: Product[] = data?.items ?? MOCK_PRODUCTS;
+  const products: Product[] = data?.items ?? [];
+
+  // Wishlist toggle — the catalog card hearts share one mutation to avoid
+  // one in-flight request per card and keep wishlist count queries in sync.
+  const addWishlist = useMutation({
+    mutationFn: async (productId: string) =>
+      (await api.post(`/wishlist/${productId}`)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile-wishlist-count'] });
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+    },
+    onError: (e) => Alert.alert(errorTitle(), errorMessage(e)),
+  });
+
+  // Add first variant to cart — the card's "+" is a one-tap convenience;
+  // size/color pickers live on the product detail screen.
+  const addCart = useMutation({
+    mutationFn: async (variantId: string) =>
+      (await api.post('/cart', { variantId, quantity: 1 })).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+      const title = lang === 'ru' ? 'Готово' : 'Qo\'shildi';
+      const msg = lang === 'ru' ? 'Товар добавлен в корзину' : 'Mahsulot savatga qo\'shildi';
+      Alert.alert(title, msg);
+    },
+    onError: (e) => Alert.alert(errorTitle(), errorMessage(e)),
+  });
 
   const renderProduct = useCallback(
     ({ item, index }: { item: Product; index: number }) => (
@@ -82,9 +99,16 @@ export default function CatalogScreen() {
         product={item}
         index={index}
         onPress={() => router.push({ pathname: '/product/[id]', params: { id: item.id } })}
+        onAddToWishlist={() => addWishlist.mutate(item.id)}
+        onAddToCart={() => {
+          const firstVariantId = item.variants?.[0]?.id;
+          if (firstVariantId) addCart.mutate(firstVariantId);
+        }}
         isLeft={index % 2 === 0}
       />
     ),
+    // mutations are stable singletons from react-query; router captured once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [router],
   );
 
@@ -101,7 +125,7 @@ export default function CatalogScreen() {
         }}
       >
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => safeBack()}
           hitSlop={12}
           style={{
             width: 40,
@@ -121,10 +145,11 @@ export default function CatalogScreen() {
           color="oliveDeep"
           style={{ fontSize: 22, letterSpacing: -0.5 }}
         >
-          N24:31
+          24:31
         </Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Pressable
+            onPress={() => router.push('/wishlist')}
             hitSlop={8}
             style={{
               width: 40,
@@ -140,6 +165,7 @@ export default function CatalogScreen() {
             <Ionicons name="heart-outline" size={20} color={colors.oliveDeep} />
           </Pressable>
           <Pressable
+            onPress={() => router.push('/(tabs)/cart')}
             hitSlop={8}
             style={{
               width: 40,
@@ -332,7 +358,7 @@ export default function CatalogScreen() {
                       fontWeight: active ? '600' : '400',
                     }}
                   >
-                    {t(`catalog.colors.${c.key}`)}
+                    {t(`catalog.colors.${c.key}` as never, { defaultValue: c.key })}
                   </Text>
                 </Pressable>
               );
@@ -345,7 +371,7 @@ export default function CatalogScreen() {
 
   return (
     <Screen>
-      <View style={{ flex: 1, paddingHorizontal: 4 }}>
+      <View style={{ flex: 1 }}>
         <FlashList
           data={products}
           numColumns={2}
@@ -356,8 +382,16 @@ export default function CatalogScreen() {
           renderItem={renderProduct}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
-              <Ionicons name="search-outline" size={48} color={colors.muted} />
-              <Text variant="body" color="muted">Mahsulot topilmadi</Text>
+              <Ionicons
+                name={isError ? 'cloud-offline-outline' : 'search-outline'}
+                size={48}
+                color={colors.muted}
+              />
+              <Text variant="body" color="muted">
+                {isError
+                  ? (lang === 'ru' ? 'Не удалось загрузить товары' : "Mahsulotlar yuklanmadi")
+                  : (lang === 'ru' ? 'Товары не найдены' : 'Mahsulot topilmadi')}
+              </Text>
             </View>
           }
         />
@@ -374,11 +408,15 @@ function ProductCard({
   product,
   index,
   onPress,
+  onAddToWishlist,
+  onAddToCart,
   isLeft,
 }: {
   product: Product;
   index: number;
   onPress: () => void;
+  onAddToWishlist: () => void;
+  onAddToCart: () => void;
   isLeft: boolean;
 }) {
   const { colors, theme } = useTheme();
@@ -390,10 +428,9 @@ function ProductCard({
       onPress={onPress}
       style={({ pressed }) => ({
         flex: 1,
-        marginRight: isLeft ? 6 : 0,
-        marginLeft: isLeft ? 0 : 6,
+        marginRight: isLeft ? 6 : 16,
+        marginLeft: isLeft ? 16 : 6,
         marginBottom: 12,
-        marginHorizontal: 12,
         backgroundColor: colors.surface,
         borderRadius: 20,
         overflow: 'hidden',
@@ -418,6 +455,10 @@ function ProductCard({
         )}
         {/* Wishlist */}
         <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onAddToWishlist();
+          }}
           hitSlop={8}
           style={{
             position: 'absolute',
@@ -476,6 +517,10 @@ function ProductCard({
             ${product.basePriceUsd}
           </Text>
           <Pressable
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onAddToCart();
+            }}
             hitSlop={8}
             style={{
               width: 28,

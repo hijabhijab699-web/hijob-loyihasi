@@ -7,11 +7,15 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { MlCompositorClient } from '../tryon/ml-compositor.client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Prisma, StyleJobStatus } from '@prisma/client';
 import * as crypto from 'crypto';
 
+import { pickMannequinForCategorySize } from './mannequin-pool';
+import { MannequinTemplatesService } from '../mannequin-templates/mannequin-templates.service';
+
 export interface DressMannequinInput {
-  mannequinUrl: string;
+  mannequinUrl?: string;
   hijabUrl: string;
   tyingStyle?: 'classical' | 'loose' | 'double';
   colorHex?: string;
@@ -25,31 +29,76 @@ export class StyleJobsService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly compositor: MlCompositorClient,
+    private readonly notifications: NotificationsService,
+    private readonly mannequins: MannequinTemplatesService,
   ) {}
 
-  /** Seller submits a new "dress the mannequin" job. */
+  /**
+   * Seller submits a new "dress the mannequin" job.
+   *
+   * One hijob can carry several size variants (S / M / L). We create a
+   * separate style-job per distinct size so each render lands on a
+   * silhouette that actually matches that size. The buyer eventually sees
+   * the render whose size matches their body profile.
+   */
   async submit(sellerUserId: string, productId: string, input: DressMannequinInput) {
     const seller = await this.prisma.seller.findUnique({ where: { userId: sellerUserId } });
     if (!seller) throw new NotFoundException('SELLER_NOT_FOUND');
 
-    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      include: { variants: { select: { size: true } } },
+    });
     if (!product) throw new NotFoundException('PRODUCT_NOT_FOUND');
     if (product.sellerId !== seller.id) throw new BadRequestException('PRODUCT_NOT_YOURS');
 
-    if (!input.mannequinUrl || !input.hijabUrl) {
-      throw new BadRequestException('MANNEQUIN_AND_HIJAB_URLS_REQUIRED');
+    if (!input.hijabUrl) {
+      throw new BadRequestException('HIJAB_URL_REQUIRED');
     }
 
-    return this.prisma.productStyleJob.create({
-      data: {
-        productId,
-        sellerId: seller.id,
-        mannequinUrl: input.mannequinUrl,
-        hijabUrl: input.hijabUrl,
-        tyingStyle: input.tyingStyle ?? 'classical',
-        colorHex: input.colorHex ?? '#8A8D5B',
-      },
-    });
+    // Distinct sizes across variants. If none (brand-new product) fall back
+    // to a single one-size job so the pipeline still runs.
+    const sizes = Array.from(
+      new Set((product.variants ?? []).map((v) => v.size).filter(Boolean)),
+    );
+    const targets: Array<string | null> = sizes.length > 0 ? sizes : [null];
+
+    // Resolve each size's mannequin URL BEFORE opening the transaction. We
+    // prefer an admin-uploaded template matching the size key / height
+    // bracket; fall back to the hardcoded Pexels pool if the admin hasn't
+    // uploaded one yet so the pipeline keeps running.
+    const resolvedMannequins = await Promise.all(
+      targets.map(async (size) => {
+        if (input.mannequinUrl?.trim()) return input.mannequinUrl.trim();
+        const fromDb = await this.mannequins.pickForSizeKey(size);
+        if (fromDb) return fromDb;
+        return pickMannequinForCategorySize(
+          product.categoryId,
+          size,
+          hashSeed(`${product.id}:${size ?? 'one'}`),
+        );
+      }),
+    );
+
+    const created = await this.prisma.$transaction(
+      targets.map((size, i) =>
+        this.prisma.productStyleJob.create({
+          data: {
+            productId,
+            sellerId: seller.id,
+            mannequinUrl: resolvedMannequins[i]!,
+            hijabUrl: input.hijabUrl,
+            tyingStyle: input.tyingStyle ?? 'classical',
+            colorHex: input.colorHex ?? '#8A8D5B',
+            targetSize: size,
+          },
+        }),
+      ),
+    );
+
+    // Return the first job (keeps the controller's single-job contract);
+    // callers who need the whole set can list via /seller/products/:id/dress-mannequin.
+    return created[0] ?? null;
   }
 
   /** Return the latest job for a product (seller-side status chip). */
@@ -102,33 +151,97 @@ export class StyleJobsService {
   }
 
   async markDone(jobId: string, resultUrl: string) {
+    return this.markDoneInternal(jobId, resultUrl, null);
+  }
+
+  async markDoneWithVariants(
+    jobId: string,
+    fallbackUrl: string,
+    variants: Record<string, string>,
+  ) {
+    return this.markDoneInternal(jobId, fallbackUrl, variants);
+  }
+
+  private async markDoneInternal(
+    jobId: string,
+    resultUrl: string,
+    resultVariants: Record<string, string> | null,
+  ) {
     const updated = await this.prisma.productStyleJob.update({
       where: { id: jobId },
       data: {
         status: 'done',
         resultUrl,
+        resultVariants: resultVariants ?? Prisma.JsonNull,
         finishedAt: new Date(),
         errorMessage: null,
       },
+      include: { seller: { select: { userId: true } }, product: { select: { titleRu: true } } },
     });
-    // Flip the parent product so buyer-side catalog instantly starts
-    // using the fresh mannequin shot.
-    await this.prisma.product.update({
-      where: { id: updated.productId },
-      data: { styledImageUrl: resultUrl },
-    });
+    // NOTE: we no longer auto-flip product.styledImageUrl here. The seller
+    // must preview the 9 variants and press "Tasdiqlash" on the mobile app;
+    // that triggers approveForProduct() below, which copies the fallback
+    // URL to the product and publishes it.
+    this.notifications
+      .create({
+        userId: updated.seller.userId,
+        kind: 'style_job_done',
+        title: 'Manekin tayyor',
+        body: `"${updated.product.titleRu}" uchun 9 variant tayyor — sotuvchi tasdig'ini kuting`,
+        data: { productId: updated.productId, jobId: updated.id, resultUrl },
+      })
+      .catch(() => undefined);
     return updated;
   }
 
+  /**
+   * Seller presses "Tasdiqlash" on a done job: we copy the fallback result
+   * URL onto the product (so catalog shows the styled hijab) and, if the
+   * product is still a draft, publish it. The 9 resultVariants stay on the
+   * job and are what the Primerka screen picks a body-matched variant from.
+   */
+  async approveForProduct(sellerUserId: string, productId: string) {
+    const seller = await this.prisma.seller.findUnique({ where: { userId: sellerUserId } });
+    if (!seller) throw new NotFoundException('SELLER_NOT_FOUND');
+    const job = await this.prisma.productStyleJob.findFirst({
+      where: { productId, sellerId: seller.id, status: 'done' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!job || !job.resultUrl) throw new NotFoundException('NO_DONE_JOB');
+
+    const current = await this.prisma.product.findUnique({ where: { id: productId } });
+    if (!current) throw new NotFoundException('PRODUCT_NOT_FOUND');
+    const publishNow = current.status === 'draft' || current.status === 'rejected';
+    await this.prisma.product.update({
+      where: { id: productId },
+      data: {
+        styledImageUrl: job.resultUrl,
+        ...(publishNow ? { status: 'published' as const, publishedAt: new Date() } : {}),
+      },
+    });
+    return { ok: true, productId, styledImageUrl: job.resultUrl, published: publishNow };
+  }
+
   async markFailed(jobId: string, message: string) {
-    return this.prisma.productStyleJob.update({
+    const updated = await this.prisma.productStyleJob.update({
       where: { id: jobId },
       data: {
         status: 'failed',
         errorMessage: message.slice(0, 500),
         finishedAt: new Date(),
       },
+      include: { seller: { select: { userId: true } }, product: { select: { titleRu: true } } },
     });
+    this.notifications
+      .create({
+        userId: updated.seller.userId,
+        kind: 'style_job_done',
+        title: 'Manekin xatosi',
+        body: `"${updated.product.titleRu}" uchun stillash muvaffaqiyatsiz: ${message.slice(0, 80)}`,
+        data: { productId: updated.productId, jobId: updated.id, error: message.slice(0, 200) },
+      })
+      .catch(() => undefined);
+    return updated;
   }
 
   /**
@@ -212,4 +325,14 @@ export class StyleJobsService {
       .digest('hex')
       .slice(0, 16);
   }
+}
+
+// Stable integer digest of a UUID so the mannequin pool pick is deterministic
+// per product id (retries don't shift which mannequin we use).
+function hashSeed(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (h * 31 + id.charCodeAt(i)) | 0;
+  }
+  return h;
 }

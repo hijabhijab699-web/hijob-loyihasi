@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "N24:31 Dev AI panel",
+  "description": "Pending style-job'larni ChatGPT'da avto bajarib natijani serverga qaytaradi (loop)",
+  "version": "1.0.2",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "N24:31 Dev AI",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "permissions": ["storage", "alarms", "notifications", "tabs", "scripting"],
+  "host_permissions": [
+    "http://localhost:4000/*",
+    "https://*.trycloudflare.com/*",
+    "https://*.n2431.app/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://*.oaiusercontent.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

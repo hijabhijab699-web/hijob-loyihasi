@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { Alert, FlatList, Pressable, View } from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
+import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 
 type OrderStatus = 'new' | 'preparing' | 'shipping' | 'delivered';
 
@@ -28,34 +30,11 @@ interface SellerOrder {
   tracking?: string;
 }
 
-const MOCK_ORDERS: SellerOrder[] = [
-  {
-    id: '1', code: '#BUY-0041', customerName: 'Aziza M.', time: 'Bugun 14:30',
-    items: [{ name: "Ipak ro'mol", color: 'Qizil', size: 'M', qty: 2 }],
-    total: 90, status: 'new',
-  },
-  {
-    id: '2', code: '#BUY-0040', customerName: 'Nodira K.', time: 'Bugun 11:15',
-    items: [{ name: "Shoyi ko'ylak", color: 'Oq', size: 'S', qty: 1 }],
-    total: 89, status: 'new',
-  },
-  {
-    id: '3', code: '#BUY-0039', customerName: 'Malika R.', time: 'Kecha 18:05',
-    items: [{ name: 'Charm sumka', color: 'Jigar', qty: 1 }],
-    total: 120, status: 'preparing',
-  },
-  {
-    id: '4', code: '#BUY-0038', customerName: 'Dilbar A.', time: '28-sen',
-    items: [{ name: "Ipak ro'mol", color: 'Qora', qty: 1 }],
-    total: 45, status: 'shipping', tracking: 'UZ1234567',
-  },
-];
-
-const STATUS_TABS: { key: OrderStatus; label: string; count: number }[] = [
-  { key: 'new', label: 'Yangi', count: 3 },
-  { key: 'preparing', label: 'Tayyorlanm.', count: 2 },
-  { key: 'shipping', label: "Yo'lda", count: 2 },
-  { key: 'delivered', label: 'Yetkazildi', count: 1 },
+const STATUS_TABS: { key: OrderStatus; label: string }[] = [
+  { key: 'new', label: 'Yangi' },
+  { key: 'preparing', label: 'Tayyorlanm.' },
+  { key: 'shipping', label: "Yo'lda" },
+  { key: 'delivered', label: 'Yetkazildi' },
 ];
 
 const STATUS_BADGE: Record<OrderStatus, { bg: string; color: string; label: string }> = {
@@ -69,22 +48,39 @@ const ITEM_BG = ['#EDE5D0', '#D9D0BE', '#EDE5D0', '#D9D0BE'];
 
 export default function SellerOrdersScreen() {
   const { colors, theme } = useTheme();
+  const { i18n } = useTranslation();
+  const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<OrderStatus>('new');
+  const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
 
+  // Fetch once; filter in memory by tab so the badge counts stay in sync
+  // without extra round trips.
   const { data: orders } = useQuery<SellerOrder[]>({
-    queryKey: ['seller', 'orders', activeTab],
-    queryFn: async () => {
-      try {
-        return (await api.get('/seller/orders', { params: { status: activeTab } })).data;
-      } catch {
-        return MOCK_ORDERS;
-      }
-    },
+    queryKey: ['seller', 'orders'],
+    queryFn: async () => (await api.get<SellerOrder[]>('/seller/orders')).data,
+    staleTime: 15_000,
   });
 
-  const filtered = (orders ?? MOCK_ORDERS).filter(
-    (o) => o.status === activeTab,
-  );
+  // Seller order-status endpoints aren't yet wired on the backend. Instead
+  // of pretending to work and leaving the UI stale, we surface a one-line
+  // explanation so sellers know these actions are coming.
+  const comingSoon = () => {
+    Alert.alert(
+      isRu ? 'Скоро' : 'Tez orada',
+      isRu
+        ? 'Эта функция будет добавлена в следующей версии.'
+        : "Bu funksiya keyingi versiyada qo'shiladi.",
+    );
+  };
+
+  const all = orders ?? [];
+  const filtered = all.filter((o) => o.status === activeTab);
+  const counts: Record<OrderStatus, number> = {
+    new: all.filter((o) => o.status === 'new').length,
+    preparing: all.filter((o) => o.status === 'preparing').length,
+    shipping: all.filter((o) => o.status === 'shipping').length,
+    delivered: all.filter((o) => o.status === 'delivered').length,
+  };
 
   return (
     <Screen>
@@ -109,13 +105,15 @@ export default function SellerOrdersScreen() {
               fontWeight: '700',
             }}
           >
-            Buyurtmalar
+            {isRu ? 'Заказы' : 'Buyurtmalar'}
           </Text>
           <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
-            8 ta faol buyurtma
+            {counts.new + counts.preparing + counts.shipping}{' '}
+            {isRu ? 'активных заказов' : 'ta faol buyurtma'}
           </Text>
         </View>
         <Pressable
+          onPress={() => qc.invalidateQueries({ queryKey: ['seller', 'orders'] })}
           style={{
             width: 40,
             height: 40,
@@ -127,7 +125,7 @@ export default function SellerOrdersScreen() {
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.ink} />
+          <Ionicons name="refresh" size={18} color={colors.ink} />
         </Pressable>
       </View>
 
@@ -158,7 +156,7 @@ export default function SellerOrdersScreen() {
                   color: active ? colors.goldSoft : colors.oliveDeep,
                 }}
               >
-                {tab.count}
+                {counts[tab.key]}
               </Text>
               <Text
                 variant="caption"
@@ -184,7 +182,7 @@ export default function SellerOrdersScreen() {
         ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
             <Ionicons name="receipt-outline" size={48} color={colors.muted} />
-            <Text variant="body" color="muted">Buyurtma yo'q</Text>
+            <Text variant="body" color="muted">{isRu ? 'Заказов нет' : "Buyurtma yo'q"}</Text>
           </View>
         }
         renderItem={({ item, index }) => {
@@ -307,6 +305,7 @@ export default function SellerOrdersScreen() {
                 {item.status === 'new' && (
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <Pressable
+                      onPress={comingSoon}
                       style={{
                         paddingHorizontal: 16,
                         paddingVertical: 8,
@@ -319,10 +318,11 @@ export default function SellerOrdersScreen() {
                         variant="caption"
                         style={{ fontSize: 12, fontWeight: '500', color: colors.danger }}
                       >
-                        Rad etish
+                        {isRu ? 'Отклонить' : 'Rad etish'}
                       </Text>
                     </Pressable>
                     <Pressable
+                      onPress={comingSoon}
                       style={{
                         paddingHorizontal: 16,
                         paddingVertical: 8,
@@ -334,7 +334,7 @@ export default function SellerOrdersScreen() {
                         variant="caption"
                         style={{ fontSize: 12, fontWeight: '500', color: colors.goldSoft }}
                       >
-                        Qabul qilish
+                        {isRu ? 'Принять' : 'Qabul qilish'}
                       </Text>
                     </Pressable>
                   </View>
@@ -342,6 +342,7 @@ export default function SellerOrdersScreen() {
 
                 {item.status === 'preparing' && (
                   <Pressable
+                    onPress={comingSoon}
                     style={{
                       paddingHorizontal: 16,
                       paddingVertical: 8,
@@ -353,7 +354,7 @@ export default function SellerOrdersScreen() {
                       variant="caption"
                       style={{ fontSize: 12, fontWeight: '500', color: '#fff' }}
                     >
-                      Jo'natishga tayyor
+                      {isRu ? 'Готово к отправке' : "Jo'natishga tayyor"}
                     </Text>
                   </Pressable>
                 )}

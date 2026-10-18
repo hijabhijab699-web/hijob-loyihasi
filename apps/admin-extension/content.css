@@ -1,0 +1,156 @@
+/* Full-width ticker at the top of ChatGPT showing current loop stage. */
+#n2431-ticker {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483647;
+  background: #363924;
+  color: #EDE5D0;
+  padding: 10px 16px;
+  font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
+
+.n2431-ext-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 320px;
+  background: #FFF;
+  border: 1px solid #E4DEC8;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(60, 50, 20, 0.18);
+  font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  color: #363924;
+  z-index: 2147483647;
+  font-size: 13px;
+}
+.n2431-ext-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 14px;
+  background: #363924;
+  color: #EDE5D0;
+  border-radius: 14px 14px 0 0;
+}
+.n2431-ext-brand { font-weight: 700; color: #FFF; }
+.n2431-ext-sub { font-size: 11px; color: #C9A96E; margin-top: 2px; }
+.n2431-ext-close {
+  background: transparent;
+  color: inherit;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.n2431-ext-body { padding: 14px; }
+.n2431-ext-body p { margin: 0 0 10px; color: #857E6E; font-size: 12px; }
+.n2431-ext-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: #F5EFE1;
+  border-radius: 6px;
+}
+.n2431-ext-step {
+  font-size: 11px;
+  color: #857E6E;
+  padding-left: 16px;
+  position: relative;
+}
+.n2431-ext-step::before {
+  content: '○';
+  position: absolute;
+  left: 0;
+  color: #B4A98E;
+}
+.n2431-ext-step.is-active { color: #363924; font-weight: 600; }
+.n2431-ext-step.is-active::before { content: '◆'; color: #C9A96E; }
+.n2431-ext-step.is-done { color: #7A8A5B; }
+.n2431-ext-step.is-done::before { content: '✓'; color: #7A8A5B; }
+.n2431-ext-step.is-fail { color: #B85450; }
+.n2431-ext-step.is-fail::before { content: '✕'; color: #B85450; }
+.n2431-primary {
+  background: #363924;
+  color: #EDE5D0;
+  border-color: #363924;
+}
+.n2431-secondary {
+  background: #FFF;
+  color: #363924;
+  border-color: #E4DEC8;
+}
+.n2431-ext-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #E4DEC8;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: ui-monospace, Menlo, monospace;
+  background: #FDFAF3;
+  color: #363924;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+.n2431-ext-input:focus { outline: none; border-color: #363924; }
+.n2431-ext-selected {
+  margin-bottom: 10px;
+}
+.n2431-ext-selected img {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #E4DEC8;
+}
+.n2431-ext-actions {
+  display: flex;
+  gap: 8px;
+}
+.n2431-ext-actions button {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
+  font-family: inherit;
+}
+.n2431-ext-send {
+  background: #363924;
+  color: #EDE5D0;
+  border-color: #363924;
+}
+.n2431-ext-send:disabled { opacity: 0.5; cursor: not-allowed; }
+.n2431-ext-pick {
+  background: #FFF;
+  color: #363924;
+  border-color: #E4DEC8;
+}
+.n2431-ext-pick:hover { background: #F5EFE1; }
+.n2431-ext-status {
+  font-size: 11px;
+  margin-top: 8px;
+  min-height: 14px;
+}
+.n2431-ext-status.ok { color: #7A8A5B; }
+.n2431-ext-status.err { color: #B85450; }
+
+/* When the operator is in "pick an image" mode, images on the page get a
+   gold ring on hover so they know which one they're grabbing. */
+body.n2431-ext-picking img {
+  cursor: crosshair !important;
+}
+body.n2431-ext-picking img:hover {
+  outline: 3px solid #C9A96E !important;
+  outline-offset: 2px;
+}

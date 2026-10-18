@@ -6,11 +6,12 @@ import {
   Get,
   Post,
   Put,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { CurrentUser, CurrentUserInfo } from '../auth/current-user.decorator';
@@ -75,6 +76,24 @@ export class OnboardingController {
   @Delete('face')
   deleteFace(@CurrentUser() user: CurrentUserInfo) {
     return this.onboarding.deleteFaceTemplate(user.id);
+  }
+
+  /**
+   * One-shot: hand us a selfie, get back a URL to a transparent-background PNG
+   * cropped to just the face. The Primerka tab uses it as the overlay above
+   * every mannequin render so there's no boxy portrait rectangle on screen.
+   */
+  @Post('face/preview')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('image', { limits: { fileSize: MAX_IMAGE_BYTES } }),
+  )
+  async faceOnly(
+    @CurrentUser() user: CurrentUserInfo,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    if (!image) throw new BadRequestException('IMAGE_REQUIRED');
+    return this.onboarding.extractFaceOnly(user.id, image);
   }
 
   /**

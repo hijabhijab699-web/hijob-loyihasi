@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.config import settings
-from app.routes import extract, health, pose
+from app.routes import extract, face_only, health, pose
 
 logging.basicConfig(
     level=settings.log_level.upper(),
@@ -35,6 +35,7 @@ app.add_middleware(
 app.include_router(health.router, tags=["health"])
 app.include_router(extract.router, tags=["face"], prefix="/face")
 app.include_router(pose.router, tags=["face"], prefix="/face")
+app.include_router(face_only.router, tags=["face"], prefix="/face")
 
 
 @app.on_event("startup")

@@ -14,6 +14,7 @@ from app.services.geometry import to_pixels
 from app.services.scarf import draw_scarf
 from app.services.dress_compose import compose_dress_template
 from app.services.face_swap import face_swap
+from app.services.facefusion import NoFaceError, face_fusion_swap
 from app.services.template_compose import compose_scarf_template
 from app.utils import decode_image_bytes, encode_output
 
@@ -207,6 +208,51 @@ async def compose_faceswap(
         content=jpeg,
         media_type="image/jpeg",
         headers={"X-Compose-Time-Ms": str(elapsed_ms), "X-Mode": "faceswap"},
+    )
+
+
+@router.post(
+    "/facefusion",
+    responses={200: {"content": {"image/jpeg": {}}, "description": "FaceFusion swap result"}},
+)
+async def compose_facefusion(
+    mannequin: UploadFile = File(
+        ..., description="Pre-styled mannequin photo (must have a visible face)"
+    ),
+    user: UploadFile = File(..., description="Buyer's frontal selfie"),
+    enhance: bool = Form(True, description="Run GFPGAN face enhancer after swap"),
+) -> Response:
+    """FaceFusion-powered swap. Compared to /faceswap this handles hijab
+    occlusion, matches skin tone to the mannequin, and (with enhance=True)
+    polishes the swapped face with GFPGAN. Noticeably cleaner result, ~4-6 s
+    on an M-series Mac once models are cached."""
+    started = time.perf_counter()
+    mannequin_bytes = await _read_upload(mannequin)
+    user_bytes = await _read_upload(user)
+    try:
+        mannequin_img = decode_image_bytes(mannequin_bytes)
+        user_img = decode_image_bytes(user_bytes)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        result = face_fusion_swap(user_img, mannequin_img, enhance=enhance)
+    except NoFaceError as exc:
+        # The mannequin render needs a visible face for swap to work. The
+        # NestJS caller already has a fallback (returning raw mannequin
+        # bytes) when it sees NO_MANNEQUIN_FACE, so keep that contract.
+        raise HTTPException(status_code=422, detail="NO_MANNEQUIN_FACE") from exc
+    except Exception:  # noqa: BLE001
+        logger.exception("facefusion swap failed")
+        raise HTTPException(status_code=500, detail="FACEFUSION_FAILED")
+
+    jpeg = encode_output(result)
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    logger.info("facefusion swap in %d ms (enhance=%s)", elapsed_ms, enhance)
+    return Response(
+        content=jpeg,
+        media_type="image/jpeg",
+        headers={"X-Compose-Time-Ms": str(elapsed_ms), "X-Mode": "facefusion"},
     )
 
 

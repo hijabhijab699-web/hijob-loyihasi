@@ -64,5 +64,4 @@ export const safeAlert: AlertFn = (title, message, buttons, options) => {
 
 // Install globally so ALL `Alert.alert(...)` call sites across the codebase
 // get the safe behaviour without having to edit each file.
-// @ts-expect-error — overriding RN's exported function in place.
-Alert.alert = safeAlert;
+(Alert as { alert: AlertFn }).alert = safeAlert;

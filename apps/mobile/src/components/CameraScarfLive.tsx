@@ -426,7 +426,7 @@ export function CameraScarfLive({
       onVideo?.(shareUri);
 
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(shareUri, { mimeType: 'video/mp4', dialogTitle: 'N24:31 try-on' });
+        await Sharing.shareAsync(shareUri, { mimeType: 'video/mp4', dialogTitle: '24:31 try-on' });
       }
     } catch (e) {
       console.warn('record failed:', e);

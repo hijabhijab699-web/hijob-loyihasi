@@ -1,8 +1,51 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { submitDressMannequin, getLatestStyleJob, type StyleJob } from '@/lib/api';
 import { Loader2, Sparkles, AlertTriangle, Check } from 'lucide-react';
+
+// Types copied inline so we don't import from the server-only api module.
+// The actual network calls go through the Next route handler at
+// /api/style-jobs/[productId] which proxies to the Nest API with the
+// httpOnly auth cookie.
+export type StyleJobStatus = 'pending' | 'running' | 'done' | 'failed';
+export interface StyleJob {
+  id: string;
+  productId: string;
+  status: StyleJobStatus;
+  mannequinUrl: string;
+  hijabUrl: string;
+  tyingStyle: string;
+  colorHex: string;
+  resultUrl: string | null;
+  errorMessage: string | null;
+  attempts: number;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+interface DressMannequinInput {
+  mannequinUrl: string;
+  hijabUrl: string;
+  tyingStyle?: 'classical' | 'loose' | 'double';
+  colorHex?: string;
+}
+
+async function submitDressMannequin(productId: string, input: DressMannequinInput): Promise<StyleJob> {
+  const res = await fetch(`/api/style-jobs/${productId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await res.text().catch(() => 'request failed'));
+  return res.json();
+}
+async function getLatestStyleJob(productId: string): Promise<StyleJob | null> {
+  const res = await fetch(`/api/style-jobs/${productId}`, { cache: 'no-store' });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error('fetch failed');
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
 
 const STYLE_OPTIONS: Array<{ value: 'classical' | 'loose' | 'double'; label: string }> = [
   { value: 'classical', label: 'Klassik' },

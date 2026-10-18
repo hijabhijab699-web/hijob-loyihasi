@@ -1,5 +1,6 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
@@ -9,20 +10,59 @@ import { useAuth } from '../../src/store/auth';
 interface MenuItem {
   label: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
+  // Either a route to navigate to, or a one-shot action. Seller features
+  // that don't yet have a backend endpoint use the action form so the tap
+  // tells the user instead of landing on a buyer-only screen (e.g. the
+  // buyer "addresses" page would mislead a seller tapping "Delivery").
+  route?: string;
+  action?: () => void;
 }
-
-const STORE_MENU: MenuItem[] = [
-  { label: "Do'kon ma'lumotlari", icon: 'storefront-outline' },
-  { label: "To'lov ma'lumotlari", icon: 'card-outline' },
-  { label: 'Yetkazib berish', icon: 'car-outline' },
-  { label: 'Bildirishnomalar', icon: 'notifications-outline' },
-  { label: 'Sozlamalar', icon: 'settings-outline' },
-];
 
 export default function SellerProfileScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { i18n } = useTranslation();
+  const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
+
+  // Payment/delivery seller controls aren't backed yet. Tell the seller
+  // outright rather than silently dropping them onto buyer-only screens.
+  const comingSoon = (what: string) => {
+    Alert.alert(
+      isRu ? 'Скоро' : 'Tez orada',
+      isRu
+        ? `Раздел «${what}» будет добавлен в следующей версии.`
+        : `«${what}» bo'limi keyingi versiyada qo'shiladi.`,
+    );
+  };
+
+  const storeMenu: MenuItem[] = [
+    {
+      label: isRu ? 'Данные магазина' : "Do'kon ma'lumotlari",
+      icon: 'storefront-outline',
+      route: '/settings/profile-details',
+    },
+    {
+      label: isRu ? 'Платежные реквизиты' : "To'lov rekvizitlari",
+      icon: 'card-outline',
+      action: () => comingSoon(isRu ? 'Платежные реквизиты' : "To'lov rekvizitlari"),
+    },
+    {
+      label: isRu ? 'Доставка и выдача' : 'Yetkazib berish va topshirish',
+      icon: 'car-outline',
+      action: () => comingSoon(isRu ? 'Доставка и выдача' : 'Yetkazib berish'),
+    },
+    {
+      label: isRu ? 'Уведомления' : 'Bildirishnomalar',
+      icon: 'notifications-outline',
+      route: '/notifications',
+    },
+    {
+      label: isRu ? 'Язык' : 'Til',
+      icon: 'language-outline',
+      route: '/settings/language',
+    },
+  ];
 
   return (
     <Screen>
@@ -41,13 +81,14 @@ export default function SellerProfileScreen() {
               fontWeight: '700',
             }}
           >
-            Profil
+            {isRu ? 'Профиль' : 'Profil'}
           </Text>
         </View>
 
         <View style={{ paddingHorizontal: 20, gap: 16 }}>
           {/* User Card */}
           <Pressable
+            onPress={() => router.push('/settings/profile-details')}
             style={{
               backgroundColor: colors.surface,
               borderRadius: 16,
@@ -87,10 +128,10 @@ export default function SellerProfileScreen() {
                 color="ink"
                 style={{ fontSize: 16, fontWeight: '600' }}
               >
-                {user?.fullName ?? 'Umidjon Gafforov'}
+                {user?.fullName ?? (isRu ? 'Продавец' : 'Sotuvchi')}
               </Text>
               <Text variant="bodySmall" color="muted" style={{ fontSize: 13 }}>
-                @{user?.username ?? 'umidjon'}
+                @{user?.username ?? '—'}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.muted} />
@@ -119,7 +160,7 @@ export default function SellerProfileScreen() {
                 paddingBottom: 10,
               }}
             >
-              Rejim tanlash
+              {isRu ? 'Режим' : 'Rejim tanlash'}
             </Text>
 
             <View style={{ paddingHorizontal: 12, paddingBottom: 12, gap: 8 }}>
@@ -155,10 +196,10 @@ export default function SellerProfileScreen() {
                     color="ink"
                     style={{ fontSize: 14, fontWeight: '600' }}
                   >
-                    Xaridor rejimi
+                    {isRu ? 'Режим покупателя' : 'Xaridor rejimi'}
                   </Text>
                   <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
-                    Mahsulotlarni ko'rish va xarid qilish
+                    {isRu ? 'Просмотр и покупка товаров' : "Mahsulotlarni ko'rish va xarid qilish"}
                   </Text>
                 </View>
                 <View
@@ -203,10 +244,10 @@ export default function SellerProfileScreen() {
                     color="ink"
                     style={{ fontSize: 14, fontWeight: '600' }}
                   >
-                    Sotuvchi rejimi
+                    {isRu ? 'Режим продавца' : 'Sotuvchi rejimi'}
                   </Text>
                   <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
-                    Do'kon boshqaruvi va sotish
+                    {isRu ? 'Управление магазином и продажи' : "Do'kon boshqaruvi va sotish"}
                   </Text>
                 </View>
                 <View
@@ -256,21 +297,26 @@ export default function SellerProfileScreen() {
                 paddingBottom: 10,
               }}
             >
-              Do'kon sozlamalari
+              {isRu ? 'Настройки магазина' : "Do'kon sozlamalari"}
             </Text>
 
-            {STORE_MENU.map((item, idx) => (
+            {storeMenu.map((item, idx) => (
               <Pressable
                 key={item.label}
-                style={{
+                onPress={() => {
+                  if (item.action) item.action();
+                  else if (item.route) router.push(item.route as any);
+                }}
+                style={({ pressed }) => ({
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 14,
                   paddingVertical: 14,
                   paddingHorizontal: 16,
-                  borderBottomWidth: idx < STORE_MENU.length - 1 ? 1 : 0,
+                  borderBottomWidth: idx < storeMenu.length - 1 ? 1 : 0,
                   borderBottomColor: colors.rule,
-                }}
+                  opacity: pressed ? 0.6 : 1,
+                })}
               >
                 <Ionicons name={item.icon} size={20} color={colors.oliveDark} />
                 <Text
@@ -287,7 +333,8 @@ export default function SellerProfileScreen() {
 
           {/* Help */}
           <Pressable
-            style={{
+            onPress={() => router.push('/settings/help' as any)}
+            style={({ pressed }) => ({
               backgroundColor: colors.surface,
               borderRadius: 14,
               padding: 14,
@@ -297,7 +344,8 @@ export default function SellerProfileScreen() {
               flexDirection: 'row',
               alignItems: 'center',
               gap: 14,
-            }}
+              opacity: pressed ? 0.6 : 1,
+            })}
           >
             <Ionicons name="help-circle-outline" size={20} color={colors.oliveDark} />
             <Text
@@ -305,7 +353,7 @@ export default function SellerProfileScreen() {
               color="ink"
               style={{ flex: 1, fontSize: 14 }}
             >
-              Yordam markazi
+              {isRu ? 'Центр помощи' : 'Yordam markazi'}
             </Text>
             <Ionicons name="chevron-forward" size={16} color={colors.muted} />
           </Pressable>
@@ -333,7 +381,7 @@ export default function SellerProfileScreen() {
               variant="body"
               style={{ fontSize: 14, fontWeight: '500', color: colors.danger }}
             >
-              Chiqish
+              {isRu ? 'Выйти' : 'Chiqish'}
             </Text>
           </Pressable>
         </View>

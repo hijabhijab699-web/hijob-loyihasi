@@ -7,7 +7,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>N24:31</string>
+    <string>24:31</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -41,12 +41,19 @@
     <key>NSAppTransportSecurity</key>
     <dict>
       <key>NSAllowsArbitraryLoads</key>
-      <false/>
+      <true/>
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>24:31 lokal server orqali rasm va ma'lumotlarni yuklash uchun lokal tarmoqdan foydalanadi.</string>
+    <key>NSBonjourServices</key>
+    <array>
+      <string>_expo-dev-server._tcp</string>
+      <string>_http._tcp</string>
+    </array>
     <key>NSCameraUsageDescription</key>
-    <string>N24:31 kamerani yuzingizni skanerlash uchun ishlatadi.</string>
+    <string>24:31 kamerani yuzingizni skanerlash uchun ishlatadi.</string>
     <key>NSFaceIDUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
     <key>NSMicrophoneUsageDescription</key>

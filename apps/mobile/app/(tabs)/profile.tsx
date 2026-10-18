@@ -1,11 +1,13 @@
 import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { useAuth } from '../../src/store/auth';
+import { api } from '../../src/api/client';
 
 interface MenuItem {
   label: string;
@@ -18,83 +20,145 @@ interface MenuItem {
 }
 
 export default function ProfileScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors, theme } = useTheme();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const lang = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru';
+
+  // Fetch real counts instead of showing hardcoded 12/8/3 that make a
+  // freshly registered account look populated. Each query runs under the
+  // user's token; empty responses render as 0 without blocking the UI.
+  const { data: ordersData } = useQuery<any>({
+    queryKey: ['profile-orders-count'],
+    queryFn: async () => (await api.get('/orders')).data,
+  });
+  const { data: wishlistData } = useQuery<any>({
+    queryKey: ['profile-wishlist-count'],
+    queryFn: async () => (await api.get('/wishlist')).data,
+  });
+  const { data: addressesData } = useQuery<any>({
+    queryKey: ['profile-addresses-count'],
+    queryFn: async () => (await api.get('/addresses')).data,
+  });
+
+  const countOf = (d: any): number => {
+    if (!d) return 0;
+    if (Array.isArray(d)) return d.length;
+    if (Array.isArray(d.items)) return d.items.length;
+    if (Array.isArray(d.data)) return d.data.length;
+    if (typeof d.total === 'number') return d.total;
+    if (typeof d.count === 'number') return d.count;
+    return 0;
+  };
+  const ordersCount = countOf(ordersData);
+  const wishlistCount = countOf(wishlistData);
+  const addressesCount = countOf(addressesData);
+
+  const L = lang === 'ru'
+    ? {
+        myOrders: 'Мои заказы',
+        wishlist: 'Избранное',
+        myAddresses: 'Мои адреса',
+        myMeasurements: 'Мои размеры',
+        faceTemplate: 'Шаблон лица',
+        ready: 'Готово',
+        notifications: 'Уведомления',
+        language: 'Язык',
+        languageValue: 'Русский',
+        help: 'Помощь',
+      }
+    : {
+        myOrders: 'Buyurtmalarim',
+        wishlist: 'Sevimlilar',
+        myAddresses: 'Manzillarim',
+        myMeasurements: "O'lchovlarim",
+        faceTemplate: 'Yuz shablonim',
+        ready: 'Tayyor',
+        notifications: 'Bildirishnomalar',
+        language: 'Til',
+        languageValue: "O'zbekcha",
+        help: 'Yordam',
+      };
 
   const SECTION_1: MenuItem[] = [
     {
-      label: 'Buyurtmalarim',
+      label: L.myOrders,
       icon: 'receipt-outline',
       iconColor: '#8A8D5B',
       iconBg: 'rgba(138,141,91,0.1)',
       route: '/orders',
-      badge: { text: '2', bg: colors.danger, color: '#fff' },
+      ...(ordersCount > 0
+        ? { badge: { text: String(ordersCount), bg: colors.danger, color: '#fff' } }
+        : {}),
     },
     {
-      label: 'Sevimlilar',
+      label: L.wishlist,
       icon: 'heart-outline',
       iconColor: '#B85450',
       iconBg: 'rgba(184,84,80,0.1)',
       route: '/wishlist',
     },
     {
-      label: 'Manzillarim',
+      label: L.myAddresses,
       icon: 'location-outline',
       iconColor: '#C9A96E',
       iconBg: 'rgba(201,169,110,0.1)',
-      route: '/addresses',
+      route: '/settings/addresses',
     },
   ];
 
+  const faceReady = Boolean((user as any)?.faceTemplateReady);
+
   const SECTION_2: MenuItem[] = [
     {
-      label: "O'lchovlarim",
+      label: L.myMeasurements,
       icon: 'body-outline',
       iconColor: '#8A8D5B',
       iconBg: 'rgba(138,141,91,0.1)',
-      route: '/measurements',
+      route: '/(onboarding)/body',
     },
     {
-      label: 'Yuz shablonim',
+      label: L.faceTemplate,
       icon: 'scan-outline',
       iconColor: '#5F7A94',
       iconBg: 'rgba(95,122,148,0.1)',
-      route: '/face',
-      badge: { text: 'Tayyor', bg: 'rgba(122,138,91,0.12)', color: '#7A8A5B' },
+      route: '/(onboarding)/face',
+      ...(faceReady
+        ? { badge: { text: L.ready, bg: 'rgba(122,138,91,0.12)', color: '#7A8A5B' } }
+        : {}),
     },
   ];
 
   const SECTION_3: MenuItem[] = [
     {
-      label: 'Bildirishnomalar',
+      label: L.notifications,
       icon: 'notifications-outline',
       iconColor: '#C9A96E',
       iconBg: 'rgba(201,169,110,0.1)',
       route: '/notifications',
     },
     {
-      label: 'Til / Язык',
+      label: L.language,
       icon: 'globe-outline',
       iconColor: '#8A8D5B',
       iconBg: 'rgba(138,141,91,0.1)',
-      route: '/language',
-      secondary: "O'zbekcha",
+      route: '/settings/language',
+      secondary: L.languageValue,
     },
     {
-      label: 'Yordam',
+      label: L.help,
       icon: 'help-circle-outline',
       iconColor: '#857E6E',
       iconBg: 'rgba(133,126,110,0.1)',
-      route: '/support',
+      route: '/settings/help',
     },
   ];
 
   const STATS = [
-    { value: '12', label: 'Buyurtmalar' },
-    { value: '8', label: 'Sevimlilar' },
-    { value: '3', label: 'Manzillar' },
+    { value: String(ordersCount), label: lang === 'ru' ? 'Заказы' : 'Buyurtmalar' },
+    { value: String(wishlistCount), label: lang === 'ru' ? 'Избранное' : 'Sevimlilar' },
+    { value: String(addressesCount), label: lang === 'ru' ? 'Адреса' : 'Manzillar' },
   ];
 
   const renderMenuSection = (items: MenuItem[]) => (
@@ -199,9 +263,10 @@ export default function ProfileScreen() {
             color="oliveDeep"
             style={{ fontSize: 26, fontWeight: '700' }}
           >
-            Profil
+            {lang === 'ru' ? 'Профиль' : 'Profil'}
           </Text>
           <Pressable
+            onPress={() => router.push('/settings')}
             style={{
               width: 40,
               height: 40,
@@ -219,6 +284,7 @@ export default function ProfileScreen() {
 
         {/* User Card */}
         <Pressable
+          onPress={() => router.push('/settings/profile-details')}
           style={{
             marginHorizontal: 20,
             marginTop: 12,
@@ -261,10 +327,10 @@ export default function ProfileScreen() {
               color="ink"
               style={{ fontSize: 16, fontWeight: '600', marginBottom: 2 }}
             >
-              {user?.fullName ?? 'Umidjon Gafforov'}
+              {user?.fullName ?? (lang === 'ru' ? 'Пользователь' : 'Foydalanuvchi')}
             </Text>
             <Text variant="bodySmall" color="muted" style={{ fontSize: 13 }}>
-              @{user?.username ?? 'umidjon'}
+              @{user?.username ?? '—'}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.muted} />
@@ -291,7 +357,7 @@ export default function ProfileScreen() {
               variant="bodySmall"
               style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.goldSoft }}
             >
-              Sotuvchi rejimiga o'tish
+              {lang === 'ru' ? 'Перейти в режим продавца' : "Sotuvchi rejimiga o'tish"}
             </Text>
             <Ionicons name="arrow-forward" size={18} color={colors.gold} />
           </Pressable>
@@ -357,7 +423,7 @@ export default function ProfileScreen() {
               paddingLeft: 4,
             }}
           >
-            Buyurtmalar va tanlangan
+            {lang === 'ru' ? 'Заказы и избранное' : 'Buyurtmalar va tanlangan'}
           </Text>
           {renderMenuSection(SECTION_1)}
         </View>
@@ -376,7 +442,7 @@ export default function ProfileScreen() {
               paddingLeft: 4,
             }}
           >
-            Primerka sozlamalari
+            {lang === 'ru' ? 'Настройки примерки' : 'Primerka sozlamalari'}
           </Text>
           {renderMenuSection(SECTION_2)}
         </View>
@@ -395,7 +461,7 @@ export default function ProfileScreen() {
               paddingLeft: 4,
             }}
           >
-            Ilova
+            {lang === 'ru' ? 'Приложение' : 'Ilova'}
           </Text>
           {renderMenuSection(SECTION_3)}
         </View>
@@ -424,7 +490,7 @@ export default function ProfileScreen() {
               variant="body"
               style={{ fontSize: 14, fontWeight: '600', color: colors.danger }}
             >
-              Chiqish
+              {lang === 'ru' ? 'Выйти' : 'Chiqish'}
             </Text>
           </Pressable>
         </View>
