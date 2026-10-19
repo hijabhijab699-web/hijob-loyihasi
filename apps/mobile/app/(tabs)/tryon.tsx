@@ -357,37 +357,21 @@ export default function TryOnScreen() {
             </View>
           ) : (
             <>
-              {hero?.scene && (
+              {hero && (
+                // Model (scene render or plain photo) composited over the
+                // fitting-room backdrop so the boutique is always visible
+                // around the figure.
                 <Image
                   source={{ uri: hero.uri }}
-                  style={{ width: '100%', height: '100%' }}
-                  resizeMode="cover"
-                />
-              )}
-              {hero && !hero.scene && (
-                // Plain product photo — framed on the fitting-room backdrop.
-                <View
                   style={{
                     position: 'absolute',
-                    top: '8%',
-                    bottom: '12%',
-                    left: '14%',
-                    right: '14%',
-                    borderRadius: 20,
-                    overflow: 'hidden',
-                    backgroundColor: 'rgba(250,246,234,0.92)',
-                    shadowColor: '#000',
-                    shadowOpacity: 0.25,
-                    shadowRadius: 16,
-                    shadowOffset: { width: 0, height: 8 },
+                    top: '4%',
+                    bottom: '8%',
+                    left: '6%',
+                    right: '6%',
                   }}
-                >
-                  <Image
-                    source={{ uri: hero.uri }}
-                    style={{ width: '100%', height: '100%' }}
-                    resizeMode="contain"
-                  />
-                </View>
+                  resizeMode="contain"
+                />
               )}
               {lighting.overlay && (
                 <View
