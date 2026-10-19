@@ -1,0 +1,26 @@
+[Unit]
+Description=hijob ml-compositor (FastAPI + FaceFusion wrapper)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mlcomp
+Group=mlcomp
+WorkingDirectory=/opt/ml-compositor
+Environment=PYTHONUNBUFFERED=1
+Environment=FACEFUSION_DIR=/opt/facefusion
+Environment=FACEFUSION_PY=/opt/facefusion/.venv/bin/python
+Environment=FACEFUSION_TIMEOUT_S=240
+# Qo'shimcha ENV'ni /etc/ml-compositor.env ga qo'ying (DATABASE_URL, S3, va h.k.)
+EnvironmentFile=-/etc/ml-compositor.env
+ExecStart=/opt/ml-compositor/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 5002 --workers 2
+Restart=on-failure
+RestartSec=5
+# Face swap bir necha soniya ishlaydi — qattiq timeout qo'ymang.
+TimeoutStopSec=60
+# ML dependency'lar ko'p xotira ishlatadi — swap bo'lsa yaxshi.
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
