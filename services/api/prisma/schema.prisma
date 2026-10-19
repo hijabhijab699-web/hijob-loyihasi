@@ -112,6 +112,17 @@ model User {
   onboardingFaceDone Boolean @default(false) @map("onboarding_face_done")
   onboardingBodyDone Boolean @default(false) @map("onboarding_body_done")
 
+  // Storage key of the raw selfie captured once at onboarding. Reused by
+  // the background worker to pre-render a face-swapped mannequin for every
+  // product variant so the Primerka tab never hits the swap endpoint on
+  // product open. Null until the buyer finishes the face step.
+  selfieKey          String? @map("selfie_key")
+  // Snapshot of the body picker so a background render covering a newly
+  // published variant knows which bodyType × height band mannequin to
+  // pick without re-reading the mobile store.
+  tryonBodyType      String? @map("tryon_body_type") @db.VarChar(10)
+  tryonHeightCm      Int?    @map("tryon_height_cm") @db.SmallInt
+
   // Admin / moderation: flipped by admins to lock accounts. The auth guard
   // and anything role-sensitive respects this; login refuses when false.
   isActive   Boolean   @default(true) @map("is_active")
@@ -124,6 +135,8 @@ model User {
   cartItems     CartItem[]
   orders        Order[]
   tryOnSessions TryOnSession[]
+  faceRenders   UserFaceRender[]
+  faceRenderJobs UserFaceRenderJob[]
   addresses     Address[]
   refreshTokens RefreshToken[]
   pushTokens    PushToken[]
@@ -388,6 +401,8 @@ model ProductVariant {
   cartItems       CartItem[]
   orderItems      OrderItem[]
   tryOnSessions   TryOnSession[]
+  faceRenders     UserFaceRender[]
+  faceRenderJobs  UserFaceRenderJob[]
 
   @@unique([productId, color, size])
   @@index([productId])
@@ -414,6 +429,54 @@ model GarmentTemplate {
 }
 
 // ─── Try-On ──────────────────────────────────────────────────
+
+enum UserFaceRenderStatus {
+  pending
+  running
+  done
+  failed
+}
+
+/// Pre-rendered face-swapped mannequin photo for a single (user, variant)
+/// pair. Produced once by the background worker after onboarding, then
+/// served instantly from the catalog / Primerka tab without re-running
+/// facefusion on every product open.
+model UserFaceRender {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  variantId String   @map("variant_id") @db.Uuid
+  url       String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, variantId])
+  @@index([userId])
+  @@map("user_face_renders")
+}
+
+/// One-shot "swap my face onto this variant's mannequin" job. The worker
+/// drains these in FIFO order and writes a UserFaceRender row on success.
+model UserFaceRenderJob {
+  id           String               @id @default(uuid()) @db.Uuid
+  userId       String               @map("user_id") @db.Uuid
+  variantId    String               @map("variant_id") @db.Uuid
+  status       UserFaceRenderStatus @default(pending)
+  attempts     Int                  @default(0)
+  errorMessage String?              @map("error_message")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  startedAt    DateTime?            @map("started_at")
+  finishedAt   DateTime?            @map("finished_at")
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, variantId])
+  @@index([status, createdAt])
+  @@map("user_face_render_jobs")
+}
 
 model TryOnSession {
   id          String   @id @default(uuid()) @db.Uuid

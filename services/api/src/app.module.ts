@@ -21,6 +21,7 @@ import { PushModule } from './push/push.module';
 import { AdminModule } from './admin/admin.module';
 import { StyleJobsModule } from './style-jobs/style-jobs.module';
 import { MannequinTemplatesModule } from './mannequin-templates/mannequin-templates.module';
+import { UserFaceRendersModule } from './user-face-renders/user-face-renders.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { MannequinTemplatesModule } from './mannequin-templates/mannequin-templa
     AdminModule,
     StyleJobsModule,
     MannequinTemplatesModule,
+    UserFaceRendersModule,
   ],
 })
 export class AppModule {}

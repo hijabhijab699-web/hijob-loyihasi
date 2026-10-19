@@ -11,7 +11,6 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 import { useTryonOnboarding, type BodyType } from '../../src/store/tryon-onboarding';
-import { hasLocalFace, localFaceUri } from '../../src/lib/face-local-cache';
 
 interface Variant {
   id: string;
@@ -19,6 +18,11 @@ interface Variant {
   colorHex: string;
   images: string[];
   renderedUrl?: string | null;
+  // Facefusion result for THIS buyer, pre-rendered at onboarding time by
+  // the backend queue. When present, the Primerka tab shows it verbatim —
+  // no per-product face-swap network call. Catalog does not know about
+  // this; it is merged client-side from GET /tryon/my-renders.
+  userRenderedUrl?: string | null;
 }
 
 interface Product {
@@ -144,51 +148,56 @@ export default function TryOnScreen() {
   const [lightIdx, setLightIdx] = useState(0);
   const lighting = LIGHTING[lightIdx] ?? LIGHTING[0];
 
-  // Local selfie available? Enables the face-swap preview. Re-checked on
-  // focus so a freshly retaken selfie is picked up.
-  const [canFaceSwap, setCanFaceSwap] = useState(false);
-  useFocusEffect(
-    useCallback(() => {
-      hasLocalFace()
-        .then(setCanFaceSwap)
-        .catch(() => setCanFaceSwap(false));
-    }, []),
-  );
-
-  const faceswapQuery = useQuery<{ resultUrl: string; swapped?: boolean }>({
-    queryKey: ['tryon-faceswap', selected?.id, bodyType, heightCm],
-    enabled: !!selected && canFaceSwap && !!selected.variants?.length,
-    staleTime: 10 * 60_000,
-    queryFn: async () => {
-      const v = selected!.variants[0];
-      if (!v) throw new Error('no variant');
-      const form = new FormData();
-      form.append('variantId', v.id);
-      if (bodyType) form.append('bodyType', bodyType);
-      if (heightCm != null) form.append('heightCm', String(heightCm));
-      form.append('face', {
-        uri: localFaceUri(),
-        name: 'face.jpg',
-        type: 'image/jpeg',
-      } as unknown as Blob);
-      const { data } = await api.post('/tryon/faceswap', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60_000,
-      });
-      return data;
+  // Pre-rendered face-swapped mannequins for the current buyer. Produced
+  // once at onboarding time by the backend queue, served instantly here —
+  // the Primerka tab no longer hits /tryon/faceswap on product open.
+  // Polled at a slow interval while jobs are still cooking so new variants
+  // show up as they finish.
+  const myRendersQuery = useQuery<{
+    hasSelfie: boolean;
+    renders: Array<{ variantId: string; url: string }>;
+    pending: number;
+    running: number;
+    failed: number;
+  }>({
+    queryKey: ['tryon-my-renders'],
+    queryFn: async () => (await api.get('/tryon/my-renders')).data,
+    enabled: !!tryonCompleted,
+    refetchInterval: (query) => {
+      const d = query.state.data;
+      if (!d) return false;
+      return d.pending > 0 || d.running > 0 ? 4000 : false;
     },
   });
+  const renderByVariant = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of myRendersQuery.data?.renders ?? []) m.set(r.variantId, r.url);
+    return m;
+  }, [myRendersQuery.data]);
 
-  // `scene` = the image is a full fitting-room render (AI variant or its
-  // face-swap); otherwise it's a plain product photo shown over the backdrop.
+  // Pick the first variant that already has a buyer-specific render; falls
+  // back to the first variant so we still render something on first open.
+  const selectedVariantRenderUrl = useMemo(() => {
+    if (!selected) return null;
+    for (const v of selected.variants ?? []) {
+      const u = renderByVariant.get(v.id);
+      if (u) return u;
+    }
+    return null;
+  }, [selected, renderByVariant]);
+
+  // `scene` = the image is a full fitting-room render (buyer swap or AI
+  // body-matched variant); otherwise it's a plain product photo shown over
+  // the backdrop. Priority: user-specific render → body-matched mannequin
+  // → coverUrl.
   const hero = useMemo(() => {
     if (!selected) return null;
+    if (selectedVariantRenderUrl)
+      return { uri: selectedVariantRenderUrl, scene: true };
     const matched = pickBodyMatched(selected.resultVariants, bodyType, heightCm);
-    if (faceswapQuery.data?.resultUrl)
-      return { uri: faceswapQuery.data.resultUrl, scene: !!matched };
     if (matched) return { uri: matched, scene: true };
     return selected.coverUrl ? { uri: selected.coverUrl, scene: false } : null;
-  }, [selected, faceswapQuery.data, bodyType, heightCm]);
+  }, [selected, selectedVariantRenderUrl, bodyType, heightCm]);
 
   const wishMutation = useMutation({
     mutationFn: async ({ productId, on }: { productId: string; on: boolean }) =>
@@ -425,26 +434,32 @@ export default function TryOnScreen() {
                 </Text>
               </Pressable>
 
-              {faceswapQuery.isFetching && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(30,24,16,0.35)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                  }}
-                >
-                  <ActivityIndicator color="#FFF" />
-                  <Text style={{ color: '#FFF', fontSize: 12 }}>
-                    AI sizning yuzingizni qo'ymoqda…
-                  </Text>
-                </View>
-              )}
+              {/* Still-cooking hint: the pre-render queue has items left
+                  for this user. Non-blocking — the body-matched mannequin
+                  (or the plain cover) is already visible underneath. */}
+              {!selectedVariantRenderUrl &&
+                ((myRendersQuery.data?.pending ?? 0) + (myRendersQuery.data?.running ?? 0)) > 0 && (
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: 'absolute',
+                      top: 14,
+                      left: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 14,
+                      backgroundColor: GLASS,
+                    }}
+                  >
+                    <ActivityIndicator color="#FFF" size="small" />
+                    <Text style={{ color: '#FFF', fontSize: 11 }}>
+                      AI yuzingizni mahsulotlarga qo'yyapti…
+                    </Text>
+                  </View>
+                )}
             </>
           )}
         </View>
@@ -506,6 +521,13 @@ export default function TryOnScreen() {
         >
           {visible.map((p) => {
             const variant = p.variants?.find((v) => v.color === colorFilter) ?? p.variants?.[0];
+            // Pre-rendered URL for the first variant of this product that
+            // the queue has finished; falls back inside ProductThumb to the
+            // body-matched render / cover.
+            const userUrl =
+              (p.variants ?? [])
+                .map((v) => renderByVariant.get(v.id))
+                .find((u) => !!u) ?? null;
             return (
               <ProductThumb
                 key={p.id}
@@ -515,6 +537,7 @@ export default function TryOnScreen() {
                 added={!!variant && justAdded === variant.id}
                 bodyType={bodyType}
                 heightCm={heightCm}
+                userRenderUrl={userUrl}
                 onPress={() => setSelectedId(p.id)}
                 onWish={() => wishMutation.mutate({ productId: p.id, on: !wished.has(p.id) })}
                 onCart={() => variant && cartMutation.mutate(variant.id)}
@@ -692,6 +715,7 @@ function ProductThumb({
   added,
   bodyType,
   heightCm,
+  userRenderUrl,
   onPress,
   onWish,
   onCart,
@@ -702,12 +726,14 @@ function ProductThumb({
   added: boolean;
   bodyType: BodyType | null | undefined;
   heightCm: number | null | undefined;
+  userRenderUrl: string | null;
   onPress: () => void;
   onWish: () => void;
   onCart: () => void;
 }) {
   const { colors } = useTheme();
-  const matched = pickBodyMatched(product.resultVariants, bodyType, heightCm);
+  const matched =
+    userRenderUrl ?? pickBodyMatched(product.resultVariants, bodyType, heightCm);
   const thumb = matched ?? product.variants?.[0]?.renderedUrl ?? product.coverUrl;
   return (
     <Pressable
