@@ -1,11 +1,14 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/theme/ThemeProvider';
 
 export default function SellerTabsLayout() {
   const { colors, theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 10);
 
   return (
     <Tabs
@@ -16,9 +19,9 @@ export default function SellerTabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.rule,
-          height: 78,
+          height: 58 + bottomInset,
           paddingTop: 10,
-          paddingBottom: 22,
+          paddingBottom: bottomInset,
         },
         tabBarLabelStyle: {
           fontFamily: theme.fontFamilies.body,
