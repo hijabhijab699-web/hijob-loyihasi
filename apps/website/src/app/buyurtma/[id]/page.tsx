@@ -34,6 +34,7 @@ export default function OrderTrackingPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!params?.id) return;
     (async () => {
       setLoading(true);
       const res = await fetchOrder(params.id);
@@ -44,7 +45,7 @@ export default function OrderTrackingPage() {
       }
       setLoading(false);
     })();
-  }, [params.id]);
+  }, [params?.id]);
 
   if (loading) {
     return (

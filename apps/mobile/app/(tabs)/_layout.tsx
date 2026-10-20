@@ -2,11 +2,17 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/theme/ThemeProvider';
 
 export default function TabsLayout() {
   const { colors, theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  // Android 3-button nav / iPhone home indicator — lift the bar above the
+  // system gesture area. 10 keeps a comfortable baseline for gesture-nav
+  // Androids where insets.bottom is 0.
+  const bottomInset = Math.max(insets.bottom, 10);
 
   return (
     <Tabs
@@ -17,9 +23,9 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.rule,
-          height: 78,
+          height: 58 + bottomInset,
           paddingTop: 10,
-          paddingBottom: 22,
+          paddingBottom: bottomInset,
         },
         tabBarLabelStyle: {
           fontFamily: theme.fontFamilies.body,

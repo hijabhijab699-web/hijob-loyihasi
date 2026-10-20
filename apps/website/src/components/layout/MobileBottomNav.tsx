@@ -25,7 +25,7 @@ export function MobileBottomNav() {
           const isActive =
             tab.href === '/'
               ? pathname === '/'
-              : pathname === tab.href || pathname.startsWith(tab.href + '/');
+              : pathname === tab.href || !!pathname?.startsWith(tab.href + '/');
           const Icon = tab.icon;
           const showBadge = tab.href === '/sevimli' && ids.length > 0;
           return (

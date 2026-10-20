@@ -1,5 +1,12 @@
-import { useEffect, useRef } from 'react';
-import { Pressable, View, Text as RNText, Animated, Easing } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Pressable,
+  View,
+  Text as RNText,
+  Animated,
+  Easing,
+  ActivityIndicator,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -8,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import Svg, { Circle, G, Path, Polyline } from 'react-native-svg';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { useTryonOnboarding } from '../../src/store/tryon-onboarding';
+import { api } from '../../src/api/client';
 
 const WOMAN_IMG = require('../../assets/body-woman.webp');
 const FALLBACK_FACE = require('../../assets/demo-face.jpg');
@@ -19,7 +27,15 @@ export default function AvatarReadyScreen() {
   const faceOverlayUrl = useTryonOnboarding((s) => s.faceOverlayUrl);
   const heightCm = useTryonOnboarding((s) => s.heightCm);
   const bodyType = useTryonOnboarding((s) => s.bodyType);
+  const storeId = useTryonOnboarding((s) => s.storeId);
   const markComplete = useTryonOnboarding((s) => s.markComplete);
+
+  // Prep status: `null` = idle (initial render), `uploading` = we're
+  // posting the selfie to /tryon/prepare, `done` = backend has queued the
+  // pre-renders and we can enter the Primerka tab. We don't block navigation
+  // on the queue completing — the catalog will show whatever renders are
+  // already ready and keep polling for the rest.
+  const [prepState, setPrepState] = useState<'idle' | 'uploading' | 'done'>('idle');
 
   const bodyLabel =
     bodyType === 'slim' ? "Ozg'in" : bodyType === 'full' ? "To'la" : "O'rtacha";
@@ -64,6 +80,39 @@ export default function AvatarReadyScreen() {
       ? { uri: faceUri }
       : FALLBACK_FACE;
   const useTransparentOverlay = !!faceOverlayUrl;
+
+  // Fire the one-time /tryon/prepare upload as soon as this screen mounts —
+  // the user is reading the "Avatar tayyor!" copy anyway, so we spend that
+  // time persisting the selfie + enqueuing the background face-swap jobs.
+  // The hero button stays enabled; worst case the user hits it before the
+  // network call returns and we fire-and-forget the request.
+  useEffect(() => {
+    if (!faceUri || prepState !== 'idle') return;
+    setPrepState('uploading');
+    (async () => {
+      try {
+        const form = new FormData();
+        form.append('face', {
+          uri: faceUri,
+          name: 'selfie.jpg',
+          type: 'image/jpeg',
+        } as unknown as Blob);
+        if (bodyType) form.append('bodyType', bodyType);
+        if (heightCm != null) form.append('heightCm', String(heightCm));
+        if (storeId) form.append('sellerId', storeId);
+        await api.post('/tryon/prepare', form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 45_000,
+        });
+      } catch (e: any) {
+        console.warn('tryon prepare failed', e?.message ?? e);
+        // Non-fatal: the Primerka tab shows raw mannequins until the next
+        // "Yuzni yangilash" tap retries the upload.
+      } finally {
+        setPrepState('done');
+      }
+    })();
+  }, [faceUri, bodyType, heightCm, storeId, prepState]);
 
   const enter = async () => {
     await markComplete();
@@ -293,6 +342,20 @@ export default function AvatarReadyScreen() {
 
         {/* Enter button */}
         <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+          {prepState === 'uploading' && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+              gap: 8, marginBottom: 10,
+            }}>
+              <ActivityIndicator size="small" color={colors.oliveDeep} />
+              <RNText style={{
+                fontFamily: theme.fontFamilies.body, fontSize: 12,
+                color: colors.muted,
+              }}>
+                AI yuzingizni mahsulotlarga qo'ymoqda…
+              </RNText>
+            </View>
+          )}
           <Pressable
             onPress={enter}
             style={{

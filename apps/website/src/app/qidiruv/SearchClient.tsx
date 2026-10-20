@@ -11,14 +11,14 @@ import { ProductCard } from '@/components/ProductCard';
 export default function SearchClient() {
   const sp = useSearchParams();
   const router = useRouter();
-  const initial = sp.get('q') ?? '';
+  const initial = sp?.get('q') ?? '';
   const [q, setQ] = useState(initial);
   const [items, setItems] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const query = sp.get('q') ?? '';
+    const query = sp?.get('q') ?? '';
     if (!query) {
       setItems([]);
       setTotal(0);
@@ -74,14 +74,14 @@ export default function SearchClient() {
             <div className="py-20 text-center">
               <Loader2 className="w-6 h-6 animate-spin inline-block text-ink-muted" />
             </div>
-          ) : !sp.get('q') ? (
+          ) : !sp?.get('q') ? (
             <p className="text-ink-muted">
               Qidiruv so&apos;zini yozing va &quot;Qidirish&quot; tugmasini bosing.
             </p>
           ) : total === 0 ? (
             <div className="py-16 text-center">
               <p className="text-ink-muted">
-                &ldquo;{sp.get('q')}&rdquo; bo&apos;yicha hech narsa topilmadi.
+                &ldquo;{sp?.get('q')}&rdquo; bo&apos;yicha hech narsa topilmadi.
               </p>
               <Link
                 href="/katalog"

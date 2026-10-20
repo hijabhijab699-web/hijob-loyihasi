@@ -13,6 +13,7 @@ import * as crypto from 'crypto';
 
 import { pickMannequinForCategorySize } from './mannequin-pool';
 import { MannequinTemplatesService } from '../mannequin-templates/mannequin-templates.service';
+import { UserFaceRendersService } from '../user-face-renders/user-face-renders.service';
 
 export interface DressMannequinInput {
   mannequinUrl?: string;
@@ -31,6 +32,7 @@ export class StyleJobsService {
     private readonly compositor: MlCompositorClient,
     private readonly notifications: NotificationsService,
     private readonly mannequins: MannequinTemplatesService,
+    private readonly faceRenders: UserFaceRendersService,
   ) {}
 
   /**
@@ -219,6 +221,19 @@ export class StyleJobsService {
         ...(publishNow ? { status: 'published' as const, publishedAt: new Date() } : {}),
       },
     });
+    // Approve = this variant becomes something a buyer can land on. Fan the
+    // facefusion pre-render out to every onboarded user. Best-effort —
+    // failing here must not block the seller's approve action.
+    if (publishNow) {
+      this.faceRenders
+        .fanoutForProduct(productId)
+        .catch((err) =>
+          this.logger.warn(
+            `face-render fanout failed for ${productId}: ${(err as Error).message}`,
+          ),
+        );
+    }
+
     return { ok: true, productId, styledImageUrl: job.resultUrl, published: publishNow };
   }
 
