@@ -56,9 +56,9 @@ export default function KatalogClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialCategory = searchParams.get('category');
-  const initialSort = searchParams.get('sort') ?? 'popular';
-  const initialSearch = searchParams.get('q') ?? '';
+  const initialCategory = searchParams?.get('category') ?? null;
+  const initialSort = searchParams?.get('sort') ?? 'popular';
+  const initialSearch = searchParams?.get('q') ?? '';
 
   const [activeCategory, setActiveCategory] = useState<string>(() => {
     if (!initialCategory) return 'Barchasi';
