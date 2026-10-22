@@ -388,40 +388,32 @@ export class UserFaceRendersService {
   // ─── Internals ──────────────────────────────────────────────────
 
   /**
-   * Return a face stamp for `userId`, building one if we don't already
-   * have it. The first call per user after a service restart downloads
-   * any existing render for that user and extracts the stamp from it, so
-   * we don't pay a fresh facefusion run just because we lost in-process
-   * cache. Returns null when the user has never had a successful render
-   * yet — the caller then runs facefusion and caches the result.
+   * Return a face stamp built straight from the buyer's selfie. We used to
+   * take the stamp from the first facefusion result, which meant every
+   * subsequent mannequin inherited the "mannequin-ified" face GFPGAN
+   * produced — the buyer looked different from themselves. Pulling the
+   * stamp from the selfie keeps 100% of the real face identity and skips
+   * facefusion entirely; the overlay step then drops that face into each
+   * mannequin's own head region.
    */
   private async getOrBuildFaceStamp(
     userId: string,
-    _selfieKey: string,
+    selfieKey: string,
   ): Promise<Buffer | null> {
     const cached = this.faceStampCache.get(userId);
     if (cached) return cached;
 
-    const existing = await this.prisma.userFaceRender.findFirst({
-      where: { userId },
-      orderBy: { updatedAt: 'desc' },
-      select: { url: true },
-    });
-    if (!existing?.url) return null;
-
     try {
-      const res = await fetch(existing.url);
-      if (!res.ok) return null;
-      const bytes = Buffer.from(await res.arrayBuffer());
-      const stamp = await this.compositor.composeFaceStamp(bytes);
+      const selfieBytes = await this.storage.read(selfieKey);
+      const stamp = await this.compositor.composeFaceStamp(selfieBytes);
       this.faceStampCache.set(userId, stamp);
       this.logger.log(
-        `face stamp rebuilt from existing render for user ${userId} (${stamp.length} B)`,
+        `face stamp cut from selfie for user ${userId} (${stamp.length} B)`,
       );
       return stamp;
     } catch (err) {
       const detail = (err as { message?: string })?.message ?? '';
-      this.logger.warn(`face stamp rebuild failed for ${userId}: ${detail}`);
+      this.logger.warn(`face stamp build failed for ${userId}: ${detail}`);
       return null;
     }
   }
