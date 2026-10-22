@@ -290,17 +290,29 @@
       return out;
     }
 
-    // Figure spills past an edge — scale down to fit inside a padded
-    // frame, horizontally centre, and plant feet near the bottom-pad
-    // line so every short/mid/tall model shares the same floor.
+    // Figure spills past an edge — crop ONLY the band that contains the
+    // figure (horizontal full width to keep the boutique scene behind
+    // it; vertically just the figure's own rows plus a small pad) and
+    // scale that band to fit the cell with a 3 % margin on every edge.
+    // Scaling the WHOLE cell would bring down stray feet/hem from the
+    // row above whenever findGridCuts put the cut a few pixels too high.
     const figW = x1 - x0 + 1;
     const figH = y1 - y0 + 1;
+    const vPad = Math.round(h * 0.02);
+    const srcY0 = Math.max(0, y0 - vPad);
+    const srcY1 = Math.min(h, y1 + vPad);
+    const srcH = srcY1 - srcY0;
     const availW = w * (1 - 2 * CELL_PAD);
     const availH = h * (1 - 2 * CELL_PAD);
-    const scale = Math.min(availW / figW, availH / figH);
-    const destX = (w - figW * scale) / 2 - x0 * scale;
-    const destY = h * (1 - CELL_PAD) - figH * scale - y0 * scale;
-    octx.drawImage(cell, 0, 0, w, h, destX, destY, w * scale, h * scale);
+    // Scale the FIGURE itself to fit — never upscale (that would just
+    // pixelate a tight figure). The scene around the figure moves with
+    // the figure since we keep the full source width.
+    const scale = Math.min(1, availW / figW, availH / figH);
+    const dw = w * scale;
+    const dh = srcH * scale;
+    const destX = (w - dw) / 2;
+    const destY = h * (1 - CELL_PAD) - dh;
+    octx.drawImage(cell, 0, srcY0, w, srcH, destX, destY, dw, dh);
     return out;
   }
 

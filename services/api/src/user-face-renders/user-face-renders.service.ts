@@ -388,34 +388,22 @@ export class UserFaceRendersService {
   // ─── Internals ──────────────────────────────────────────────────
 
   /**
-   * Return a face stamp built straight from the buyer's selfie. We used to
-   * take the stamp from the first facefusion result, which meant every
-   * subsequent mannequin inherited the "mannequin-ified" face GFPGAN
-   * produced — the buyer looked different from themselves. Pulling the
-   * stamp from the selfie keeps 100% of the real face identity and skips
-   * facefusion entirely; the overlay step then drops that face into each
-   * mannequin's own head region.
+   * Return the cached face stamp for this user if one has already been
+   * derived from a previous facefusion run. First variant per user comes
+   * back null → caller falls through to a fresh facefusion swap, whose
+   * result (face already properly aligned + GFPGAN-enhanced inside the
+   * hijab opening) is then cropped into a stamp for every later variant.
+   * The selfieKey arg is kept so the signature doesn't drift, even though
+   * we deliberately no longer cut the stamp straight from the selfie —
+   * the selfie's face at that angle rarely drops cleanly into a 3/4-view
+   * mannequin head, so the first-render-via-facefusion approach gives a
+   * better-looking buyer identity on every subsequent variant.
    */
   private async getOrBuildFaceStamp(
     userId: string,
-    selfieKey: string,
+    _selfieKey: string,
   ): Promise<Buffer | null> {
-    const cached = this.faceStampCache.get(userId);
-    if (cached) return cached;
-
-    try {
-      const selfieBytes = await this.storage.read(selfieKey);
-      const stamp = await this.compositor.composeFaceStamp(selfieBytes);
-      this.faceStampCache.set(userId, stamp);
-      this.logger.log(
-        `face stamp cut from selfie for user ${userId} (${stamp.length} B)`,
-      );
-      return stamp;
-    } catch (err) {
-      const detail = (err as { message?: string })?.message ?? '';
-      this.logger.warn(`face stamp build failed for ${userId}: ${detail}`);
-      return null;
-    }
+    return this.faceStampCache.get(userId) ?? null;
   }
 
   private heightBand(cm: number | null): 'short' | 'mid' | 'tall' {
