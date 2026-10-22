@@ -15,6 +15,7 @@ from app.services.scarf import draw_scarf
 from app.services.dress_compose import compose_dress_template
 from app.services.face_swap import face_swap
 from app.services.facefusion import NoFaceError, face_fusion_swap
+from app.services.face_overlay import apply_face_stamp, extract_face_stamp
 from app.services.template_compose import compose_scarf_template
 from app.utils import decode_image_bytes, encode_output
 
@@ -253,6 +254,91 @@ async def compose_facefusion(
         content=jpeg,
         media_type="image/jpeg",
         headers={"X-Compose-Time-Ms": str(elapsed_ms), "X-Mode": "facefusion"},
+    )
+
+
+@router.post(
+    "/face-stamp",
+    responses={
+        200: {"content": {"image/png": {}}, "description": "RGBA soft-oval face cut-out"},
+        422: {"description": "No face found in the image"},
+    },
+)
+async def compose_face_stamp(
+    image: UploadFile = File(
+        ..., description="Full-body image containing a visible face (typically a facefusion swap result)"
+    ),
+) -> Response:
+    """One-off: crop the buyer's face out of their first facefusion swap
+    as a soft-oval transparent PNG. The caller caches this stamp and
+    reuses it on every other variant via /compose/face-overlay — one
+    expensive swap, many cheap composites."""
+    started = time.perf_counter()
+    img_bytes = await _read_upload(image)
+    try:
+        img = decode_image_bytes(img_bytes)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    stamp = extract_face_stamp(img)
+    if stamp is None:
+        raise HTTPException(status_code=422, detail="NO_FACE_FOUND")
+
+    ok, buf = cv2.imencode(".png", stamp, [cv2.IMWRITE_PNG_COMPRESSION, 6])
+    if not ok:
+        logger.error("face stamp encode failed")
+        raise HTTPException(status_code=500, detail="encode_failed")
+
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    logger.info("face-stamp cut in %d ms (%d bytes)", elapsed_ms, len(buf))
+    return Response(
+        content=buf.tobytes(),
+        media_type="image/png",
+        headers={"X-Compose-Time-Ms": str(elapsed_ms), "X-Mode": "face-stamp"},
+    )
+
+
+@router.post(
+    "/face-overlay",
+    responses={
+        200: {"content": {"image/jpeg": {}}, "description": "Face stamp composited over target mannequin"},
+        422: {"description": "Target mannequin has no detectable face"},
+    },
+)
+async def compose_face_overlay(
+    mannequin: UploadFile = File(..., description="Target mannequin image (the product's variant render)"),
+    stamp: UploadFile = File(..., description="RGBA face stamp from /compose/face-stamp"),
+) -> Response:
+    """Alpha-composite a cached face stamp onto a new mannequin. ~2 s
+    instead of ~2 min for a full facefusion run — the trade-off is that
+    the face is just a 2D overlay, not re-rendered per angle, so the
+    source swap's lighting/angle are reused. Good enough when every
+    product's mannequin faces the camera head-on at the same scale."""
+    started = time.perf_counter()
+    mannequin_bytes = await _read_upload(mannequin)
+    stamp_bytes = await _read_upload(stamp)
+
+    try:
+        target = decode_image_bytes(mannequin_bytes)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    arr = np.frombuffer(stamp_bytes, dtype=np.uint8)
+    stamp_rgba = cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
+    if stamp_rgba is None or stamp_rgba.ndim != 3 or stamp_rgba.shape[-1] != 4:
+        raise HTTPException(status_code=400, detail="stamp_must_be_rgba_png")
+
+    result = apply_face_stamp(target, stamp_rgba)
+    if result is None:
+        raise HTTPException(status_code=422, detail="NO_FACE_ON_MANNEQUIN")
+
+    jpeg = encode_output(result)
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    logger.info("face-overlay in %d ms", elapsed_ms)
+    return Response(
+        content=jpeg,
+        media_type="image/jpeg",
+        headers={"X-Compose-Time-Ms": str(elapsed_ms), "X-Mode": "face-overlay"},
     )
 
 

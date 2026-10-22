@@ -152,6 +152,76 @@ export class MlCompositorClient {
     return Buffer.from(arrayBuffer);
   }
 
+  /**
+   * One-off per user: crop their face out of the first facefusion swap as
+   * a soft-oval RGBA PNG. The caller caches the stamp and feeds it to
+   * composeFaceOverlay for every subsequent variant — one slow swap, N
+   * cheap composites.
+   */
+  async composeFaceStamp(swapResult: Buffer): Promise<Buffer> {
+    const body = new FormData();
+    body.append(
+      'image',
+      new Blob([new Uint8Array(swapResult)], { type: 'image/jpeg' }),
+      'swap.jpg',
+    );
+    const started = Date.now();
+    const res = await fetch(`${this.composerBase}/compose/face-stamp`, {
+      method: 'POST',
+      body,
+    });
+    const elapsed = Date.now() - started;
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      this.logger.warn(`ml-compositor face-stamp ${res.status}: ${txt}`);
+      if (res.status === 422) {
+        throw new InternalServerErrorException({ code: 'STAMP_NO_FACE', detail: txt });
+      }
+      throw new InternalServerErrorException({ code: 'STAMP_FAILED', upstream: res.status });
+    }
+    this.logger.log(`face-stamp cut in ${elapsed}ms`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+
+  /**
+   * Alpha-composite a cached face stamp onto a new mannequin. ~2 s on
+   * CPU. Returns the composited JPEG, or throws FACESWAP_UNPROCESSABLE
+   * if the mannequin has no detectable face (caller falls back to the
+   * raw mannequin or triggers a real facefusion run).
+   */
+  async composeFaceOverlay(
+    mannequin: { buffer: Buffer; mimetype: string; filename?: string },
+    stamp: Buffer,
+  ): Promise<Buffer> {
+    const body = new FormData();
+    body.append(
+      'mannequin',
+      new Blob([new Uint8Array(mannequin.buffer)], { type: mannequin.mimetype }),
+      mannequin.filename || 'mannequin.jpg',
+    );
+    body.append(
+      'stamp',
+      new Blob([new Uint8Array(stamp)], { type: 'image/png' }),
+      'stamp.png',
+    );
+    const started = Date.now();
+    const res = await fetch(`${this.composerBase}/compose/face-overlay`, {
+      method: 'POST',
+      body,
+    });
+    const elapsed = Date.now() - started;
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      this.logger.warn(`ml-compositor face-overlay ${res.status}: ${txt}`);
+      if (res.status === 422) {
+        throw new InternalServerErrorException({ code: 'FACESWAP_UNPROCESSABLE', detail: txt });
+      }
+      throw new InternalServerErrorException({ code: 'OVERLAY_FAILED', upstream: res.status });
+    }
+    this.logger.log(`face-overlay composed in ${elapsed}ms`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+
   async composeScarf(faceImage: Express.Multer.File, spec: ScarfSpec): Promise<Buffer> {
     const landmarks = await this.extractLandmarks(faceImage);
 

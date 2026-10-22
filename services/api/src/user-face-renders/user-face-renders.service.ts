@@ -20,6 +20,12 @@ type BodyType = 'slim' | 'medium' | 'full';
 export class UserFaceRendersService {
   private readonly logger = new Logger(UserFaceRendersService.name);
 
+  /** In-process cache of per-user face stamps (soft-oval RGBA PNG). Cleared
+   * on service restart; rebuilt lazily from an existing render whenever a
+   * subsequent variant job comes in. One slow facefusion per user then
+   * drives every later variant through the cheap overlay path. */
+  private readonly faceStampCache = new Map<string, Buffer>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
@@ -264,7 +270,6 @@ export class UserFaceRendersService {
       if (!job.user?.selfieKey) {
         throw new Error('NO_SELFIE_ON_USER');
       }
-      const selfieBytes = await this.storage.read(job.user.selfieKey);
 
       const bodyType = (job.user.tryonBodyType as BodyType) ?? 'medium';
       const heightCm = job.user.tryonHeightCm ?? null;
@@ -278,25 +283,59 @@ export class UserFaceRendersService {
         job.variant.product.coverUrl;
       if (!mannequinUrl) throw new Error('STYLED_IMAGE_MISSING');
 
-      // Fetch the mannequin and feed it to facefusion as the "to" image.
       const res = await fetch(mannequinUrl);
       if (!res.ok) throw new Error(`mannequin fetch HTTP ${res.status}`);
       const mannequinBytes = Buffer.from(await res.arrayBuffer());
       const mannequinMime = res.headers.get('content-type') ?? 'image/jpeg';
+      const mannequinFile = {
+        buffer: mannequinBytes,
+        mimetype: mannequinMime,
+        filename: 'mannequin.jpg',
+      };
 
-      const jpeg = await this.compositor.composeFacefusion(
-        {
-          buffer: mannequinBytes,
-          mimetype: mannequinMime,
-          filename: 'mannequin.jpg',
-        },
-        {
+      // Try the cheap path first: if we already have a face stamp for this
+      // user (either in process memory or re-derivable from any existing
+      // render), overlay it in ~2 s instead of spending 2 min on a fresh
+      // facefusion swap. The slow path only runs once per user, ever.
+      const stamp = await this.getOrBuildFaceStamp(job.userId, job.user.selfieKey);
+      let jpeg: Buffer | null = null;
+      if (stamp) {
+        try {
+          jpeg = await this.compositor.composeFaceOverlay(mannequinFile, stamp);
+          this.logger.log(`overlay path for ${job.variantId} (${jpeg.length} B)`);
+        } catch (overlayErr) {
+          // Mannequin had no detectable face (or overlay crashed) — fall
+          // through to a full facefusion run so this one variant still
+          // gets a proper render.
+          const detail = (overlayErr as { message?: string })?.message ?? '';
+          this.logger.warn(`overlay fell back to facefusion: ${detail}`);
+        }
+      }
+
+      if (!jpeg) {
+        const selfieBytes = await this.storage.read(job.user.selfieKey);
+        jpeg = await this.compositor.composeFacefusion(mannequinFile, {
           buffer: selfieBytes,
           mimetype: 'image/jpeg',
           originalname: 'selfie.jpg',
-          // The rest of Multer.File is irrelevant to composeFacefusion.
-        } as unknown as Express.Multer.File,
-      );
+        } as unknown as Express.Multer.File);
+        this.logger.log(`facefusion path for ${job.variantId} (${jpeg.length} B)`);
+
+        // First successful swap for this user → cache its face as a stamp
+        // so every later variant takes the cheap overlay path.
+        if (!this.faceStampCache.has(job.userId)) {
+          try {
+            const freshStamp = await this.compositor.composeFaceStamp(jpeg);
+            this.faceStampCache.set(job.userId, freshStamp);
+            this.logger.log(
+              `face stamp cached for user ${job.userId} (${freshStamp.length} B)`,
+            );
+          } catch (stampErr) {
+            const detail = (stampErr as { message?: string })?.message ?? '';
+            this.logger.warn(`face stamp build failed: ${detail}`);
+          }
+        }
+      }
 
       const saved = await this.storage.save(
         `tryon/renders/${job.userId}`,
@@ -347,6 +386,45 @@ export class UserFaceRendersService {
   }
 
   // ─── Internals ──────────────────────────────────────────────────
+
+  /**
+   * Return a face stamp for `userId`, building one if we don't already
+   * have it. The first call per user after a service restart downloads
+   * any existing render for that user and extracts the stamp from it, so
+   * we don't pay a fresh facefusion run just because we lost in-process
+   * cache. Returns null when the user has never had a successful render
+   * yet — the caller then runs facefusion and caches the result.
+   */
+  private async getOrBuildFaceStamp(
+    userId: string,
+    _selfieKey: string,
+  ): Promise<Buffer | null> {
+    const cached = this.faceStampCache.get(userId);
+    if (cached) return cached;
+
+    const existing = await this.prisma.userFaceRender.findFirst({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      select: { url: true },
+    });
+    if (!existing?.url) return null;
+
+    try {
+      const res = await fetch(existing.url);
+      if (!res.ok) return null;
+      const bytes = Buffer.from(await res.arrayBuffer());
+      const stamp = await this.compositor.composeFaceStamp(bytes);
+      this.faceStampCache.set(userId, stamp);
+      this.logger.log(
+        `face stamp rebuilt from existing render for user ${userId} (${stamp.length} B)`,
+      );
+      return stamp;
+    } catch (err) {
+      const detail = (err as { message?: string })?.message ?? '';
+      this.logger.warn(`face stamp rebuild failed for ${userId}: ${detail}`);
+      return null;
+    }
+  }
 
   private heightBand(cm: number | null): 'short' | 'mid' | 'tall' {
     if (!cm || cm <= 160) return 'short';
