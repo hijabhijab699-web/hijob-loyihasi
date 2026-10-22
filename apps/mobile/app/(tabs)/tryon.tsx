@@ -387,35 +387,19 @@ export default function TryOnScreen() {
                 // backdrop shows around them.
                 <Image
                   source={{ uri: hero.uri }}
-                  style={
-                    hero.scene
-                      ? {
-                          // Composite renders ALREADY contain their own
-                          // boutique scene; stacking the mobile backdrop
-                          // behind would show two different fitting
-                          // rooms, so fill the card completely with the
-                          // baked-in scene. The content script already
-                          // pads the figure 3 % inside the cell, so
-                          // `cover` never clips the model.
-                          position: 'absolute',
-                          top: 0,
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                        }
-                      : {
-                          // Plain product photos (no baked scene) float
-                          // on top of the mobile backdrop with a padded
-                          // placement so the backdrop can breathe
-                          // around them.
-                          position: 'absolute',
-                          top: '2%',
-                          bottom: '2%',
-                          left: '2%',
-                          right: '2%',
-                        }
-                  }
-                  resizeMode={hero.scene ? 'cover' : 'contain'}
+                  style={{
+                    // Whole figure (head to feet) always visible — the
+                    // composite's own boutique scene fills most of the
+                    // frame and any mismatch between the cell aspect
+                    // ratio and the hero card is a thin matte band that
+                    // the sampled bg colour behind this image absorbs.
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                  }}
+                  resizeMode="contain"
                 />
               )}
               {lighting.overlay && (
@@ -803,7 +787,7 @@ function ProductThumb({
         <Image
           source={{ uri: thumb }}
           style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
-          resizeMode="cover"
+          resizeMode="contain"
         />
       )}
       {/* Heart / cart affordances used to sit on the thumbnail but they

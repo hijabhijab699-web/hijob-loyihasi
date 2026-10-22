@@ -388,22 +388,34 @@ export class UserFaceRendersService {
   // ─── Internals ──────────────────────────────────────────────────
 
   /**
-   * Return the cached face stamp for this user if one has already been
-   * derived from a previous facefusion run. First variant per user comes
-   * back null → caller falls through to a fresh facefusion swap, whose
-   * result (face already properly aligned + GFPGAN-enhanced inside the
-   * hijab opening) is then cropped into a stamp for every later variant.
-   * The selfieKey arg is kept so the signature doesn't drift, even though
-   * we deliberately no longer cut the stamp straight from the selfie —
-   * the selfie's face at that angle rarely drops cleanly into a 3/4-view
-   * mannequin head, so the first-render-via-facefusion approach gives a
-   * better-looking buyer identity on every subsequent variant.
+   * Return a face stamp built straight from the buyer's own selfie — no
+   * facefusion in the loop. The selfie's face is cropped as a soft-oval
+   * RGBA stamp once, cached in-process, and the overlay step drops that
+   * same identity into every mannequin's hijab opening. Keeps the face
+   * looking exactly like the buyer across all 9 variants; facefusion
+   * only kicks in as a fallback when this fails (no face detected in
+   * the selfie, selfie file missing, etc.).
    */
   private async getOrBuildFaceStamp(
     userId: string,
-    _selfieKey: string,
+    selfieKey: string,
   ): Promise<Buffer | null> {
-    return this.faceStampCache.get(userId) ?? null;
+    const cached = this.faceStampCache.get(userId);
+    if (cached) return cached;
+
+    try {
+      const selfieBytes = await this.storage.read(selfieKey);
+      const stamp = await this.compositor.composeFaceStamp(selfieBytes);
+      this.faceStampCache.set(userId, stamp);
+      this.logger.log(
+        `face stamp cut from selfie for user ${userId} (${stamp.length} B)`,
+      );
+      return stamp;
+    } catch (err) {
+      const detail = (err as { message?: string })?.message ?? '';
+      this.logger.warn(`face stamp build failed for ${userId}: ${detail}`);
+      return null;
+    }
   }
 
   private heightBand(cm: number | null): 'short' | 'mid' | 'tall' {
