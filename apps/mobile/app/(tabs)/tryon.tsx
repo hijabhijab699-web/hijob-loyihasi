@@ -752,44 +752,9 @@ function ProductThumb({
           resizeMode={matched ? 'cover' : 'contain'}
         />
       )}
-      <Pressable
-        onPress={onWish}
-        hitSlop={8}
-        style={{
-          position: 'absolute',
-          top: 6,
-          right: 6,
-          width: 28,
-          height: 28,
-          borderRadius: 14,
-          backgroundColor: 'rgba(255,255,255,0.85)',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Ionicons
-          name={wished ? 'heart' : 'heart-outline'}
-          size={16}
-          color={wished ? colors.danger : colors.ink}
-        />
-      </Pressable>
-      <Pressable
-        onPress={onCart}
-        hitSlop={8}
-        style={{
-          position: 'absolute',
-          right: 6,
-          bottom: 6,
-          width: 30,
-          height: 30,
-          borderRadius: 15,
-          backgroundColor: '#1E1A14',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Ionicons name={added ? 'checkmark' : 'cart-outline'} size={16} color="#FFF" />
-      </Pressable>
+      {/* Heart / cart affordances used to sit on the thumbnail but they
+          duplicated the primary CTAs already visible on the hero — the
+          thumbnail now stays a pure "switch to this product" tap target. */}
     </Pressable>
   );
 }
