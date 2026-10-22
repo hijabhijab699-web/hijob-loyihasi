@@ -79,9 +79,13 @@ def _init_detector() -> bool:
 # have to match in extract and apply so the stamp lands at the right scale
 # — the stamp's padded crop is wider than the detected bbox by this
 # fraction, so when we resize to a new target we scale UP by the inverse.
-_PAD_X = 0.35          # left + right padding, as fraction of bbox width
-_PAD_Y_TOP = 0.55      # top padding (hair/forehead), fraction of bbox h
-_PAD_Y_BOTTOM = 0.45   # bottom padding (jaw/neck), fraction of bbox h
+# Keep padding tight to the face bbox: the source mannequin's hijab wraps
+# across the forehead and over the shoulders, so a loose crop drags that
+# wrap into the stamp and we see two hijabs stacked when the stamp lands
+# on a target wearing a different one.
+_PAD_X = 0.12          # left + right padding, as fraction of bbox width
+_PAD_Y_TOP = 0.10      # top padding — just a sliver of forehead, no hijab
+_PAD_Y_BOTTOM = 0.18   # bottom padding (jaw), stays off neck/hijab drape
 
 _STAMP_FACE_W_RATIO = 1.0 / (1.0 + 2.0 * _PAD_X)
 
@@ -126,16 +130,19 @@ def extract_face_stamp(bgr: np.ndarray) -> Optional[np.ndarray]:
     if ch < 10 or cw < 10:
         return None
 
-    # Soft oval alpha — feathered so edges disappear into the mannequin
-    # instead of showing a hard cut-out line.
+    # Soft oval alpha — feathered so edges disappear into the mannequin.
+    # The ellipse is intentionally narrower than the crop box so forehead
+    # pixels (the top of the crop, where the source hijab wrap could still
+    # creep in on a wide face) stay transparent and the target's own hair/
+    # hijab shows through unchanged. Only the actual face area is replaced.
     mask = np.zeros((ch, cw), dtype=np.uint8)
     cv2.ellipse(
         mask,
-        (cw // 2, int(ch * 0.52)),
-        (int(cw * 0.46), int(ch * 0.48)),
+        (cw // 2, int(ch * 0.55)),
+        (int(cw * 0.40), int(ch * 0.44)),
         0, 0, 360, 255, -1,
     )
-    feather = max(5, int(max(cw, ch) * 0.08))
+    feather = max(5, int(max(cw, ch) * 0.06))
     k = feather * 2 + 1
     mask = cv2.GaussianBlur(mask, (k, k), feather / 2.0)
 
