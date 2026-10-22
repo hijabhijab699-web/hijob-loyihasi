@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useQuery } from '@tanstack/react-query';
 import Svg, { Circle, G, Path, Polyline } from 'react-native-svg';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { useTryonOnboarding } from '../../src/store/tryon-onboarding';
@@ -113,6 +114,29 @@ export default function AvatarReadyScreen() {
       }
     })();
   }, [faceUri, bodyType, heightCm, storeId, prepState]);
+
+  // Once /tryon/prepare has enqueued the renders, poll /tryon/my-renders
+  // for the first completed one. The queue produces its very first swap in
+  // ~2 min (facefusion), then each subsequent variant in ~2 s via the
+  // overlay path. We show whichever lands first here as the real avatar.
+  const myRendersQuery = useQuery<{
+    hasSelfie: boolean;
+    renders: Array<{ variantId: string; url: string }>;
+    pending: number;
+    running: number;
+    failed: number;
+  }>({
+    queryKey: ['tryon-my-renders'],
+    queryFn: async () => (await api.get('/tryon/my-renders')).data,
+    enabled: prepState === 'done',
+    refetchInterval: (query) => {
+      const d = query.state.data;
+      if (!d) return 4000;
+      if ((d.renders?.length ?? 0) > 0) return false; // first render landed
+      return (d.pending + d.running) > 0 ? 4000 : false;
+    },
+  });
+  const firstRenderUrl = myRendersQuery.data?.renders?.[0]?.url ?? null;
 
   const enter = async () => {
     await markComplete();
@@ -222,82 +246,58 @@ export default function AvatarReadyScreen() {
             backgroundColor: `${colors.goldSoft}1F`,
           }} />
 
-          {/* Mannequin body with the buyer's face sitting inside the hijab's
-              face opening. The oval is small (matches real face size), lower
-              on the frame (so it falls inside the hijab, not above it), and
-              has a subtle inner shadow so the join reads as a real wearer. */}
+          {/* Real face-swapped mannequin once the queue has finished the
+              buyer's first swap (~2 min). While we wait we fall back to
+              the generic mannequin illustration — the oval face overlay
+              that used to live here was a cosmetic placeholder that read
+              as "my face is pasted on" rather than "I am wearing this",
+              so it's gone. */}
           <View style={{ width: 220, height: 400, position: 'relative' }}>
-            <Image
-              source={WOMAN_IMG}
-              style={{ width: 220, height: 400, position: 'absolute', top: 0, left: 0 }}
-              contentFit="contain"
-            />
-
-            {/* Face: small oval, centered over the hijab's face opening */}
-            {(() => {
-              const faceW = 56;
-              const faceH = 68;
-              const faceTop = 32;
-              const faceLeft = (220 - faceW) / 2;
-              return (
-                <>
-                  <Animated.View
+            {firstRenderUrl ? (
+              <Animated.View
+                style={{
+                  width: 220,
+                  height: 400,
+                  opacity: faceOpacity,
+                  transform: [{ scale: faceScale }],
+                }}
+              >
+                <Image
+                  source={{ uri: firstRenderUrl }}
+                  style={{ width: 220, height: 400, borderRadius: 16 }}
+                  contentFit="cover"
+                />
+              </Animated.View>
+            ) : (
+              <>
+                <Image
+                  source={WOMAN_IMG}
+                  style={{ width: 220, height: 400, position: 'absolute', top: 0, left: 0 }}
+                  contentFit="contain"
+                />
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: 24,
+                    left: 0,
+                    right: 0,
+                    alignItems: 'center',
+                  }}
+                >
+                  <ActivityIndicator color={colors.oliveDeep} />
+                  <RNText
                     style={{
-                      position: 'absolute',
-                      top: faceTop,
-                      left: faceLeft,
-                      width: faceW,
-                      height: faceH,
-                      borderRadius: useTransparentOverlay ? 0 : faceW / 2,
-                      overflow: useTransparentOverlay ? 'visible' : 'hidden',
-                      opacity: faceOpacity,
-                      transform: [{ scale: faceScale }],
-                      shadowColor: colors.oliveDeep,
-                      shadowOpacity: 0.25,
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowRadius: 8,
-                      elevation: 6,
+                      fontFamily: theme.fontFamilies.body,
+                      fontSize: 11,
+                      color: colors.muted,
+                      marginTop: 6,
                     }}
                   >
-                    <Image
-                      source={faceSource}
-                      style={{ width: '100%', height: '100%' }}
-                      contentFit={useTransparentOverlay ? 'contain' : 'cover'}
-                    />
-                    {!useTransparentOverlay && (
-                      <View
-                        pointerEvents="none"
-                        style={{
-                          position: 'absolute',
-                          bottom: 0, left: 0, right: 0, height: 10,
-                          backgroundColor: 'rgba(0,0,0,0.14)',
-                        }}
-                      />
-                    )}
-                  </Animated.View>
-                  {/* Thin gold ring hugging the face oval (only when we're
-                      using the raw selfie — the transparent PNG has its own
-                      feathered edge). */}
-                  {!useTransparentOverlay && (
-                    <Animated.View
-                      pointerEvents="none"
-                      style={{
-                        position: 'absolute',
-                        top: faceTop,
-                        left: faceLeft,
-                        width: faceW,
-                        height: faceH,
-                        borderRadius: faceW / 2,
-                        borderWidth: 1,
-                        borderColor: `${colors.goldSoft}66`,
-                        opacity: faceOpacity,
-                        transform: [{ scale: faceScale }],
-                      }}
-                    />
-                  )}
-                </>
-              );
-            })()}
+                    AI yuzingizni manekenga qo'ymoqda…
+                  </RNText>
+                </View>
+              </>
+            )}
 
             {/* Shimmer sweep sparkle */}
             <View style={{

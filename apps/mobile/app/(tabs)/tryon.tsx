@@ -148,18 +148,52 @@ export default function TryOnScreen() {
   const [lightIdx, setLightIdx] = useState(0);
   const lighting = LIGHTING[lightIdx] ?? LIGHTING[0];
 
-  // Face-swap was disabled for Primerka — the inswapper result on these
-  // stylised mannequins came out looking like an oval cut-out pasted onto
-  // the face, not a seamless swap. Show the body-matched mannequin or the
-  // seller's cover photo exactly as uploaded; the buyer still sees the
-  // right body type for their height band, just with the mannequin's own
-  // face.
+  // Pre-rendered face-swapped mannequins keyed by variant id. The backend
+  // queue (user-face-renders) builds one per variant the buyer could land
+  // on — the overlay path makes new ones in ~1.5 s once the first facefusion
+  // run has cached the user's stamp, so the colour-matched render usually
+  // beats the user to the tab.
+  const myRendersQuery = useQuery<{
+    hasSelfie: boolean;
+    renders: Array<{ variantId: string; url: string }>;
+    pending: number;
+    running: number;
+    failed: number;
+  }>({
+    queryKey: ['tryon-my-renders'],
+    queryFn: async () => (await api.get('/tryon/my-renders')).data,
+    enabled: !!tryonCompleted,
+    refetchInterval: (query) => {
+      const d = query.state.data;
+      if (!d) return false;
+      return d.pending > 0 || d.running > 0 ? 4000 : false;
+    },
+  });
+  const renderByVariant = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of myRendersQuery.data?.renders ?? []) m.set(r.variantId, r.url);
+    return m;
+  }, [myRendersQuery.data]);
+
+  // Hero priority: use the colour-matched variant's render so the big
+  // image agrees with the active colour chip. Falls back along the usual
+  // chain if that specific variant hasn't been rendered yet.
   const hero = useMemo(() => {
     if (!selected) return null;
+    // Try the active-colour variant first, then any already-rendered
+    // variant for this product.
+    const colourVariant =
+      selected.variants?.find((v) => v.color === colorFilter) ?? null;
+    const colourRender = colourVariant ? renderByVariant.get(colourVariant.id) : null;
+    if (colourRender) return { uri: colourRender, scene: true };
+    for (const v of selected.variants ?? []) {
+      const u = renderByVariant.get(v.id);
+      if (u) return { uri: u, scene: true };
+    }
     const matched = pickBodyMatched(selected.resultVariants, bodyType, heightCm);
     if (matched) return { uri: matched, scene: true };
     return selected.coverUrl ? { uri: selected.coverUrl, scene: false } : null;
-  }, [selected, bodyType, heightCm]);
+  }, [selected, colorFilter, renderByVariant, bodyType, heightCm]);
 
   const wishMutation = useMutation({
     mutationFn: async ({ productId, on }: { productId: string; on: boolean }) =>
@@ -481,6 +515,7 @@ export default function TryOnScreen() {
                 added={!!variant && justAdded === variant.id}
                 bodyType={bodyType}
                 heightCm={heightCm}
+                userRenderUrl={variant ? (renderByVariant.get(variant.id) ?? null) : null}
                 onPress={() => setSelectedId(p.id)}
                 onWish={() => wishMutation.mutate({ productId: p.id, on: !wished.has(p.id) })}
                 onCart={() => variant && cartMutation.mutate(variant.id)}
@@ -658,6 +693,7 @@ function ProductThumb({
   added,
   bodyType,
   heightCm,
+  userRenderUrl,
   onPress,
   onWish,
   onCart,
@@ -668,12 +704,16 @@ function ProductThumb({
   added: boolean;
   bodyType: BodyType | null | undefined;
   heightCm: number | null | undefined;
+  userRenderUrl: string | null;
   onPress: () => void;
   onWish: () => void;
   onCart: () => void;
 }) {
   const { colors } = useTheme();
-  const matched = pickBodyMatched(product.resultVariants, bodyType, heightCm);
+  // Prefer the buyer's rendered variant so the thumbnail matches the hero.
+  // Falls back to the body-matched render → first-variant preview → cover.
+  const matched =
+    userRenderUrl ?? pickBodyMatched(product.resultVariants, bodyType, heightCm);
   const thumb = matched ?? product.variants?.[0]?.renderedUrl ?? product.coverUrl;
   return (
     <Pressable
