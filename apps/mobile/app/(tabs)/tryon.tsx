@@ -131,6 +131,16 @@ export default function TryOnScreen() {
     return [...seen.entries()].map(([name, hex]) => ({ name, hex }));
   }, [products]);
   const [colorFilter, setColorFilter] = useState<string | null>(null);
+  // Drop a stale filter whose colour disappeared from the catalogue — e.g.
+  // the chip row got hidden under the single-colour threshold or the seller
+  // unpublished the last product of that colour. Without this the user can
+  // land on an empty strip with no way back short of restarting the app.
+  useEffect(() => {
+    if (!colorFilter) return;
+    if (!colorChips.some((c) => c.name === colorFilter)) {
+      setColorFilter(null);
+    }
+  }, [colorFilter, colorChips]);
   const visible = useMemo(
     () =>
       colorFilter
@@ -466,37 +476,67 @@ export default function TryOnScreen() {
           elevation: 8,
         }}
       >
-        {/* Colour chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 8, alignItems: 'center' }}
-        >
-          <Chip label="Hammasi" active={!colorFilter} onPress={() => setColorFilter(null)} />
-          {colorChips.map((c) => (
-            <Chip
-              key={c.name}
-              label={c.name}
-              dot={c.hex}
-              active={colorFilter === c.name}
-              onPress={() => setColorFilter(colorFilter === c.name ? null : c.name)}
-            />
-          ))}
-          <Pressable
-            onPress={() => router.push('/(tryon-onboarding)/height')}
-            hitSlop={8}
+        {/* Colour chips — only shown when the store actually has more than
+            one colour published, otherwise the row is just a Hammasi chip
+            that cannot filter anything and a filter button that reads as
+            inert. Clamping colorFilter to a still-present colour means a
+            stale filter from an earlier reload can't ghost the strip. */}
+        {colorChips.length >= 2 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 8, alignItems: 'center' }}
+          >
+            <Chip label="Hammasi" active={!colorFilter} onPress={() => setColorFilter(null)} />
+            {colorChips.map((c) => (
+              <Chip
+                key={c.name}
+                label={c.name}
+                dot={c.hex}
+                active={colorFilter === c.name}
+                onPress={() => setColorFilter(colorFilter === c.name ? null : c.name)}
+              />
+            ))}
+            <Pressable
+              onPress={() => router.push('/(tryon-onboarding)/height')}
+              hitSlop={8}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surface2,
+              }}
+            >
+              <Ionicons name="options-outline" size={18} color={colors.ink} />
+            </Pressable>
+          </ScrollView>
+        ) : (
+          <View
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: 19,
+              paddingHorizontal: 16,
+              flexDirection: 'row',
+              justifyContent: 'flex-end',
               alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: colors.surface2,
             }}
           >
-            <Ionicons name="options-outline" size={18} color={colors.ink} />
-          </Pressable>
-        </ScrollView>
+            <Pressable
+              onPress={() => router.push('/(tryon-onboarding)/height')}
+              hitSlop={8}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surface2,
+              }}
+            >
+              <Ionicons name="options-outline" size={18} color={colors.ink} />
+            </Pressable>
+          </View>
+        )}
 
         {/* Product strip */}
         <ScrollView
