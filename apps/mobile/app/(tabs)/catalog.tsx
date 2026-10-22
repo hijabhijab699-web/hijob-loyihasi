@@ -25,11 +25,14 @@ interface Product {
   variants?: Array<{ id: string }>;
 }
 
-const CATEGORY_ICONS: Record<CategoryId, string> = {
-  scarves: 'ribbon-outline',
-  dresses: 'shirt-outline',
-  bags: 'bag-handle-outline',
-  accessories: 'diamond-outline',
+// Same hero webp images the website and the home-tab tiles use, so the pill
+// chip, the big tiles on the home tab, and the website homepage all agree
+// on how a category looks.
+const CATEGORY_IMAGES: Record<CategoryId, number> = {
+  scarves: require('../../assets/category-ipak.webp'),
+  dresses: require('../../assets/category-shoyi.webp'),
+  bags: require('../../assets/category-pashmina.webp'),
+  accessories: require('../../assets/category-shifon.webp'),
 };
 
 const COLORS: Array<{ key: string; hex: string }> = [
@@ -221,19 +224,26 @@ export default function CatalogScreen() {
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 6,
-                paddingHorizontal: 16,
-                height: 38,
-                borderRadius: 19,
+                gap: 8,
+                paddingLeft: 6,
+                paddingRight: 16,
+                height: 42,
+                borderRadius: 21,
                 backgroundColor: active ? colors.oliveDeep : colors.surface,
                 borderWidth: active ? 0 : 1,
                 borderColor: colors.rule,
               }}
             >
-              <Ionicons
-                name={CATEGORY_ICONS[c] as any}
-                size={16}
-                color={active ? colors.goldSoft : colors.muted}
+              <Image
+                source={CATEGORY_IMAGES[c]}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  borderWidth: 1.5,
+                  borderColor: active ? colors.goldSoft : 'rgba(0,0,0,0.08)',
+                }}
+                resizeMode="cover"
               />
               <Text
                 variant="bodySmall"

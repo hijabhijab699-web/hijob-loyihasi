@@ -49,14 +49,11 @@ interface Address {
 }
 
 type DeliveryType = 'delivery' | 'pickup' | 'proba';
-type PaymentMethod = 'click' | 'payme' | 'uzcard' | 'humo' | 'visa' | 'mastercard';
 
-const PAYMENT_METHODS: Array<{ id: PaymentMethod; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
-  { id: 'click', label: 'Click', icon: 'wallet-outline' },
-  { id: 'payme', label: 'Payme', icon: 'card-outline' },
-  { id: 'uzcard', label: 'Uzcard', icon: 'card-outline' },
-  { id: 'humo', label: 'Humo', icon: 'card-outline' },
-];
+// There is no in-app payment anymore — the seller contacts the buyer after
+// the order lands. The backend contract still wants a paymentMethod enum,
+// so every order ships this placeholder; it is never surfaced in the UI.
+const DEFAULT_PAYMENT_METHOD = 'click' as const;
 
 const DELIVERY_FEES: Record<DeliveryType, number> = {
   delivery: 5,
@@ -79,7 +76,6 @@ export default function CheckoutScreen() {
     params.deliveryMethod === 'pickup' ? 'pickup' : params.deliveryMethod === 'proba' ? 'proba' : 'delivery';
 
   const [deliveryType, setDeliveryType] = useState<DeliveryType>(initialDelivery);
-  const [payment, setPayment] = useState<PaymentMethod>('click');
   const [addressId, setAddressId] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   const [newAddressModal, setNewAddressModal] = useState(false);
@@ -125,7 +121,7 @@ export default function CheckoutScreen() {
         addressId,
         deliveryType,
         deliverySpeed: deliveryType === 'pickup' ? undefined : 'tomorrow',
-        paymentMethod: payment,
+        paymentMethod: DEFAULT_PAYMENT_METHOD,
         comment: comment.trim() || undefined,
       });
       return data as { orderId: string; totalUsd: number; paymentUrl: string };
@@ -133,7 +129,19 @@ export default function CheckoutScreen() {
     onSuccess: async (order) => {
       await qc.invalidateQueries({ queryKey: ['cart'] });
       await qc.invalidateQueries({ queryKey: ['orders'] });
-      router.replace({ pathname: '/orders/[id]', params: { id: order.orderId } });
+      Alert.alert(
+        isRu ? 'Заказ отправлен' : 'Buyurtma yuborildi',
+        isRu
+          ? 'Продавец скоро свяжется с вами, чтобы согласовать оплату и доставку.'
+          : "Sotuvchi tez orada siz bilan aloqaga chiqadi — to'lov va yetkazishni kelishib olasiz.",
+        [
+          {
+            text: 'OK',
+            onPress: () =>
+              router.replace({ pathname: '/orders/[id]', params: { id: order.orderId } }),
+          },
+        ],
+      );
     },
     onError: (e: any) => {
       Alert.alert(errorTitle(), errorMessage(e));
@@ -275,33 +283,9 @@ export default function CheckoutScreen() {
             </View>
           </View>
 
-          {/* Payment */}
-          <SectionLabel>{isRu ? 'Способ оплаты' : "To'lov usuli"}</SectionLabel>
-          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {PAYMENT_METHODS.map((p) => {
-                const selected = payment === p.id;
-                return (
-                  <Pressable
-                    key={p.id}
-                    onPress={() => setPayment(p.id)}
-                    style={{
-                      flexBasis: '48%',
-                      backgroundColor: colors.surface,
-                      borderRadius: 14,
-                      borderWidth: selected ? 2 : 1,
-                      borderColor: selected ? colors.oliveDeep : colors.rule,
-                      padding: 14,
-                      flexDirection: 'row', alignItems: 'center', gap: 10,
-                    }}
-                  >
-                    <Ionicons name={p.icon} size={20} color={colors.oliveDeep} />
-                    <Text variant="bodySmall" color="ink" style={{ fontSize: 14, fontWeight: '600' }}>{p.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+          {/* Payment used to be here. The marketplace does not take payment
+              in-app any more — the seller contacts the buyer after the order
+              lands and they agree on money + handover together. */}
 
           {/* Items */}
           <SectionLabel>{isRu ? 'Товары' : 'Mahsulotlar'} ({items.length})</SectionLabel>
@@ -411,11 +395,20 @@ export default function CheckoutScreen() {
               <>
                 <Ionicons name="checkmark-circle" size={20} color={colors.goldSoft} />
                 <Text variant="body" style={{ fontSize: 15, fontWeight: '700', color: colors.goldSoft, fontFamily: theme.fontFamilies.display }}>
-                  Buyurtma berish · ${total.toFixed(2)}
+                  {isRu ? 'Отправить заказ' : "Buyurtma yuborish"} · ${total.toFixed(2)}
                 </Text>
               </>
             )}
           </Pressable>
+          <Text
+            variant="caption"
+            color="muted"
+            style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}
+          >
+            {isRu
+              ? 'Продавец скоро свяжется с вами'
+              : "Sotuvchi tez orada aloqaga chiqadi"}
+          </Text>
         </View>
       </KeyboardAvoidingView>
 

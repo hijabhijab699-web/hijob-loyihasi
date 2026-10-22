@@ -367,19 +367,31 @@ export default function TryOnScreen() {
           ) : (
             <>
               {hero && (
-                // Model (scene render or plain photo) composited over the
-                // fitting-room backdrop so the boutique is always visible
-                // around the figure.
+                // Scene renders already bake in the fitting-room so they must
+                // fill the card completely — otherwise the asset backdrop
+                // peeks around the figure and we get a double boutique.
+                // Plain product photos keep the padded placement so the real
+                // backdrop shows around them.
                 <Image
                   source={{ uri: hero.uri }}
-                  style={{
-                    position: 'absolute',
-                    top: '4%',
-                    bottom: '8%',
-                    left: '6%',
-                    right: '6%',
-                  }}
-                  resizeMode="contain"
+                  style={
+                    hero.scene
+                      ? {
+                          position: 'absolute',
+                          top: 0,
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                        }
+                      : {
+                          position: 'absolute',
+                          top: '4%',
+                          bottom: '8%',
+                          left: '6%',
+                          right: '6%',
+                        }
+                  }
+                  resizeMode={hero.scene ? 'cover' : 'contain'}
                 />
               )}
               {lighting.overlay && (

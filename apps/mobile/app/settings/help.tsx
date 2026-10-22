@@ -101,20 +101,6 @@ export default function HelpCenterScreen() {
           </View>
         </View>
 
-        {/* Contact link */}
-        <View style={{ paddingHorizontal: 20 }}>
-          <Pressable
-            onPress={() => router.push('/settings/contact')}
-            style={{
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-              backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.rule,
-              paddingVertical: 14,
-            }}
-          >
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.oliveDeep} />
-            <Text variant="bodySmall" color="oliveDeep" style={{ fontSize: 14, fontWeight: '600' }}>{isRu ? 'Связаться с нами' : "Biz bilan bog'laning"}</Text>
-          </Pressable>
-        </View>
       </ScrollView>
     </Screen>
   );

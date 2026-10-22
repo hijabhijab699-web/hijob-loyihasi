@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ActivityIndicator, Alert, Image, Pressable, Share, ScrollView, View } from 'react-native';
@@ -7,10 +7,7 @@ import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
-import { hasLocalFace, localFaceUri } from '../../src/lib/face-local-cache';
-import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 import { safeBack } from '../../src/lib/safe-back';
-import { useTryonOnboarding } from '../../src/store/tryon-onboarding';
 
 interface ProductDetail {
   id: string;
@@ -35,29 +32,6 @@ interface ProductDetail {
   }>;
 }
 
-function heightBand(cm: number | null | undefined): 'short' | 'mid' | 'tall' {
-  if (!cm || cm <= 160) return 'short';
-  if (cm <= 170) return 'mid';
-  return 'tall';
-}
-
-function pickBodyMatchedUrl(
-  resultVariants: Record<string, string> | null | undefined,
-  bodyType: 'slim' | 'medium' | 'full' | null | undefined,
-  heightCm: number | null | undefined,
-): string | null {
-  if (!resultVariants) return null;
-  const body = bodyType ?? 'medium';
-  const band = heightBand(heightCm);
-  return (
-    resultVariants[`${body}-${band}`] ??
-    resultVariants[`${body}-mid`] ??
-    resultVariants['medium-mid'] ??
-    Object.values(resultVariants)[0] ??
-    null
-  );
-}
-
 interface BodyParamsResponse {
   heightCm: number;
   weightKg: number;
@@ -71,8 +45,6 @@ export default function ProductScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
   const qc = useQueryClient();
-  const buyerBodyType = useTryonOnboarding((s) => s.bodyType);
-  const buyerHeightCm = useTryonOnboarding((s) => s.heightCm);
 
   const { data, isLoading, isError } = useQuery<ProductDetail>({
     queryKey: ['product', id],
@@ -99,31 +71,11 @@ export default function ProductScreen() {
   const [selectedSize, setSelectedSize] = useState(1);
   const [liked, setLiked] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
-  const [canFaceSwap, setCanFaceSwap] = useState(false);
-  const [personalizedUrl, setPersonalizedUrl] = useState<string | null>(null);
-  const [swapping, setSwapping] = useState(false);
 
-  // Check whether we have a cached selfie for the "Mendagi ko'rinishi"
-  // button; if the user never finished face onboarding, the button hides.
-  useEffect(() => {
-    hasLocalFace().then(setCanFaceSwap).catch(() => setCanFaceSwap(false));
-  }, []);
-
-  // Auto-run the face-swap as soon as the product opens, so the buyer
-  // lands on the page already seeing THEMSELVES wearing the hijab — no
-  // extra tap needed.
-  const autoSwappedForVariantRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!canFaceSwap) return;
-    if (!data?.variants?.length) return;
-    if (swapping || personalizedUrl) return;
-    const firstVariant = data.variants[0];
-    if (!firstVariant) return;
-    if (autoSwappedForVariantRef.current === firstVariant.id) return;
-    autoSwappedForVariantRef.current = firstVariant.id;
-    void tryItOnMe(firstVariant.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canFaceSwap, data?.id]);
+  // Face-swap used to run automatically on this page; it was moved to the
+  // dedicated Primerka tab where the pre-rendered mannequins live. The
+  // product page now shows the seller's own product photo so the buyer sees
+  // the hijab as photographed, not a face-swapped try-on.
 
   const addToCart = useMutation({
     mutationFn: async (variantId: string) => {
@@ -134,32 +86,6 @@ export default function ProductScreen() {
       Alert.alert('✓', 'Savatga qo\'shildi');
     },
   });
-
-  const tryItOnMe = async (variantId: string) => {
-    setSwapping(true);
-    try {
-      const form = new FormData();
-      form.append('variantId', variantId);
-      // Pass the buyer's body profile so the backend picks the matching
-      // mannequin render from the 9-variant grid before face-swapping.
-      if (buyerBodyType) form.append('bodyType', buyerBodyType);
-      if (buyerHeightCm != null) form.append('heightCm', String(buyerHeightCm));
-      form.append('face', {
-        uri: localFaceUri(),
-        name: 'face.jpg',
-        type: 'image/jpeg',
-      } as unknown as Blob);
-      const { data } = await api.post('/tryon/faceswap', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60_000,
-      });
-      setPersonalizedUrl(data.resultUrl);
-    } catch (e: any) {
-      Alert.alert(errorTitle(), errorMessage(e));
-    } finally {
-      setSwapping(false);
-    }
-  };
 
   // Nothing to render while the request is in flight or the product is
   // missing; surfacing a mock here would hide stale/broken ids and let the
@@ -180,16 +106,9 @@ export default function ProductScreen() {
     product.variants?.find((v) => (v.size ?? '').toLowerCase() === 'm') ??
     product.variants?.[0];
   const currentVariant = matchByBuyerSize;
-  // Pick the body-matched (bodyType × height-band) render from the 9-variant
-  // grid produced by the extension. Falls back to the per-size legacy render
-  // → then the seller cover. The face-swap preview wins over everything.
-  const bodyMatchedUrl = pickBodyMatchedUrl(
-    product.resultVariants,
-    buyerBodyType,
-    buyerHeightCm,
-  );
-  const heroImageUrl =
-    personalizedUrl ?? bodyMatchedUrl ?? currentVariant?.renderedUrl ?? product.coverUrl;
+  // Show the seller's own product photo. The face-swapped / body-matched
+  // renders live on the Primerka tab; this page is for product info.
+  const heroImageUrl = product.coverUrl ?? currentVariant?.renderedUrl;
 
   return (
     <Screen>
@@ -216,60 +135,6 @@ export default function ProductScreen() {
                 }}
               >
                 <Ionicons name="ribbon-outline" size={64} color="rgba(255,255,255,0.35)" />
-              </View>
-            )}
-
-            {/* "Mendagi ko'rinishi" face-swap trigger — only when the user
-                finished face onboarding and the product has a variant to
-                swap against. Hides itself after a successful swap so the
-                hero image stays as the personalized render. */}
-            {canFaceSwap && currentVariant && !personalizedUrl && (
-              <Pressable
-                onPress={() => tryItOnMe(currentVariant.id)}
-                disabled={swapping}
-                style={{
-                  position: 'absolute',
-                  bottom: 16,
-                  right: 16,
-                  backgroundColor: colors.oliveDeep,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  borderRadius: 20,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                  opacity: swapping ? 0.7 : 1,
-                }}
-              >
-                {swapping ? (
-                  <ActivityIndicator color={colors.goldSoft} size="small" />
-                ) : (
-                  <Ionicons name="person" size={16} color={colors.goldSoft} />
-                )}
-                <Text variant="caption" style={{ fontSize: 12, fontWeight: '600', color: colors.goldSoft }}>
-                  {swapping ? 'Qoyilyapti…' : 'Mendagi ko\'rinishi'}
-                </Text>
-              </Pressable>
-            )}
-            {personalizedUrl && (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 56,
-                  left: 16,
-                  backgroundColor: 'rgba(54,57,36,0.85)',
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
-                  borderRadius: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <Ionicons name="sparkles" size={12} color={colors.goldSoft} />
-                <Text variant="caption" style={{ fontSize: 11, fontWeight: '600', color: colors.goldSoft }}>
-                  Sizning ko'rinishingiz
-                </Text>
               </View>
             )}
 

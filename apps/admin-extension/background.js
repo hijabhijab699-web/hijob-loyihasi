@@ -358,7 +358,6 @@ async function loadScene() {
 }
 
 function buildPrompt(job) {
-  const chroma = chromaFor(job.colorHex);
   const style =
     job.tyingStyle === 'loose' ? 'loose, flowing drape style' :
     job.tyingStyle === 'double' ? 'double-layered formal style' :
@@ -368,9 +367,11 @@ function buildPrompt(job) {
     ? `Scarf size: ${job.targetSize} cm — show the full fabric length draping down in every panel.`
     : 'Scarf size: standard square — show the full fabric length draping down in every panel.';
   return [
-    'Ultra-realistic fashion-catalogue composite photo containing NINE (9) full-body modest-fashion young women models, each wearing THE SAME hijab from the attached reference image.',
+    'Ultra-realistic fashion-catalogue cut-out containing NINE (9) full-body modest-fashion young women models, each wearing THE SAME hijab from the attached reference image.',
     '',
-    'ARRANGE them in a 3×3 grid (3 rows × 3 columns), SAME baseline per row, SAME lighting, equal gaps between cells, EQUAL cell size so the image can be cut cleanly into 9 pieces.',
+    'OUTPUT FORMAT (CRITICAL): a TRANSPARENT PNG with a real alpha channel. There must be NOTHING behind the models — no scene, no room, no floor, no mirrors, no curtains, no boutique, no studio backdrop, no shadow, no gradient, no solid colour fill. Every pixel that is not part of the models themselves must be FULLY TRANSPARENT (alpha = 0). The seller will later place these cut-outs onto their own backdrop; a baked-in scene is unusable.',
+    '',
+    'ARRANGE the 9 models in a 3×3 grid (3 rows × 3 columns), SAME baseline per row, SAME lighting, equal gaps between cells, EQUAL cell size so the image can be cut cleanly into 9 pieces.',
     '',
     'ROWS = body type (top → bottom):',
     '  • Row 1 — SLIM: narrow shoulders and waist, overall thin frame',
@@ -396,9 +397,8 @@ function buildPrompt(job) {
     '• Realistic proportions, head to feet (head, neck, shoulders, chest, waist, hips, thighs, knees, calves and ankles).',
     '• FULLY MODEST OUTFIT: plain SOFT BEIGE / CREAM long-sleeve ankle-length dress (abaya-like simple gown in warm beige #e8dcc6, NOT white). Long sleeves to the wrists, closed high neckline, hem reaching the ankles. No bare skin anywhere.',
     '• Plain BEIGE closed flat shoes on the feet — no bare feet.',
-    `• Nothing on the model, dress, shoes or hijab may be ${chroma.name} — the background colour is reserved for keying.`,
     '',
-    'Pose (SAME in every cell) — relaxed boutique fitting-room pose like a fashion catalogue photo, NOT a stiff passport pose:',
+    'Pose (SAME in every cell) — relaxed, elegant catalogue pose, NOT a stiff passport pose:',
     '• Body turned about 20° to the side (three-quarter view), face turned back toward the camera.',
     '• Weight on one leg, the other knee softly relaxed; shoulders soft; elegant, confident posture.',
     '• One hand lightly touching the hijab edge at chest level (fingers visible, NOT covering the face and NOT hiding the hijab pattern); the other arm relaxed along the body.',
@@ -409,13 +409,11 @@ function buildPrompt(job) {
     '• Drape the hijab naturally around the head, shoulders, and chest over the beige dress; same drape in every cell.',
     '• The dress and shoes beneath remain fully visible — no bare skin exposed anywhere.',
     '',
-    'Scene:',
-    '• Soft warm studio lighting on the figures (like a boutique fitting room), NO ground shadow and NO floor.',
-    `• BACKGROUND MUST BE A SOLID FLAT ${chroma.name} SCREEN — fill the entire canvas with ${chroma.hex}. FULLY OPAQUE, no transparency, no alpha channel. Same solid colour behind every model, no gradient, no texture, no vignette.`,
-    '• NO text, NO labels, NO rulers, NO panel borders, NO watermarks drawn into the image.',
-    `• Equal empty ${chroma.hex} gaps between the 9 figures so a 3×3 crop lands cleanly without clipping any figure.`,
+    'Lighting is soft, even and warm, as if lit by a diffused softbox so the models would composite cleanly onto any backdrop later. NO cast shadow on the ground (the ground does not exist — the gap between cells and under each model is transparent).',
     '',
-    'Output ONE OPAQUE image (JPEG or PNG without alpha), square or 4:5 portrait, containing all 9 full-body models arranged in a clean 3×3 grid ready for mechanical cutting. Do NOT use transparency.',
+    'STRICTLY DO NOT draw: any room, mirrors, curtains, floor, wall, lamp, clothing rack, plant, chair, sofa, shadow, gradient, texture, border, text, label, ruler, watermark, logo. Nothing behind, around or under the figures. The ONLY non-transparent pixels are the models themselves (hijab + dress + shoes + visible skin).',
+    '',
+    'Output ONE PNG WITH ALPHA, square or 4:5 portrait, containing all 9 full-body models arranged in a clean 3×3 grid of cut-outs on a FULLY TRANSPARENT canvas, ready for mechanical cutting.',
   ].join('\n');
 }
 
@@ -452,14 +450,16 @@ async function runOne(job) {
     // variants; the content script slices it before replying.
     note('✏ GPT ga 3×3 grid yuborilyapti…');
     const prompt = buildPrompt(job);
-    const scene = await loadScene();
-    if (!scene) note(`⚠ ${SCENE_PATH} topilmadi — fonsiz bo'laklar yuklanadi`);
+    // Sellers get PNG cut-outs with a transparent background — they overlay
+    // them onto their own catalogue scenes later, so baking in a fitting
+    // room here is unusable. We skip loadScene() on purpose; content.js
+    // falls through to the alpha-only branch when scene is null.
     const resp = await askContentPort(tabId, {
       type: 'DRESS',
       prompt,
       hijabBase64,
       hijabMime: hijabBlob.type || 'image/jpeg',
-      scene,
+      scene: null,
       gridKeys: BASE_GRID_KEYS,
       rows: 3,
       cols: 3,

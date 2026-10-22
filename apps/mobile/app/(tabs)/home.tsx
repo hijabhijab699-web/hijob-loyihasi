@@ -31,12 +31,15 @@ interface HomeFeed {
 
 const STORE_COLORS = ['#C9A96E', '#8A8D5B', '#B85450', '#5F7A94', '#D9A24B'];
 
+// Same category hero images the website uses on its homepage, bundled with
+// the app so there's no network dependency and the layout matches cross-
+// platform. Slug → scarf type mapping mirrors apps/website/src/lib/categories.ts.
 const CATEGORY_DATA = [
-  { id: 'scarves', icon: 'ribbon-outline' as const, gradient: ['#E4CE9A', '#C9A96E'] as const },
-  { id: 'dresses', icon: 'shirt-outline' as const, gradient: ['#B5B891', '#8A8D5B'] as const },
-  { id: 'bags', icon: 'bag-handle-outline' as const, gradient: ['#D9D0BE', '#857E6E'] as const },
-  { id: 'accessories', icon: 'diamond-outline' as const, gradient: ['#E8DFCC', '#C9A96E'] as const },
-];
+  { id: 'scarves', image: require('../../assets/category-ipak.webp') },
+  { id: 'dresses', image: require('../../assets/category-shoyi.webp') },
+  { id: 'bags', image: require('../../assets/category-pashmina.webp') },
+  { id: 'accessories', image: require('../../assets/category-shifon.webp') },
+] as const;
 
 const PLACEHOLDER_BG = ['#B5B891', '#E4CE9A', '#D4C3A0', '#C4C88C', '#D9D0BE', '#E8DFCC'];
 
@@ -409,33 +412,45 @@ export default function HomeScreen() {
                   opacity: pressed ? 0.85 : 1,
                 })}
               >
-                <LinearGradient
-                  colors={[...cat.gradient]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                <View
                   style={{
-                    aspectRatio: 0.85,
+                    aspectRatio: 3 / 4,
                     borderRadius: theme.radii.xl,
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    position: 'relative',
                     ...theme.shadows.sm,
                   }}
                 >
-                  <Ionicons name={cat.icon} size={28} color="#fff" />
-                </LinearGradient>
-                <Text
-                  variant="caption"
-                  color="ink"
-                  numberOfLines={1}
-                  style={{
-                    textAlign: 'center',
-                    marginTop: 8,
-                    fontWeight: '500',
-                    fontSize: 11,
-                  }}
-                >
-                  {t(`home.categories.${cat.id}` as never, { defaultValue: cat.id })}
-                </Text>
+                  <Image
+                    source={cat.image}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
+                  {/* Website parity: dark gradient from the bottom so the
+                      caption below reads well regardless of the photo. */}
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.55)']}
+                    start={{ x: 0, y: 0.4 }}
+                    end={{ x: 0, y: 1 }}
+                    style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0 }}
+                  />
+                  <Text
+                    variant="caption"
+                    numberOfLines={1}
+                    style={{
+                      position: 'absolute',
+                      left: 6,
+                      right: 6,
+                      bottom: 6,
+                      color: '#fff',
+                      fontWeight: '600',
+                      fontSize: 11,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {t(`home.categories.${cat.id}` as never, { defaultValue: cat.id })}
+                  </Text>
+                </View>
               </Pressable>
             ))}
           </ScrollView>

@@ -32,7 +32,6 @@ const TEXT = {
     language: 'Til',
     notifications: 'Bildirishnomalar',
     helpCenter: 'Yordam markazi',
-    contactUs: "Biz bilan bog'lanish",
   },
   ru: {
     title: 'Настройки',
@@ -44,7 +43,6 @@ const TEXT = {
     language: 'Язык',
     notifications: 'Уведомления',
     helpCenter: 'Центр помощи',
-    contactUs: 'Связаться с нами',
   },
 };
 
@@ -100,7 +98,6 @@ export default function SettingsScreen() {
 
   const supportItems: MenuItem[] = [
     { label: t.helpCenter, icon: 'help-circle-outline', iconColor: '#7A8A5B', iconBg: 'rgba(122,138,91,0.1)', route: '/settings/help' },
-    { label: t.contactUs, icon: 'chatbubble-ellipses-outline', iconColor: '#B85450', iconBg: 'rgba(184,84,80,0.08)', route: '/settings/contact' },
   ];
 
   return (
