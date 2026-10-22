@@ -83,9 +83,9 @@ def _init_detector() -> bool:
 # across the forehead and over the shoulders, so a loose crop drags that
 # wrap into the stamp and we see two hijabs stacked when the stamp lands
 # on a target wearing a different one.
-_PAD_X = 0.12          # left + right padding, as fraction of bbox width
-_PAD_Y_TOP = 0.10      # top padding — just a sliver of forehead, no hijab
-_PAD_Y_BOTTOM = 0.18   # bottom padding (jaw), stays off neck/hijab drape
+_PAD_X = 0.08          # left + right padding, as fraction of bbox width
+_PAD_Y_TOP = 0.06      # top padding — just a sliver of forehead, no hijab
+_PAD_Y_BOTTOM = 0.10   # bottom padding (jaw), stays off neck/hijab drape
 
 _STAMP_FACE_W_RATIO = 1.0 / (1.0 + 2.0 * _PAD_X)
 
@@ -138,11 +138,13 @@ def extract_face_stamp(bgr: np.ndarray) -> Optional[np.ndarray]:
     mask = np.zeros((ch, cw), dtype=np.uint8)
     cv2.ellipse(
         mask,
-        (cw // 2, int(ch * 0.55)),
-        (int(cw * 0.40), int(ch * 0.44)),
+        (cw // 2, int(ch * 0.52)),
+        (int(cw * 0.36), int(ch * 0.42)),
         0, 0, 360, 255, -1,
     )
-    feather = max(5, int(max(cw, ch) * 0.06))
+    # Heavier feather so the oval edge dissolves instead of showing a seam
+    # against the target mannequin's skin / hijab.
+    feather = max(8, int(max(cw, ch) * 0.12))
     k = feather * 2 + 1
     mask = cv2.GaussianBlur(mask, (k, k), feather / 2.0)
 
