@@ -173,9 +173,16 @@ export default function TryOnScreen() {
     queryKey: ['tryon-my-renders'],
     queryFn: async () => (await api.get('/tryon/my-renders')).data,
     enabled: !!tryonCompleted,
+    // Always refetch when the Primerka tab becomes active and treat the
+    // cached list as immediately stale — otherwise re-queued renders that
+    // completed in the background (e.g. after a seller unpublished-then-
+    // republished a variant) stay invisible until the user kills the app.
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0,
     refetchInterval: (query) => {
       const d = query.state.data;
-      if (!d) return false;
+      if (!d) return 4000; // first load — poll until we know the queue is empty
       return d.pending > 0 || d.running > 0 ? 4000 : false;
     },
   });
