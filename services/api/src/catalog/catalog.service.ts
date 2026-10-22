@@ -11,8 +11,10 @@ export class CatalogService {
     const [stores, categories, newArrivals] = await Promise.all([
       this.prisma.seller.findMany({
         where: { verified: true },
-        take: 10,
-        orderBy: { rating: 'desc' },
+        take: 8,
+        // Home surfaces newly opened shops only — the "Yangi do'konchilar"
+        // strip. Older verified sellers are reachable from the Katalog tab.
+        orderBy: { createdAt: 'desc' },
         select: {
           id: true,
           brandName: true,
@@ -21,6 +23,7 @@ export class CatalogService {
           rating: true,
           reviewsCount: true,
           verified: true,
+          createdAt: true,
         },
       }),
       this.prisma.category.findMany({ orderBy: { order: 'asc' } }),

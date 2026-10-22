@@ -10,7 +10,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { useTryonOnboarding } from '../../src/store/tryon-onboarding';
 import { safeBack } from '../../src/lib/safe-back';
 
-const WOMAN_IMG = require('../../assets/body-woman.webp');
+const WOMAN_IMG = require('../../assets/body-woman.png');
 
 const MIN_H = 140;
 const MAX_H = 210;

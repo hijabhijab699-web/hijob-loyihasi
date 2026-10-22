@@ -17,7 +17,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { useTryonOnboarding } from '../../src/store/tryon-onboarding';
 import { api } from '../../src/api/client';
 
-const WOMAN_IMG = require('../../assets/body-woman.webp');
+const WOMAN_IMG = require('../../assets/body-woman.png');
 const FALLBACK_FACE = require('../../assets/demo-face.jpg');
 
 export default function AvatarReadyScreen() {

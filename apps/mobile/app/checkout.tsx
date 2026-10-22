@@ -379,27 +379,35 @@ export default function CheckoutScreen() {
           paddingHorizontal: 20, paddingTop: 14, paddingBottom: 34,
           backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.rule,
         }}>
-          <Pressable
-            onPress={() => checkout.mutate()}
-            disabled={checkout.isPending || items.length === 0 || !addressId}
-            style={{
-              height: 52, borderRadius: 16,
-              backgroundColor: items.length === 0 || !addressId ? colors.rule : colors.oliveDeep,
-              alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8,
-              opacity: checkout.isPending ? 0.7 : 1,
-            }}
-          >
-            {checkout.isPending ? (
-              <ActivityIndicator color={colors.goldSoft} />
-            ) : (
-              <>
-                <Ionicons name="checkmark-circle" size={20} color={colors.goldSoft} />
-                <Text variant="body" style={{ fontSize: 15, fontWeight: '700', color: colors.goldSoft, fontFamily: theme.fontFamilies.display }}>
-                  {isRu ? 'Отправить заказ' : "Buyurtma yuborish"} · ${total.toFixed(2)}
-                </Text>
-              </>
-            )}
-          </Pressable>
+          {(() => {
+            const canSubmit = items.length > 0 && !!addressId && !checkout.isPending;
+            // Even when disabled we keep the oliveDeep fill — the greyed-out
+            // "rule" shade blended into the surface and the CTA looked almost
+            // invisible. Only the opacity drops so it still reads as disabled.
+            return (
+              <Pressable
+                onPress={() => checkout.mutate()}
+                disabled={!canSubmit}
+                style={{
+                  height: 52, borderRadius: 16,
+                  backgroundColor: colors.oliveDeep,
+                  alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8,
+                  opacity: canSubmit ? 1 : 0.55,
+                }}
+              >
+                {checkout.isPending ? (
+                  <ActivityIndicator color={colors.goldSoft} />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.goldSoft} />
+                    <Text variant="body" style={{ fontSize: 15, fontWeight: '700', color: colors.goldSoft, fontFamily: theme.fontFamilies.display }}>
+                      {isRu ? 'Отправить заказ' : "Buyurtma yuborish"} · ${total.toFixed(2)}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            );
+          })()}
           <Text
             variant="caption"
             color="muted"
@@ -486,7 +494,7 @@ function NewAddressModal({ onClose, onCreated }: NewAddressModalProps) {
   const canSubmit = city.trim() && district.trim() && street.trim() && building.trim();
 
   return (
-    <Modal transparent animationType="slide" onRequestClose={onClose}>
+    <Modal transparent animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={{
@@ -522,8 +530,11 @@ function NewAddressModal({ onClose, onCreated }: NewAddressModalProps) {
               disabled={!canSubmit || create.isPending}
               style={{
                 height: 52, borderRadius: 16, marginTop: 18,
-                backgroundColor: canSubmit ? colors.oliveDeep : colors.rule,
+                // Keep the oliveDeep fill even when disabled — the greyed
+                // rule shade blended into the sheet and the CTA vanished.
+                backgroundColor: colors.oliveDeep,
                 alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8,
+                opacity: canSubmit && !create.isPending ? 1 : 0.55,
               }}
             >
               {create.isPending ? (

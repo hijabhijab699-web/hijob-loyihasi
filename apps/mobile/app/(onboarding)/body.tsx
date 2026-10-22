@@ -11,11 +11,11 @@ import { useAuth } from '../../src/store/auth';
 import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 import { safeBack } from '../../src/lib/safe-back';
 
-const WOMAN_IMG = require('../../assets/body-woman.webp');
+const WOMAN_IMG = require('../../assets/body-woman.png');
 const BODY_IMGS: Record<BodyType, any> = {
-  slim: require('../../assets/body-slim.webp'),
-  medium: require('../../assets/body-medium.webp'),
-  full: require('../../assets/body-full.webp'),
+  slim: require('../../assets/body-slim.png'),
+  medium: require('../../assets/body-medium.png'),
+  full: require('../../assets/body-full.png'),
 };
 
 type BodyType = 'slim' | 'medium' | 'full';

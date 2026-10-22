@@ -148,56 +148,18 @@ export default function TryOnScreen() {
   const [lightIdx, setLightIdx] = useState(0);
   const lighting = LIGHTING[lightIdx] ?? LIGHTING[0];
 
-  // Pre-rendered face-swapped mannequins for the current buyer. Produced
-  // once at onboarding time by the backend queue, served instantly here —
-  // the Primerka tab no longer hits /tryon/faceswap on product open.
-  // Polled at a slow interval while jobs are still cooking so new variants
-  // show up as they finish.
-  const myRendersQuery = useQuery<{
-    hasSelfie: boolean;
-    renders: Array<{ variantId: string; url: string }>;
-    pending: number;
-    running: number;
-    failed: number;
-  }>({
-    queryKey: ['tryon-my-renders'],
-    queryFn: async () => (await api.get('/tryon/my-renders')).data,
-    enabled: !!tryonCompleted,
-    refetchInterval: (query) => {
-      const d = query.state.data;
-      if (!d) return false;
-      return d.pending > 0 || d.running > 0 ? 4000 : false;
-    },
-  });
-  const renderByVariant = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const r of myRendersQuery.data?.renders ?? []) m.set(r.variantId, r.url);
-    return m;
-  }, [myRendersQuery.data]);
-
-  // Pick the first variant that already has a buyer-specific render; falls
-  // back to the first variant so we still render something on first open.
-  const selectedVariantRenderUrl = useMemo(() => {
-    if (!selected) return null;
-    for (const v of selected.variants ?? []) {
-      const u = renderByVariant.get(v.id);
-      if (u) return u;
-    }
-    return null;
-  }, [selected, renderByVariant]);
-
-  // `scene` = the image is a full fitting-room render (buyer swap or AI
-  // body-matched variant); otherwise it's a plain product photo shown over
-  // the backdrop. Priority: user-specific render → body-matched mannequin
-  // → coverUrl.
+  // Face-swap was disabled for Primerka — the inswapper result on these
+  // stylised mannequins came out looking like an oval cut-out pasted onto
+  // the face, not a seamless swap. Show the body-matched mannequin or the
+  // seller's cover photo exactly as uploaded; the buyer still sees the
+  // right body type for their height band, just with the mannequin's own
+  // face.
   const hero = useMemo(() => {
     if (!selected) return null;
-    if (selectedVariantRenderUrl)
-      return { uri: selectedVariantRenderUrl, scene: true };
     const matched = pickBodyMatched(selected.resultVariants, bodyType, heightCm);
     if (matched) return { uri: matched, scene: true };
     return selected.coverUrl ? { uri: selected.coverUrl, scene: false } : null;
-  }, [selected, selectedVariantRenderUrl, bodyType, heightCm]);
+  }, [selected, bodyType, heightCm]);
 
   const wishMutation = useMutation({
     mutationFn: async ({ productId, on }: { productId: string; on: boolean }) =>
@@ -446,32 +408,9 @@ export default function TryOnScreen() {
                 </Text>
               </Pressable>
 
-              {/* Still-cooking hint: the pre-render queue has items left
-                  for this user. Non-blocking — the body-matched mannequin
-                  (or the plain cover) is already visible underneath. */}
-              {!selectedVariantRenderUrl &&
-                ((myRendersQuery.data?.pending ?? 0) + (myRendersQuery.data?.running ?? 0)) > 0 && (
-                  <View
-                    pointerEvents="none"
-                    style={{
-                      position: 'absolute',
-                      top: 14,
-                      left: 14,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 8,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 14,
-                      backgroundColor: GLASS,
-                    }}
-                  >
-                    <ActivityIndicator color="#FFF" size="small" />
-                    <Text style={{ color: '#FFF', fontSize: 11 }}>
-                      AI yuzingizni mahsulotlarga qo'yyapti…
-                    </Text>
-                  </View>
-                )}
+              {/* The "AI yuzingizni qo'yyapti…" pending badge used to live
+                  here, tied to the user-face-render queue. The queue now
+                  no longer gates the display, so the badge is gone too. */}
             </>
           )}
         </View>
@@ -533,13 +472,6 @@ export default function TryOnScreen() {
         >
           {visible.map((p) => {
             const variant = p.variants?.find((v) => v.color === colorFilter) ?? p.variants?.[0];
-            // Pre-rendered URL for the first variant of this product that
-            // the queue has finished; falls back inside ProductThumb to the
-            // body-matched render / cover.
-            const userUrl =
-              (p.variants ?? [])
-                .map((v) => renderByVariant.get(v.id))
-                .find((u) => !!u) ?? null;
             return (
               <ProductThumb
                 key={p.id}
@@ -549,7 +481,6 @@ export default function TryOnScreen() {
                 added={!!variant && justAdded === variant.id}
                 bodyType={bodyType}
                 heightCm={heightCm}
-                userRenderUrl={userUrl}
                 onPress={() => setSelectedId(p.id)}
                 onWish={() => wishMutation.mutate({ productId: p.id, on: !wished.has(p.id) })}
                 onCart={() => variant && cartMutation.mutate(variant.id)}
@@ -727,7 +658,6 @@ function ProductThumb({
   added,
   bodyType,
   heightCm,
-  userRenderUrl,
   onPress,
   onWish,
   onCart,
@@ -738,14 +668,12 @@ function ProductThumb({
   added: boolean;
   bodyType: BodyType | null | undefined;
   heightCm: number | null | undefined;
-  userRenderUrl: string | null;
   onPress: () => void;
   onWish: () => void;
   onCart: () => void;
 }) {
   const { colors } = useTheme();
-  const matched =
-    userRenderUrl ?? pickBodyMatched(product.resultVariants, bodyType, heightCm);
+  const matched = pickBodyMatched(product.resultVariants, bodyType, heightCm);
   const thumb = matched ?? product.variants?.[0]?.renderedUrl ?? product.coverUrl;
   return (
     <Pressable
