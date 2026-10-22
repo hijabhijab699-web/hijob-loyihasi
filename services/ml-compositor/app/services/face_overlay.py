@@ -16,14 +16,64 @@ fall back to the real facefusion run.
 from __future__ import annotations
 
 import logging
+import os
+import threading
+from pathlib import Path
 from typing import Optional
 
 import cv2
 import numpy as np
 
-from .face_swap import _init_insightface
-
 logger = logging.getLogger(__name__)
+
+# Face DETECTOR only — we deliberately do not require inswapper_128.onnx
+# here, unlike face_swap.py. The overlay path takes the user's face from a
+# cached stamp, so the ONNX swapper model is never needed; a missing one
+# would otherwise shoot the whole overlay pipeline down.
+_MODEL_DIR = Path(
+    os.environ.get(
+        "ML_COMPOSITOR_MODEL_DIR",
+        Path(__file__).resolve().parents[2] / "models",
+    )
+)
+_detector = None
+_init_lock = threading.Lock()
+_init_failed = False
+
+
+def _init_detector() -> bool:
+    """Lazily load an InsightFace FaceAnalysis (buffalo_l) just for detection.
+    Returns True on success. On failure (missing deps, model download blocked)
+    we flip _init_failed so retries don't thrash."""
+    global _detector, _init_failed
+    if _detector is not None:
+        return True
+    if _init_failed:
+        return False
+
+    with _init_lock:
+        if _detector is not None:
+            return True
+        if _init_failed:
+            return False
+
+        try:
+            from insightface.app import FaceAnalysis
+
+            logger.info("initialising face detector (buffalo_l)…")
+            app = FaceAnalysis(
+                name="buffalo_l",
+                providers=["CPUExecutionProvider"],
+                root=str(_MODEL_DIR),
+            )
+            app.prepare(ctx_id=0, det_size=(512, 512))
+            _detector = app
+            logger.info("face detector ready")
+            return True
+        except Exception as exc:  # noqa: BLE001
+            _init_failed = True
+            logger.warning("face detector init failed: %s", exc)
+            return False
 
 # Padding ratios used when we crop the face out of a swap result. These
 # have to match in extract and apply so the stamp lands at the right scale
@@ -37,16 +87,10 @@ _STAMP_FACE_W_RATIO = 1.0 / (1.0 + 2.0 * _PAD_X)
 
 
 def _largest_face(bgr: np.ndarray):
-    """Return the largest detected face from an image, or None. Uses the
-    same InsightFace FaceAnalysis instance that face_swap.py already warms
-    up, so there's no second model load."""
-    if not _init_insightface():
+    """Return the largest detected face from an image, or None."""
+    if not _init_detector():
         return None
-    # Import *after* init so the module-level `_app` is populated.
-    from . import face_swap as _fs
-    if _fs._app is None:
-        return None
-    faces = _fs._app.get(bgr)
+    faces = _detector.get(bgr)
     if not faces:
         return None
     faces.sort(
