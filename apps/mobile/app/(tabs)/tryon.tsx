@@ -390,6 +390,13 @@ export default function TryOnScreen() {
                   style={
                     hero.scene
                       ? {
+                          // Composite renders ALREADY contain their own
+                          // boutique scene; stacking the mobile backdrop
+                          // behind would show two different fitting
+                          // rooms, so fill the card completely with the
+                          // baked-in scene. The content script already
+                          // pads the figure 3 % inside the cell, so
+                          // `cover` never clips the model.
                           position: 'absolute',
                           top: 0,
                           bottom: 0,
@@ -397,11 +404,15 @@ export default function TryOnScreen() {
                           right: 0,
                         }
                       : {
+                          // Plain product photos (no baked scene) float
+                          // on top of the mobile backdrop with a padded
+                          // placement so the backdrop can breathe
+                          // around them.
                           position: 'absolute',
-                          top: '4%',
-                          bottom: '8%',
-                          left: '6%',
-                          right: '6%',
+                          top: '2%',
+                          bottom: '2%',
+                          left: '2%',
+                          right: '2%',
                         }
                   }
                   resizeMode={hero.scene ? 'cover' : 'contain'}
@@ -791,12 +802,8 @@ function ProductThumb({
       {thumb && (
         <Image
           source={{ uri: thumb }}
-          style={
-            matched
-              ? { width: '100%', height: '100%' }
-              : { position: 'absolute', top: '10%', bottom: '10%', left: '10%', right: '10%' }
-          }
-          resizeMode={matched ? 'cover' : 'contain'}
+          style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
+          resizeMode="cover"
         />
       )}
       {/* Heart / cart affordances used to sit on the thumbnail but they

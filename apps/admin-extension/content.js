@@ -232,14 +232,15 @@
     );
   }
 
-  // Re-sample the cell's background from its 4 corners, locate the
-  // figure's horizontal extent independently of the grid-wide call, and
-  // shift the figure so it is centred within the cell. The vertical
-  // position is kept intact so the row's short/mid/tall height difference
-  // still reads. Blank columns revealed by the shift are repainted with
-  // the sampled background colour so there is no black band on either
-  // side. Falls back to the untouched cell if the figure cannot be
-  // located (e.g. a near-empty cell).
+  // Measure the figure's bounding box (both axes), centre it in the cell
+  // horizontally, and ONLY if the figure crosses an edge (head above
+  // y=0, feet below bottom, hijab past a side) scale it down just enough
+  // to fit with a thin ~3 % margin. Figures that already fit keep their
+  // size and vertical position so the row's short/mid/tall heights are
+  // preserved. Blank area is painted with the sampled background colour.
+  const CELL_PAD = 0.03;      // only used when a figure has to be shrunk
+  const CELL_FG_DIST = 40;    // |ΔR|+|ΔG|+|ΔB| threshold vs. background
+
   function centerFigureInCell(cell) {
     const w = cell.width;
     const h = cell.height;
@@ -248,29 +249,31 @@
     let d;
     try { d = ctx.getImageData(0, 0, w, h).data; } catch { return cell; }
     const bg = sampleBackground(d, w, h);
-    // Scan every column — if any pixel in it is clearly non-background,
-    // the column counts as figure. Use a lower threshold than the grid
-    // cut pass because dark hijab / dark hair sit close to the near-
-    // black boutique backdrop and we don't want to lose them.
-    const fgDist = 40;
-    let x0 = -1;
-    let x1 = -1;
-    for (let x = 0; x < w; x++) {
-      let hit = false;
-      for (let y = 0; y < h; y++) {
+
+    const colProf = new Uint32Array(w);
+    const rowProf = new Uint32Array(h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
         const i = (y * w + x) * 4;
         if (
           Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]) >
-          fgDist
-        ) { hit = true; break; }
+          CELL_FG_DIST
+        ) { colProf[x]++; rowProf[y]++; }
       }
-      if (hit) { if (x0 < 0) x0 = x; x1 = x; }
     }
-    if (x0 < 0 || x1 <= x0) return cell;
-    const figCx = (x0 + x1 + 1) / 2;
-    const cellCx = w / 2;
-    const dx = Math.round(cellCx - figCx);
-    if (dx === 0) return cell;
+    const minColHits = Math.max(3, Math.round(h * 0.015));
+    const minRowHits = Math.max(3, Math.round(w * 0.015));
+    let x0 = -1, x1 = -1, y0 = -1, y1 = -1;
+    for (let x = 0; x < w; x++) if (colProf[x] >= minColHits) { if (x0 < 0) x0 = x; x1 = x; }
+    for (let y = 0; y < h; y++) if (rowProf[y] >= minRowHits) { if (y0 < 0) y0 = y; y1 = y; }
+    if (x0 < 0 || y0 < 0 || x1 <= x0 || y1 <= y0) return cell;
+
+    // If the figure already sits fully inside the cell with a tiny
+    // breathing room, just horizontally shift it so it is centred.
+    const edgeTol = 2; // pixels — count a 1-2 px touch as inside
+    const touchesEdge =
+      x0 <= edgeTol || x1 >= w - 1 - edgeTol || y0 <= edgeTol || y1 >= h - 1 - edgeTol;
+
     const out = document.createElement('canvas');
     out.width = w;
     out.height = h;
@@ -278,7 +281,26 @@
     if (!octx) return cell;
     octx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
     octx.fillRect(0, 0, w, h);
-    octx.drawImage(cell, dx, 0);
+    octx.imageSmoothingQuality = 'high';
+
+    if (!touchesEdge) {
+      const figCx = (x0 + x1 + 1) / 2;
+      const dx = Math.round(w / 2 - figCx);
+      octx.drawImage(cell, dx, 0);
+      return out;
+    }
+
+    // Figure spills past an edge — scale down to fit inside a padded
+    // frame, horizontally centre, and plant feet near the bottom-pad
+    // line so every short/mid/tall model shares the same floor.
+    const figW = x1 - x0 + 1;
+    const figH = y1 - y0 + 1;
+    const availW = w * (1 - 2 * CELL_PAD);
+    const availH = h * (1 - 2 * CELL_PAD);
+    const scale = Math.min(availW / figW, availH / figH);
+    const destX = (w - figW * scale) / 2 - x0 * scale;
+    const destY = h * (1 - CELL_PAD) - figH * scale - y0 * scale;
+    octx.drawImage(cell, 0, 0, w, h, destX, destY, w * scale, h * scale);
     return out;
   }
 

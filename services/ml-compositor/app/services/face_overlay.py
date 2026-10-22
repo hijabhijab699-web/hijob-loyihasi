@@ -131,20 +131,19 @@ def extract_face_stamp(bgr: np.ndarray) -> Optional[np.ndarray]:
         return None
 
     # Soft oval alpha — feathered so edges disappear into the mannequin.
-    # The ellipse is intentionally narrower than the crop box so forehead
-    # pixels (the top of the crop, where the source hijab wrap could still
-    # creep in on a wide face) stay transparent and the target's own hair/
-    # hijab shows through unchanged. Only the actual face area is replaced.
+    # The ellipse is sized so the opaque face region matches the
+    # detected bbox closely (so the overlay reads as "a face",
+    # not a shrunken oval floating inside the hijab opening). Only
+    # the TOP of the crop stays transparent, so the source hijab wrap
+    # (if any) can't creep onto the target.
     mask = np.zeros((ch, cw), dtype=np.uint8)
     cv2.ellipse(
         mask,
-        (cw // 2, int(ch * 0.52)),
-        (int(cw * 0.36), int(ch * 0.42)),
+        (cw // 2, int(ch * 0.54)),
+        (int(cw * 0.46), int(ch * 0.48)),
         0, 0, 360, 255, -1,
     )
-    # Heavier feather so the oval edge dissolves instead of showing a seam
-    # against the target mannequin's skin / hijab.
-    feather = max(8, int(max(cw, ch) * 0.12))
+    feather = max(6, int(max(cw, ch) * 0.08))
     k = feather * 2 + 1
     mask = cv2.GaussianBlur(mask, (k, k), feather / 2.0)
 
