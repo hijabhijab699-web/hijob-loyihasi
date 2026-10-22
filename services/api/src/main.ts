@@ -33,10 +33,21 @@ async function bootstrap() {
     app.useStaticAssets(storage.getRoot(), { prefix: '/uploads/' });
   }
 
+  const envOrigins = process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()).filter(Boolean);
   app.enableCors({
-    origin:
-      process.env.CORS_ORIGIN?.split(',') ??
-      ['http://localhost:3001', 'http://localhost:19006', /^http:\/\/localhost:\d+$/],
+    // The admin Chrome extension talks to the API from its own
+    // `chrome-extension://<id>` origin, which no deployment env var is
+    // going to anticipate (and the id changes between developers). Allow
+    // any chrome-extension origin by default on top of whatever
+    // CORS_ORIGIN names explicitly.
+    origin: [
+      ...(envOrigins ?? [
+        'http://localhost:3001',
+        'http://localhost:19006',
+        /^http:\/\/localhost:\d+$/,
+      ]),
+      /^chrome-extension:\/\/[a-p]+$/,
+    ],
     credentials: true,
   });
 

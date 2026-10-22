@@ -221,7 +221,65 @@
       }
     }
 
-    return cells.map((c) => canvasToSlice(c.sizeKey, trimTransparent(c.cell) ?? c.cell, 'image/png'));
+    // Plain-slice path: GPT puts the figure wherever it wants inside a
+    // cell (often off-center with a black band on the opposite side).
+    // We re-measure the figure's actual horizontal extent inside each
+    // slice and shift it so it sits dead-centre in its own cell. We also
+    // sample the cell's own background colour (not the grid-wide one) in
+    // case GPT drew different cells on slightly different shades.
+    return cells.map((c) =>
+      canvasToSlice(c.sizeKey, centerFigureInCell(c.cell), 'image/png'),
+    );
+  }
+
+  // Re-sample the cell's background from its 4 corners, locate the
+  // figure's horizontal extent independently of the grid-wide call, and
+  // shift the figure so it is centred within the cell. The vertical
+  // position is kept intact so the row's short/mid/tall height difference
+  // still reads. Blank columns revealed by the shift are repainted with
+  // the sampled background colour so there is no black band on either
+  // side. Falls back to the untouched cell if the figure cannot be
+  // located (e.g. a near-empty cell).
+  function centerFigureInCell(cell) {
+    const w = cell.width;
+    const h = cell.height;
+    const ctx = cell.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return cell;
+    let d;
+    try { d = ctx.getImageData(0, 0, w, h).data; } catch { return cell; }
+    const bg = sampleBackground(d, w, h);
+    // Scan every column — if any pixel in it is clearly non-background,
+    // the column counts as figure. Use a lower threshold than the grid
+    // cut pass because dark hijab / dark hair sit close to the near-
+    // black boutique backdrop and we don't want to lose them.
+    const fgDist = 40;
+    let x0 = -1;
+    let x1 = -1;
+    for (let x = 0; x < w; x++) {
+      let hit = false;
+      for (let y = 0; y < h; y++) {
+        const i = (y * w + x) * 4;
+        if (
+          Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]) >
+          fgDist
+        ) { hit = true; break; }
+      }
+      if (hit) { if (x0 < 0) x0 = x; x1 = x; }
+    }
+    if (x0 < 0 || x1 <= x0) return cell;
+    const figCx = (x0 + x1 + 1) / 2;
+    const cellCx = w / 2;
+    const dx = Math.round(cellCx - figCx);
+    if (dx === 0) return cell;
+    const out = document.createElement('canvas');
+    out.width = w;
+    out.height = h;
+    const octx = out.getContext('2d');
+    if (!octx) return cell;
+    octx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
+    octx.fillRect(0, 0, w, h);
+    octx.drawImage(cell, dx, 0);
+    return out;
   }
 
   // ─── Gutter-aware grid cutting ─────────────────────────────────────
@@ -589,7 +647,7 @@
   function trimTransparent(src) {
     const w = src.width;
     const h = src.height;
-    const ctx = src.getContext('2d');
+    const ctx = src.getContext('2d', { willReadFrequently: true });
     if (!ctx) return null;
     let data;
     try {

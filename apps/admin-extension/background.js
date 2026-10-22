@@ -367,11 +367,9 @@ function buildPrompt(job) {
     ? `Scarf size: ${job.targetSize} cm — show the full fabric length draping down in every panel.`
     : 'Scarf size: standard square — show the full fabric length draping down in every panel.';
   return [
-    'Ultra-realistic fashion-catalogue cut-out containing NINE (9) full-body modest-fashion young women models, each wearing THE SAME hijab from the attached reference image.',
+    'Ultra-realistic fashion-catalogue composite photo containing NINE (9) full-body modest-fashion young women models, each wearing THE SAME hijab from the attached reference image.',
     '',
-    'OUTPUT FORMAT (CRITICAL): a TRANSPARENT PNG with a real alpha channel. There must be NOTHING behind the models — no scene, no room, no floor, no mirrors, no curtains, no boutique, no studio backdrop, no shadow, no gradient, no solid colour fill. Every pixel that is not part of the models themselves must be FULLY TRANSPARENT (alpha = 0). The seller will later place these cut-outs onto their own backdrop; a baked-in scene is unusable.',
-    '',
-    'ARRANGE the 9 models in a 3×3 grid (3 rows × 3 columns), SAME baseline per row, SAME lighting, equal gaps between cells, EQUAL cell size so the image can be cut cleanly into 9 pieces.',
+    'ARRANGE them in a 3×3 grid (3 rows × 3 columns), SAME baseline per row, SAME lighting, equal gaps between cells, EQUAL cell size so the image can be cut cleanly into 9 pieces.',
     '',
     'ROWS = body type (top → bottom):',
     '  • Row 1 — SLIM: narrow shoulders and waist, overall thin frame',
@@ -398,7 +396,7 @@ function buildPrompt(job) {
     '• FULLY MODEST OUTFIT: plain SOFT BEIGE / CREAM long-sleeve ankle-length dress (abaya-like simple gown in warm beige #e8dcc6, NOT white). Long sleeves to the wrists, closed high neckline, hem reaching the ankles. No bare skin anywhere.',
     '• Plain BEIGE closed flat shoes on the feet — no bare feet.',
     '',
-    'Pose (SAME in every cell) — relaxed, elegant catalogue pose, NOT a stiff passport pose:',
+    'Pose (SAME in every cell) — relaxed boutique fitting-room pose like a fashion catalogue photo, NOT a stiff passport pose:',
     '• Body turned about 20° to the side (three-quarter view), face turned back toward the camera.',
     '• Weight on one leg, the other knee softly relaxed; shoulders soft; elegant, confident posture.',
     '• One hand lightly touching the hijab edge at chest level (fingers visible, NOT covering the face and NOT hiding the hijab pattern); the other arm relaxed along the body.',
@@ -409,11 +407,14 @@ function buildPrompt(job) {
     '• Drape the hijab naturally around the head, shoulders, and chest over the beige dress; same drape in every cell.',
     '• The dress and shoes beneath remain fully visible — no bare skin exposed anywhere.',
     '',
-    'Lighting is soft, even and warm, as if lit by a diffused softbox so the models would composite cleanly onto any backdrop later. NO cast shadow on the ground (the ground does not exist — the gap between cells and under each model is transparent).',
+    'Scene (baked INTO every cell, same scene across all 9 cells):',
+    '• A warm BOUTIQUE FITTING-ROOM interior behind every model: soft beige/cream wall, a small velvet sofa or ottoman at the side, a potted plant, a tall standing lamp, and a soft warm carpet on the floor. The scene must be clearly visible BEHIND and AROUND the model, filling the ENTIRE cell including the full width (no empty bands on the left or right, no black bars, no solid flat colour).',
+    '• Soft warm boutique lighting falls from the upper-left; a very soft, short contact shadow at the feet grounds the model on the carpet.',
+    '• The SAME scene composition is behind every one of the 9 models (one scene photographed 9 times from the same angle, with a different model standing in front each time). No chroma / green / magenta screen.',
+    '• NO text, NO labels, NO rulers, NO panel borders between the cells, NO watermarks, NO logos.',
+    '• Equal, FULL boutique-scene gaps between the 9 figures so a 3×3 crop lands cleanly without clipping any figure and without exposing any solid colour band.',
     '',
-    'STRICTLY DO NOT draw: any room, mirrors, curtains, floor, wall, lamp, clothing rack, plant, chair, sofa, shadow, gradient, texture, border, text, label, ruler, watermark, logo. Nothing behind, around or under the figures. The ONLY non-transparent pixels are the models themselves (hijab + dress + shoes + visible skin).',
-    '',
-    'Output ONE PNG WITH ALPHA, square or 4:5 portrait, containing all 9 full-body models arranged in a clean 3×3 grid of cut-outs on a FULLY TRANSPARENT canvas, ready for mechanical cutting.',
+    'Output ONE OPAQUE image (JPEG or PNG without alpha), square or 4:5 portrait, containing all 9 full-body models with the baked-in boutique scene arranged in a clean 3×3 grid ready for mechanical cutting. Do NOT use transparency.',
   ].join('\n');
 }
 
@@ -450,10 +451,10 @@ async function runOne(job) {
     // variants; the content script slices it before replying.
     note('✏ GPT ga 3×3 grid yuborilyapti…');
     const prompt = buildPrompt(job);
-    // Sellers get PNG cut-outs with a transparent background — they overlay
-    // them onto their own catalogue scenes later, so baking in a fitting
-    // room here is unusable. We skip loadScene() on purpose; content.js
-    // falls through to the alpha-only branch when scene is null.
+    // GPT now bakes the boutique scene into every cell, so we skip the
+    // chroma-key composite pass. loadScene() + placeOnScene over-cropped
+    // and left a black band on the right whenever GPT drew the figure off-
+    // center. Passing scene: null tells the content script to just slice.
     const resp = await askContentPort(tabId, {
       type: 'DRESS',
       prompt,
