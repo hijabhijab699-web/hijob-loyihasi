@@ -159,8 +159,9 @@ def apply_face_stamp(
 ) -> Optional[np.ndarray]:
     """Alpha-composite `stamp_rgba` onto the face region of `target_bgr`
     (in place). Returns the mutated target or None if the target has no
-    detectable face. The stamp is resized so its underlying face region
-    matches the target's bbox width."""
+    detectable face. The stamp is scaled uniformly to the SMALLER of the
+    width/height fits, so a long selfie face never gets vertically
+    stretched over a shorter mannequin head."""
     face = _largest_face(target_bgr)
     if face is None:
         return None
@@ -172,11 +173,18 @@ def apply_face_stamp(
     tcy = (ty1 + ty2) // 2
 
     sh, sw = stamp_rgba.shape[:2]
-    # The stamp's own face bbox is roughly _STAMP_FACE_W_RATIO of the
-    # stamp width (we padded by _PAD_X on each side when extracting).
-    # Scale the whole stamp so its face bbox width matches the target's.
-    target_stamp_w = max(4, int(tw / _STAMP_FACE_W_RATIO))
-    scale = target_stamp_w / sw
+    # Pick the uniform scale that fits BOTH the width and the height of
+    # the target bbox — the min of the two per-axis scales. Using width
+    # alone (as before) let a long selfie face spill past the mannequin's
+    # chin; using height alone squashed wide selfie faces sideways.
+    scale_by_w = (tw / _STAMP_FACE_W_RATIO) / float(sw)
+    # The stamp's face region height, as a fraction of total stamp height,
+    # derived from the extract padding (same math as the width ratio).
+    stamp_face_h_ratio = 1.0 / (1.0 + _PAD_Y_TOP + _PAD_Y_BOTTOM)
+    scale_by_h = (th / stamp_face_h_ratio) / float(sh)
+    scale = min(scale_by_w, scale_by_h)
+
+    target_stamp_w = max(4, int(sw * scale))
     target_stamp_h = max(4, int(sh * scale))
 
     stamp_resized = cv2.resize(
@@ -185,11 +193,10 @@ def apply_face_stamp(
         interpolation=cv2.INTER_LANCZOS4,
     )
 
-    # Center on the target face center, nudged slightly up so the stamp's
-    # hairline sits above the forehead where it belongs rather than
-    # cutting the mannequin's eyes.
+    # Center the stamp on the target bbox center. The stamp is now bbox-
+    # proportioned, so no extra vertical nudge is needed.
     px = tcx - target_stamp_w // 2
-    py = tcy - int(target_stamp_h * 0.52)
+    py = tcy - target_stamp_h // 2
 
     H, W = target_bgr.shape[:2]
     x0 = max(0, px)
