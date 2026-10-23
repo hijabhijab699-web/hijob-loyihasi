@@ -283,7 +283,8 @@ export class TryOnService {
       return /NO_MANNEQUIN_FACE|FACESWAP_UNPROCESSABLE/i.test(s);
     };
     try {
-      jpeg = await this.compositor.composeFacefusion(mannequinFile, faceImage);
+      const fusion = await this.compositor.composeFacefusion(mannequinFile, faceImage);
+      jpeg = fusion.buffer;
       swapped = true;
     } catch (ffErr) {
       if (isNoFace(ffErr)) {
