@@ -1,7 +1,7 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
@@ -25,6 +25,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const lang = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru';
+  const qc = useQueryClient();
 
   // Fetch real counts instead of showing hardcoded 12/8/3 that make a
   // freshly registered account look populated. Each query runs under the
@@ -175,15 +176,17 @@ export default function ProfileScreen() {
         <Pressable
           key={item.label}
           onPress={() => item.route && router.push(item.route as any)}
-          style={{
+          android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
+          style={({ pressed }) => ({
             flexDirection: 'row',
             alignItems: 'center',
             gap: 12,
             padding: 14,
             paddingHorizontal: 16,
+            backgroundColor: pressed ? 'rgba(0,0,0,0.04)' : 'transparent',
             borderBottomWidth: idx < items.length - 1 ? 1 : 0,
             borderBottomColor: colors.rule,
-          }}
+          })}
         >
           <View
             style={{
@@ -246,6 +249,18 @@ export default function ProfileScreen() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => {
+              qc.invalidateQueries({ queryKey: ['profile-orders-count'] });
+              qc.invalidateQueries({ queryKey: ['profile-wishlist-count'] });
+              qc.invalidateQueries({ queryKey: ['profile-addresses-count'] });
+            }}
+            tintColor={colors.oliveDeep}
+            colors={[colors.oliveDeep]}
+          />
+        }
       >
         {/* Header */}
         <View

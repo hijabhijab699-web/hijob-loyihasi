@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Pressable, ScrollView, View, Image, Animated, Dimensions } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, View, Image, Animated, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,6 +42,68 @@ const CATEGORY_DATA = [
 ] as const;
 
 const PLACEHOLDER_BG = ['#B5B891', '#E4CE9A', '#D4C3A0', '#C4C88C', '#D9D0BE', '#E8DFCC'];
+
+type Ad = { id: string; imageUrl: string; linkUrl: string | null; title: string | null };
+
+/**
+ * Horizontal paginated carousel of admin-curated banners, shown just below
+ * the welcome header. Pulls `GET /ads` once per app session; renders
+ * nothing when the admin hasn't published any banners so the screen
+ * doesn't collapse around an empty row.
+ */
+function AdsCarousel() {
+  const router = useRouter();
+  const { colors, theme } = useTheme();
+  const { data } = useQuery<Ad[]>({
+    queryKey: ['ads'],
+    queryFn: async () => {
+      const res = await api.get<Ad[]>('/ads');
+      return res.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (!data || data.length === 0) return null;
+
+  const screenW = Dimensions.get('window').width;
+  const cardW = screenW - 2 * 20;
+
+  return (
+    <View style={{ marginTop: 16 }}>
+      <ScrollView
+        horizontal
+        pagingEnabled
+        decelerationRate="fast"
+        snapToInterval={cardW + 12}
+        snapToAlignment="start"
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+      >
+        {data.map((ad) => (
+          <Pressable
+            key={ad.id}
+            onPress={() => {
+              if (ad.linkUrl) router.push(ad.linkUrl as any);
+            }}
+            style={{
+              width: cardW,
+              aspectRatio: 16 / 9,
+              borderRadius: theme.radii.xl,
+              overflow: 'hidden',
+              backgroundColor: colors.surface2,
+            }}
+          >
+            <Image
+              source={{ uri: ad.imageUrl }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
 
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
@@ -117,7 +179,21 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => {
+              queryClient.invalidateQueries({ queryKey: ['home'] });
+              refetch();
+            }}
+            tintColor={colors.oliveDeep}
+            colors={[colors.oliveDeep]}
+          />
+        }
+      >
         {/* ── Header ── */}
         <View
           style={{
@@ -204,6 +280,9 @@ export default function HomeScreen() {
               : (lang === 'ru' ? 'Откройте свой стиль' : "O'z uslubingizni toping")}
           </Text>
         </View>
+
+        {/* ── Ads Carousel ── */}
+        <AdsCarousel />
 
         {/* ── Hero Try-On Banner ── */}
         <Pressable
@@ -646,124 +725,6 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        {/* ── Popular Collections ── */}
-        <View style={{ marginTop: 28 }}>
-          <View style={{ paddingHorizontal: SIDE, marginBottom: 14 }}>
-            <Text variant="titleMedium" color="oliveDeep" style={{ fontSize: 18 }}>
-              {lang === 'ru' ? 'Популярные коллекции' : 'Mashhur kolleksiyalar'}
-            </Text>
-          </View>
-
-          <View style={{ paddingHorizontal: SIDE, gap: 12 }}>
-            {/* Collection 1 */}
-            <Pressable
-              onPress={() =>
-                router.push({ pathname: '/(tabs)/catalog', params: { category: 'scarves' } })
-              }
-            >
-              <LinearGradient
-                colors={['#363924', '#4E5230']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0.5 }}
-                style={{
-                  borderRadius: theme.radii.xl,
-                  padding: 20,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  minHeight: 90,
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text variant="caption" style={{ color: colors.goldSoft, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase' }}>
-                    {lang === 'ru' ? 'Коллекция' : 'Kolleksiya'}
-                  </Text>
-                  <Text
-                    variant="titleMedium"
-                    style={{ color: '#fff', marginTop: 4, fontSize: 16 }}
-                  >
-                    {lang === 'ru' ? 'Шёлковые платки' : "Ipak ro'mollar"}
-                  </Text>
-                  <Text variant="caption" style={{ color: 'rgba(255,255,255,0.5)', marginTop: 2, fontSize: 11 }}>
-                    24 {lang === 'ru' ? 'товара' : 'mahsulot'}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 26,
-                    backgroundColor: 'rgba(201,169,110,0.15)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Ionicons name="ribbon-outline" size={24} color={colors.goldSoft} />
-                </View>
-              </LinearGradient>
-            </Pressable>
-
-            {/* Collection row */}
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <Pressable
-                onPress={() =>
-                  router.push({ pathname: '/(tabs)/catalog', params: { category: 'dresses' } })
-                }
-                style={{ flex: 1 }}
-              >
-                <LinearGradient
-                  colors={['#B5B891', '#8A8D5B']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    borderRadius: theme.radii.xl,
-                    padding: 16,
-                    aspectRatio: 1,
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Ionicons name="shirt-outline" size={26} color="rgba(255,255,255,0.8)" />
-                  <View>
-                    <Text variant="titleSmall" style={{ color: '#fff', fontSize: 13 }}>
-                      {lang === 'ru' ? 'Платья' : "Ko'ylaklar"}
-                    </Text>
-                    <Text variant="caption" style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 1 }}>
-                      18 {lang === 'ru' ? 'товаров' : 'mahsulot'}
-                    </Text>
-                  </View>
-                </LinearGradient>
-              </Pressable>
-
-              <Pressable
-                onPress={() =>
-                  router.push({ pathname: '/(tabs)/catalog', params: { category: 'bags' } })
-                }
-                style={{ flex: 1 }}
-              >
-                <LinearGradient
-                  colors={['#C9A96E', '#A88848']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    borderRadius: theme.radii.xl,
-                    padding: 16,
-                    aspectRatio: 1,
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Ionicons name="bag-handle-outline" size={26} color="rgba(255,255,255,0.8)" />
-                  <View>
-                    <Text variant="titleSmall" style={{ color: '#fff', fontSize: 13 }}>
-                      {lang === 'ru' ? 'Сумки' : 'Sumkalar'}
-                    </Text>
-                    <Text variant="caption" style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 1 }}>
-                      12 {lang === 'ru' ? 'товаров' : 'mahsulot'}
-                    </Text>
-                  </View>
-                </LinearGradient>
-              </Pressable>
-            </View>
-          </View>
-        </View>
       </ScrollView>
     </Screen>
   );

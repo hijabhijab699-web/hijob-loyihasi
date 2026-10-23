@@ -591,3 +591,20 @@ model OrderItem {
   @@id([orderId, variantId])
   @@map("order_items")
 }
+
+/// Admin-managed banner shown at the top of the mobile home page. The
+/// mobile client pulls `GET /ads` once per app session; admins curate
+/// the list from the admin panel.
+model Advertisement {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String?  @db.VarChar(120)
+  imageUrl    String   @map("image_url")
+  linkUrl     String?  @map("link_url")
+  sortOrder   Int      @default(0) @map("sort_order")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([active, sortOrder])
+  @@map("advertisements")
+}

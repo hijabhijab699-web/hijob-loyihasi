@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, UserCog, Package, Users, ShoppingCart, LogOut, Sparkles } from 'lucide-react';
+import { LayoutDashboard, UserCog, Package, Users, ShoppingCart, LogOut, Sparkles, Megaphone } from 'lucide-react';
 import { me, logout } from '@/lib/api';
 
 const NAV = [
   { href: '/', label: 'Umumiy', icon: LayoutDashboard },
   { href: '/sellers', label: 'Sotuvchilar', icon: UserCog },
   { href: '/products', label: 'Mahsulotlar', icon: Package },
+  { href: '/ads', label: 'Reklama', icon: Megaphone },
   { href: '/dev-ai', label: 'Dev AI panel', icon: Sparkles },
   { href: '/users', label: 'Foydalanuvchilar', icon: Users },
   { href: '/orders', label: 'Buyurtmalar', icon: ShoppingCart },

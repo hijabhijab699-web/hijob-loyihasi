@@ -230,6 +230,42 @@ export async function adminDeleteUser(id: string) {
   );
 }
 
+/* ─── Ads ─── */
+
+export interface AdminAd {
+  id: string;
+  title: string | null;
+  imageUrl: string;
+  linkUrl: string | null;
+  sortOrder: number;
+  active: boolean;
+  createdAt: string;
+}
+
+export async function adminListAds() {
+  return request<AdminAd[]>('/admin/ads');
+}
+
+export async function adminCreateAd(form: FormData) {
+  return request<AdminAd>('/admin/ads', { method: 'POST', body: form });
+}
+
+export async function adminUpdateAd(
+  id: string,
+  patch: Partial<Pick<AdminAd, 'title' | 'linkUrl' | 'sortOrder' | 'active'>>,
+) {
+  return request<AdminAd>(`/admin/ads/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function adminDeleteAd(id: string) {
+  return request<{ id: string; deleted: boolean }>(`/admin/ads/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function adminListOrders() {
   return request<AdminOrder[]>('/admin/orders');
 }

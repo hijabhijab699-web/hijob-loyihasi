@@ -22,6 +22,7 @@ import { AdminModule } from './admin/admin.module';
 import { StyleJobsModule } from './style-jobs/style-jobs.module';
 import { MannequinTemplatesModule } from './mannequin-templates/mannequin-templates.module';
 import { UserFaceRendersModule } from './user-face-renders/user-face-renders.module';
+import { AdsModule } from './ads/ads.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { UserFaceRendersModule } from './user-face-renders/user-face-renders.mod
     StyleJobsModule,
     MannequinTemplatesModule,
     UserFaceRendersModule,
+    AdsModule,
   ],
 })
 export class AppModule {}
