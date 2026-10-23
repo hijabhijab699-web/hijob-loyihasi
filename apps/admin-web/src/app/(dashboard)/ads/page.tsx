@@ -1,5 +1,4 @@
 import { revalidatePath } from 'next/cache';
-import { Trash2 } from 'lucide-react';
 import {
   adminListAds,
   adminCreateAd,
@@ -105,9 +104,12 @@ export default async function AdminAdsPage() {
                   {ad.active ? 'Nofaol qilish' : 'Faollashtirish'}
                 </button>
               </form>
-              <ConfirmDelete action={remove} id={ad.id} label="O'chirish">
-                <Trash2 className="h-4 w-4" />
-              </ConfirmDelete>
+              <ConfirmDelete
+                action={remove}
+                id={ad.id}
+                label="O'chirish"
+                confirmText="Reklamani butunlay o'chirmoqchimisiz?"
+              />
             </div>
           ))}
         </div>
