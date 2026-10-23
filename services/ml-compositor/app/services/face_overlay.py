@@ -84,7 +84,10 @@ def _init_detector() -> bool:
 # into the stamp and the soft-alpha blend turns them into a dark halo
 # around the face on every target mannequin.
 _PAD_X = 0.03          # left + right padding, as fraction of bbox width
-_PAD_Y_TOP = 0.02      # top padding — only a sliver of forehead
+_PAD_Y_TOP = 0.0       # NO top padding — anything above the face bbox
+                       # (dark hair / hijab wrap behind the forehead) was
+                       # leaking into the stamp's top-right corner as a
+                       # thin dark crescent on the mobile overlay.
 _PAD_Y_BOTTOM = 0.04   # bottom padding (jaw), stays off neck/hair line
 
 _STAMP_FACE_W_RATIO = 1.0 / (1.0 + 2.0 * _PAD_X)
@@ -130,16 +133,16 @@ def extract_face_stamp(bgr: np.ndarray) -> Optional[np.ndarray]:
     if ch < 10 or cw < 10:
         return None
 
-    # Soft oval alpha — the opaque centre now sits well INSIDE the crop
-    # box and feathering is light, so even if the crop still catches a
-    # dark pixel at the edge (shadow under the jaw, a stray hair) that
-    # pixel is already outside the mask and never blends onto the target.
-    # Result: no dark halo around the pasted face.
+    # Soft oval alpha — centred just below the vertical middle so the
+    # ellipse's top edge sits at the hairline, not above it. Any dark
+    # hair / hijab pixel the selfie detector included at the very top
+    # of the bbox stays OUTSIDE the mask and is never blended onto the
+    # mannequin — no dark crescent on the top-right of the overlaid face.
     mask = np.zeros((ch, cw), dtype=np.uint8)
     cv2.ellipse(
         mask,
-        (cw // 2, int(ch * 0.52)),
-        (int(cw * 0.42), int(ch * 0.44)),
+        (cw // 2, int(ch * 0.58)),
+        (int(cw * 0.42), int(ch * 0.42)),
         0, 0, 360, 255, -1,
     )
     feather = max(4, int(max(cw, ch) * 0.05))
