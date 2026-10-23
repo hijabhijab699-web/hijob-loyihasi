@@ -388,18 +388,21 @@ export default function TryOnScreen() {
                 <Image
                   source={{ uri: hero.uri }}
                   style={{
-                    // Whole figure (head to feet) always visible — the
-                    // composite's own boutique scene fills most of the
-                    // frame and any mismatch between the cell aspect
-                    // ratio and the hero card is a thin matte band that
-                    // the sampled bg colour behind this image absorbs.
                     position: 'absolute',
                     top: 0,
                     bottom: 0,
                     left: 0,
                     right: 0,
                   }}
-                  resizeMode="contain"
+                  // Composite is 600×800 (3:4) with the figure centred
+                  // vertically and ~8%/6% head/foot padding; `cover`
+                  // scales it to fill the whole card so the baked-in
+                  // boutique scene reaches every edge (no matte bands,
+                  // no second backdrop showing through). The crop a
+                  // slightly taller card does to the scene is on its
+                  // sides, where there is only lamp / plant / wall —
+                  // never on the figure.
+                  resizeMode="cover"
                 />
               )}
               {lighting.overlay && (
@@ -787,7 +790,7 @@ function ProductThumb({
         <Image
           source={{ uri: thumb }}
           style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
-          resizeMode="contain"
+          resizeMode="cover"
         />
       )}
       {/* Heart / cart affordances used to sit on the thumbnail but they
