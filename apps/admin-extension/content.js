@@ -291,67 +291,31 @@
     const srcW = srcX1 - srcX0;
     const srcH = srcY1 - srcY0;
 
-    // Compose into a transparent-background canvas: the mobile app now
-    // draws its own boutique backdrop behind every render, so leaving
-    // the figure's own near-black bg in the slice would show as a dark
-    // frame on top of that backdrop. We key the near-black colour to
-    // alpha below so only the model's pixels stay opaque.
+    // Build a transparent cut-out of the figure using the proven keyOut
+    // path (connected-component flood-fill from edges + despill), then
+    // place that onto a FIXED 3:4 canvas so every variant has the same
+    // frame. The simplified alpha-ramp we were using before leaked
+    // chroma on non-pure backgrounds and left dark halos on JPEG-
+    // compressed edges; keyOut's flood-fill ignores enclosed dark
+    // pockets inside the figure and keeps the model's own dark hijab/
+    // hair/shoes fully opaque.
+    const figBox = { x0: srcX0, y0: srcY0, x1: srcX1, y1: srcY1 };
+    const figure = keyOut(cell, figBox, bg);
+    const fw = figure.width;
+    const fh = figure.height;
+
     const out = document.createElement('canvas');
     out.width = CELL_OUT_W;
     out.height = CELL_OUT_H;
-    const octx = out.getContext('2d', { willReadFrequently: true });
+    const octx = out.getContext('2d');
     if (!octx) return cell;
     octx.imageSmoothingQuality = 'high';
-    // "contain": figure keeps its aspect ratio inside the output canvas
-    // without ever being clipped (padding on either sides or top/bottom
-    // depending on the ratio match).
-    const scale = Math.min(CELL_OUT_W / srcW, CELL_OUT_H / srcH);
-    const dw = srcW * scale;
-    const dh = srcH * scale;
+    const scale = Math.min(CELL_OUT_W / fw, CELL_OUT_H / fh);
+    const dw = fw * scale;
+    const dh = fh * scale;
     const destX = (CELL_OUT_W - dw) / 2;
     const destY = (CELL_OUT_H - dh) / 2;
-    octx.drawImage(cell, srcX0, srcY0, srcW, srcH, destX, destY, dw, dh);
-
-    // Chroma-key the backdrop → transparent + despill the figure.
-    // The soft ramp (ALPHA_LO…ALPHA_HI) feathers the edge so there is no
-    // hard outline on the mobile backdrop. Already-transparent padding
-    // pixels are skipped so they don't false-match as "far from bg".
-    // Despill fixes the thin green/magenta halo bounced off the chroma
-    // screen onto the figure's edges — on a green bg we clamp any pixel
-    // where green dominates (g > max(r,b)) to that max, and the mirror
-    // for magenta where r & b both exceed g.
-    const ALPHA_LO = 35;
-    const ALPHA_HI = 90;
-    const greenKey = bg[1] > bg[0] + 40 && bg[1] > bg[2] + 40;
-    const magentaKey = bg[0] > bg[1] + 40 && bg[2] > bg[1] + 40;
-    const id = octx.getImageData(0, 0, CELL_OUT_W, CELL_OUT_H);
-    const dd = id.data;
-    for (let p = 0; p < dd.length; p += 4) {
-      if (dd[p + 3] === 0) continue;
-      const dist =
-        Math.abs(dd[p] - bg[0]) +
-        Math.abs(dd[p + 1] - bg[1]) +
-        Math.abs(dd[p + 2] - bg[2]);
-      if (dist <= ALPHA_LO) {
-        dd[p + 3] = 0;
-        continue;
-      }
-      if (dist < ALPHA_HI) {
-        dd[p + 3] = Math.round(((dist - ALPHA_LO) / (ALPHA_HI - ALPHA_LO)) * 255);
-      }
-      // Despill — only touch pixels that will remain visible.
-      if (greenKey) {
-        const cap = Math.max(dd[p], dd[p + 2]);
-        if (dd[p + 1] > cap) dd[p + 1] = cap;
-      } else if (magentaKey) {
-        const ex = Math.min(dd[p], dd[p + 2]) - dd[p + 1];
-        if (ex > 0) {
-          dd[p] -= ex;
-          dd[p + 2] -= ex;
-        }
-      }
-    }
-    octx.putImageData(id, 0, 0);
+    octx.drawImage(figure, 0, 0, fw, fh, destX, destY, dw, dh);
     return out;
   }
 
