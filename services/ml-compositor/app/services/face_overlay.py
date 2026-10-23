@@ -79,13 +79,13 @@ def _init_detector() -> bool:
 # have to match in extract and apply so the stamp lands at the right scale
 # — the stamp's padded crop is wider than the detected bbox by this
 # fraction, so when we resize to a new target we scale UP by the inverse.
-# Keep padding tight to the face bbox: the source mannequin's hijab wraps
-# across the forehead and over the shoulders, so a loose crop drags that
-# wrap into the stamp and we see two hijabs stacked when the stamp lands
-# on a target wearing a different one.
-_PAD_X = 0.08          # left + right padding, as fraction of bbox width
-_PAD_Y_TOP = 0.06      # top padding — just a sliver of forehead, no hijab
-_PAD_Y_BOTTOM = 0.10   # bottom padding (jaw), stays off neck/hijab drape
+# Keep padding VERY tight — any pixels past the actual face (dark hair,
+# the shadow line around the jaw, the selfie's background) get dragged
+# into the stamp and the soft-alpha blend turns them into a dark halo
+# around the face on every target mannequin.
+_PAD_X = 0.03          # left + right padding, as fraction of bbox width
+_PAD_Y_TOP = 0.02      # top padding — only a sliver of forehead
+_PAD_Y_BOTTOM = 0.04   # bottom padding (jaw), stays off neck/hair line
 
 _STAMP_FACE_W_RATIO = 1.0 / (1.0 + 2.0 * _PAD_X)
 
@@ -130,20 +130,19 @@ def extract_face_stamp(bgr: np.ndarray) -> Optional[np.ndarray]:
     if ch < 10 or cw < 10:
         return None
 
-    # Soft oval alpha — feathered so edges disappear into the mannequin.
-    # The ellipse is sized so the opaque face region matches the
-    # detected bbox closely (so the overlay reads as "a face",
-    # not a shrunken oval floating inside the hijab opening). Only
-    # the TOP of the crop stays transparent, so the source hijab wrap
-    # (if any) can't creep onto the target.
+    # Soft oval alpha — the opaque centre now sits well INSIDE the crop
+    # box and feathering is light, so even if the crop still catches a
+    # dark pixel at the edge (shadow under the jaw, a stray hair) that
+    # pixel is already outside the mask and never blends onto the target.
+    # Result: no dark halo around the pasted face.
     mask = np.zeros((ch, cw), dtype=np.uint8)
     cv2.ellipse(
         mask,
-        (cw // 2, int(ch * 0.54)),
-        (int(cw * 0.46), int(ch * 0.48)),
+        (cw // 2, int(ch * 0.52)),
+        (int(cw * 0.42), int(ch * 0.44)),
         0, 0, 360, 255, -1,
     )
-    feather = max(6, int(max(cw, ch) * 0.08))
+    feather = max(4, int(max(cw, ch) * 0.05))
     k = feather * 2 + 1
     mask = cv2.GaussianBlur(mask, (k, k), feather / 2.0)
 

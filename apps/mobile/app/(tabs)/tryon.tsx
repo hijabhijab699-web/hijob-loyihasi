@@ -769,7 +769,7 @@ function ProductThumb({
       onPress={onPress}
       style={{
         width: 96,
-        aspectRatio: 3 / 4.2,
+        aspectRatio: 3 / 4,
         borderRadius: 14,
         overflow: 'hidden',
         borderWidth: 2,
