@@ -358,6 +358,7 @@ async function loadScene() {
 }
 
 function buildPrompt(job) {
+  const chroma = chromaFor(job.colorHex);
   const style =
     job.tyingStyle === 'loose' ? 'loose, flowing drape style' :
     job.tyingStyle === 'double' ? 'double-layered formal style' :
@@ -387,10 +388,10 @@ function buildPrompt(job) {
     '',
     'Each cell is a HEAD-TO-TOE full-body shot — the ENTIRE model must be visible from the top of the head all the way DOWN TO THE FEET; feet inside the frame; model centered in her cell.',
     '',
-    'GRID GUTTERS (CRITICAL — the image is auto-sliced into 9 cells and these gutters are what the slicer locks onto):',
-    '• Draw a VISIBLE SOLID BLACK HORIZONTAL BAR between rows 1↔2 and between rows 2↔3. Each bar is pure #000000, FULL IMAGE WIDTH, and roughly 2.5% of the TOTAL image height tall (not thinner). No scene, no shadow and no part of any model crosses into these bars.',
-    '• Draw a VISIBLE SOLID BLACK VERTICAL BAR between columns 1↔2 and between columns 2↔3. Each bar is pure #000000, FULL IMAGE HEIGHT, and roughly 2.5% of the TOTAL image width wide.',
-    '• The 9 cells are the regions BETWEEN those black bars. Every model stays entirely inside her own cell with ~8% empty space above her head and ~6% empty space below her shoes; nothing crosses the black bars.',
+    'GRID GUTTERS (CRITICAL — the image is auto-sliced into 9 cells):',
+    `• Leave a VISIBLE EMPTY ${chroma.name.toLowerCase().split(' ').pop()} HORIZONTAL BAND between rows 1↔2 and between rows 2↔3. Each band is pure ${chroma.hex}, FULL IMAGE WIDTH, and roughly 2.5% of the TOTAL image height tall. No part of any model crosses into these bands.`,
+    `• Leave a VISIBLE EMPTY ${chroma.name.toLowerCase().split(' ').pop()} VERTICAL BAND between columns 1↔2 and between columns 2↔3. Each band is pure ${chroma.hex}, FULL IMAGE HEIGHT, and roughly 2.5% of the TOTAL image width wide.`,
+    '• The 9 cells are the regions BETWEEN those bands. Every model stays entirely inside her own cell with ~8% empty space above her head and ~6% empty space below her shoes; nothing crosses the gutter bands.',
     '',
     'Model (every cell):',
     '• Realistic young woman fashion model, photoreal skin and natural look — NOT a plastic mannequin. Realistic proportions head to feet.',
@@ -412,13 +413,14 @@ function buildPrompt(job) {
     '• Drape the hijab naturally around the head, shoulders, and chest over the beige dress; same drape in every cell.',
     '• The dress and shoes beneath remain fully visible — no bare skin exposed anywhere.',
     '',
-    'Background (CRITICAL — the mobile app composes its OWN boutique scene behind every mannequin, so this image must NOT contain any scene or room):',
-    '• Behind every model draw a SOLID FLAT NEAR-BLACK colour #1b1b14 (very dark olive-brown). The same flat colour fills EVERY pixel that is not part of the model herself — no gradient, no texture, no vignette, no lamp, no sofa, no plant, no wall, no floor, no shadow pattern, no boutique interior.',
-    '• The 2.5 %-tall solid-black gutter bars BETWEEN cells (described above) are the ONLY other non-model pixels in the image. There is no scene inside any cell either.',
-    '• Soft, even studio lighting on the figures so they composite cleanly later; no cast shadow on the ground (there is no ground — just the flat #1b1b14 colour).',
-    '• NO text, NO labels, NO rulers, NO panel borders beyond the required black gutter bars, NO watermarks, NO logos.',
+    'Background (CRITICAL — the mobile app draws its OWN boutique scene behind every mannequin, so this image must NOT contain any scene, room, or dark colour that could ever appear on a hijab):',
+    `• Behind every model draw a SOLID FLAT ${chroma.name} SCREEN — fill every non-model pixel with ${chroma.hex} ${chroma.hex === '#00B140' ? '(bright chroma green)' : '(bright chroma magenta)'}. The same flat colour fills EVERY pixel that is not part of the model herself — no gradient, no texture, no vignette, no scene, no ground.`,
+    `• NOTHING on the model, dress, shoes or hijab may be ${chroma.name.toLowerCase().split(' ').pop()} — that colour is reserved for the chroma backdrop and will be made transparent later. A dark or black backdrop would swallow dark hijabs, so this bright chroma is deliberate.`,
+    `• Replace the 2.5 % black gutter bars BETWEEN cells (described above) with equally thick ${chroma.hex} bars so the whole non-model area is a single flat chroma colour — the slicer still finds the cut lines by their distance from the figures.`,
+    '• Soft, even studio lighting on the figures so they composite cleanly later; no cast shadow on the ground.',
+    '• NO text, NO labels, NO rulers, NO watermarks, NO logos.',
     '',
-    'Output ONE OPAQUE image (JPEG or PNG without alpha), square or 4:5 portrait, containing all 9 full-body models on the flat near-black backdrop arranged in a clean 3×3 grid ready for mechanical cutting. Do NOT use transparency.',
+    `Output ONE OPAQUE image (JPEG or PNG without alpha), square or 4:5 portrait, containing all 9 full-body models on the flat ${chroma.name} chroma backdrop arranged in a clean 3×3 grid ready for mechanical cutting. Do NOT use transparency.`,
   ].join('\n');
 }
 
