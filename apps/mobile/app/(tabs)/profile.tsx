@@ -484,9 +484,15 @@ export default function ProfileScreen() {
         {/* Logout */}
         <View style={{ paddingHorizontal: 20 }}>
           <Pressable
-            onPress={() => {
-              logout();
-              router.replace('/');
+            onPress={async () => {
+              // Await the async token clear BEFORE navigating so the
+              // splash sees `isAuthed=false` and routes to /welcome.
+              // Without the await, router.replace('/') fired while the
+              // store was still authed and bounced back to home — the
+              // user had to tap "Chiqish" a second time to actually
+              // log out.
+              await logout();
+              router.replace('/(auth)/welcome');
             }}
             style={{
               height: 48,

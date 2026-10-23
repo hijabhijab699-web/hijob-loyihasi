@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlatList, Image, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Image, Pressable, RefreshControl, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +53,7 @@ export default function SellerProductsScreen() {
 
   // Backend returns the full list; we filter client-side so switching tabs
   // is instant and the badge counts stay in sync with real data.
-  const { data: products } = useQuery<SellerProduct[]>({
+  const { data: products, refetch } = useQuery<SellerProduct[]>({
     queryKey: ['seller', 'products'],
     queryFn: async () => (await api.get<SellerProduct[]>('/seller/products')).data,
     staleTime: 15_000,
@@ -177,6 +177,14 @@ export default function SellerProductsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, gap: 10 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => refetch()}
+            tintColor={colors.oliveDeep}
+            colors={[colors.oliveDeep]}
+          />
+        }
         ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
             <Ionicons name="pricetag-outline" size={48} color={colors.muted} />

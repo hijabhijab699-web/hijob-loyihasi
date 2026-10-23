@@ -1,4 +1,4 @@
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,6 +69,14 @@ export default function SellerProfileScreen() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => router.replace('/(seller-tabs)/profile')}
+            tintColor={colors.oliveDeep}
+            colors={[colors.oliveDeep]}
+          />
+        }
       >
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
@@ -360,9 +368,9 @@ export default function SellerProfileScreen() {
 
           {/* Logout */}
           <Pressable
-            onPress={() => {
-              logout();
-              router.replace('/');
+            onPress={async () => {
+              await logout();
+              router.replace('/(auth)/welcome');
             }}
             style={{
               backgroundColor: colors.surface,

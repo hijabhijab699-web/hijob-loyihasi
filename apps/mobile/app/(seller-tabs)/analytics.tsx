@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, ScrollView, View, Pressable } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, View, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -118,6 +118,14 @@ export default function SellerAnalyticsScreen() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 30 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => refetch()}
+            tintColor={colors.oliveDeep}
+            colors={[colors.oliveDeep]}
+          />
+        }
       >
         <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
           <Text

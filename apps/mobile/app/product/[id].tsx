@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ActivityIndicator, Alert, Image, Pressable, Share, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, Share, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
@@ -46,7 +46,7 @@ export default function ProductScreen() {
   const router = useRouter();
   const qc = useQueryClient();
 
-  const { data, isLoading, isError } = useQuery<ProductDetail>({
+  const { data, isLoading, isError, refetch } = useQuery<ProductDetail>({
     queryKey: ['product', id],
     queryFn: async () => (await api.get(`/catalog/products/${id}`)).data,
     enabled: !!id,
@@ -116,6 +116,14 @@ export default function ProductScreen() {
         <ScrollView
           contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={false}
+              onRefresh={() => refetch()}
+              tintColor={colors.oliveDeep}
+              colors={[colors.oliveDeep]}
+            />
+          }
         >
           {/* Product Image Area */}
           <View style={{ width: '100%', height: 400, position: 'relative' }}>

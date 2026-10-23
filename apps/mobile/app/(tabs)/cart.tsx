@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -35,7 +35,7 @@ export default function CartScreen() {
   const [deliveryMethod, setDeliveryMethod] = useState<'courier' | 'pickup' | 'proba'>('courier');
   const [promoCode, setPromoCode] = useState('');
 
-  const { data } = useQuery<CartResponse>({
+  const { data, refetch } = useQuery<CartResponse>({
     queryKey: ['cart'],
     queryFn: async () => (await api.get('/cart')).data,
   });
@@ -136,6 +136,14 @@ export default function CartScreen() {
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 0 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => refetch()}
+            tintColor={colors.oliveDeep}
+            colors={[colors.oliveDeep]}
+          />
+        }
       >
         {/* Empty state */}
         {items.length === 0 && (

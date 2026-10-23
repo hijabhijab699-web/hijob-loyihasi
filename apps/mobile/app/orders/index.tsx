@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, View, Image } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
@@ -46,7 +46,7 @@ export default function OrdersList() {
   const { i18n } = useTranslation();
   const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
 
-  const { data, isLoading } = useQuery<OrderSummary[]>({
+  const { data, isLoading, refetch } = useQuery<OrderSummary[]>({
     queryKey: ['orders'],
     queryFn: async () => (await api.get('/orders')).data,
   });
@@ -69,7 +69,17 @@ export default function OrdersList() {
         <Text variant="displayMedium" color="oliveDeep">{isRu ? 'Заказы' : 'Buyurtmalar'}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16, gap: 12 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => refetch()}
+            tintColor={colors.oliveDeep}
+            colors={[colors.oliveDeep]}
+          />
+        }
+      >
         {isLoading && (
           <Text variant="body" color="muted" style={{ textAlign: 'center', padding: 40 }}>
             {isRu ? 'Загрузка…' : 'Yuklanmoqda…'}

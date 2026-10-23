@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Alert, Image, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -60,7 +60,7 @@ export default function CatalogScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
-  const { data, isError } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ['products', category, selectedColor],
     queryFn: async () =>
       (await api.get('/catalog/products', {
@@ -390,6 +390,14 @@ export default function CatalogScreen() {
           contentContainerStyle={{ paddingBottom: 24 }}
           ListHeaderComponent={listHeader}
           renderItem={renderProduct}
+          refreshControl={
+            <RefreshControl
+              refreshing={false}
+              onRefresh={() => refetch()}
+              tintColor={colors.oliveDeep}
+              colors={[colors.oliveDeep]}
+            />
+          }
           ListEmptyComponent={
             <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
               <Ionicons

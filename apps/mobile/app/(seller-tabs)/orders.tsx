@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, FlatList, Pressable, View } from 'react-native';
+import { Alert, FlatList, Image, Pressable, RefreshControl, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -55,23 +55,28 @@ export default function SellerOrdersScreen() {
 
   // Fetch once; filter in memory by tab so the badge counts stay in sync
   // without extra round trips.
-  const { data: orders } = useQuery<SellerOrder[]>({
+  const { data: orders, refetch } = useQuery<SellerOrder[]>({
     queryKey: ['seller', 'orders'],
     queryFn: async () => (await api.get<SellerOrder[]>('/seller/orders')).data,
     staleTime: 15_000,
   });
 
-  // Seller order-status endpoints aren't yet wired on the backend. Instead
-  // of pretending to work and leaving the UI stale, we surface a one-line
-  // explanation so sellers know these actions are coming.
-  const comingSoon = () => {
-    Alert.alert(
-      isRu ? 'Скоро' : 'Tez orada',
-      isRu
-        ? 'Эта функция будет добавлена в следующей версии.'
-        : "Bu funksiya keyingi versiyada qo'shiladi.",
-    );
-  };
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: 'accept' | 'reject' | 'ship' | 'deliver' }) =>
+      api.patch(`/seller/orders/${id}/status`, { action }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['seller', 'orders'] });
+      qc.invalidateQueries({ queryKey: ['seller', 'stats'] });
+    },
+    onError: (e: any) => {
+      Alert.alert(
+        isRu ? 'Ошибка' : 'Xatolik',
+        e?.response?.data?.message ?? e?.message ?? (isRu ? 'Повторите позже' : 'Qayta urining'),
+      );
+    },
+  });
+  const act = (id: string, action: 'accept' | 'reject' | 'ship' | 'deliver') =>
+    statusMutation.mutate({ id, action });
 
   const all = orders ?? [];
   const filtered = all.filter((o) => o.status === activeTab);
@@ -179,6 +184,14 @@ export default function SellerOrdersScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, gap: 10 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => refetch()}
+            tintColor={colors.oliveDeep}
+            colors={[colors.oliveDeep]}
+          />
+        }
         ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
             <Ionicons name="receipt-outline" size={48} color={colors.muted} />
@@ -261,8 +274,17 @@ export default function SellerOrdersScreen() {
                           borderRadius: 8,
                           backgroundColor: ITEM_BG[index % ITEM_BG.length],
                           flexShrink: 0,
+                          overflow: 'hidden',
                         }}
-                      />
+                      >
+                        {prod.imageUrl ? (
+                          <Image
+                            source={{ uri: prod.imageUrl }}
+                            style={{ width: '100%', height: '100%' }}
+                            resizeMode="contain"
+                          />
+                        ) : null}
+                      </View>
                       <View>
                         <Text
                           variant="bodySmall"
@@ -305,13 +327,15 @@ export default function SellerOrdersScreen() {
                 {item.status === 'new' && (
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <Pressable
-                      onPress={comingSoon}
+                      onPress={() => act(item.id, 'reject')}
+                      disabled={statusMutation.isPending}
                       style={{
                         paddingHorizontal: 16,
                         paddingVertical: 8,
                         borderRadius: 8,
                         borderWidth: 1,
                         borderColor: colors.danger,
+                        opacity: statusMutation.isPending ? 0.5 : 1,
                       }}
                     >
                       <Text
@@ -322,12 +346,14 @@ export default function SellerOrdersScreen() {
                       </Text>
                     </Pressable>
                     <Pressable
-                      onPress={comingSoon}
+                      onPress={() => act(item.id, 'accept')}
+                      disabled={statusMutation.isPending}
                       style={{
                         paddingHorizontal: 16,
                         paddingVertical: 8,
                         borderRadius: 8,
                         backgroundColor: colors.oliveDeep,
+                        opacity: statusMutation.isPending ? 0.5 : 1,
                       }}
                     >
                       <Text
@@ -342,12 +368,14 @@ export default function SellerOrdersScreen() {
 
                 {item.status === 'preparing' && (
                   <Pressable
-                    onPress={comingSoon}
+                    onPress={() => act(item.id, 'ship')}
+                    disabled={statusMutation.isPending}
                     style={{
                       paddingHorizontal: 16,
                       paddingVertical: 8,
                       borderRadius: 8,
                       backgroundColor: '#7A8A5B',
+                      opacity: statusMutation.isPending ? 0.5 : 1,
                     }}
                   >
                     <Text

@@ -1,6 +1,6 @@
-import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
@@ -60,6 +60,7 @@ export default function SellerDashboard() {
   const { user } = useAuth();
   const { i18n } = useTranslation();
   const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
+  const qc = useQueryClient();
 
   const { data: stats } = useQuery<SellerStats>({
     queryKey: ['seller', 'stats'],
@@ -123,6 +124,16 @@ export default function SellerDashboard() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 30 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => {
+              qc.invalidateQueries({ queryKey: ['seller'] });
+            }}
+            tintColor={colors.oliveDeep}
+            colors={[colors.oliveDeep]}
+          />
+        }
       >
         {/* Header */}
         <View

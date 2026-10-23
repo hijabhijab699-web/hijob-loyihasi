@@ -139,24 +139,46 @@ export default function ProfileDetailsScreen() {
                 Username va telefon raqam o'zgartirilmaydi — ular hisobga kirish identifikatori. O'zgartirmoqchi bo'lsangiz support'ga murojaat qiling.
               </Text>
 
-              <Pressable
-                onPress={() => save.mutate()}
-                disabled={save.isPending || fullName.trim().length < 2 || fullName.trim() === (data.fullName ?? '')}
-                style={{
-                  height: 52, borderRadius: 16,
-                  backgroundColor: fullName.trim().length < 2 || fullName.trim() === (data.fullName ?? '') ? colors.rule : colors.oliveDeep,
-                  alignItems: 'center', justifyContent: 'center',
-                  opacity: save.isPending ? 0.7 : 1,
-                }}
-              >
-                {save.isPending ? (
-                  <ActivityIndicator color={colors.goldSoft} />
-                ) : (
-                  <Text variant="body" style={{ fontSize: 15, fontWeight: '700', color: colors.goldSoft, fontFamily: theme.fontFamilies.display }}>
-                    Saqlash
-                  </Text>
-                )}
-              </Pressable>
+              {(() => {
+                const isDisabled =
+                  save.isPending ||
+                  fullName.trim().length < 2 ||
+                  fullName.trim() === (data.fullName ?? '');
+                return (
+                  <Pressable
+                    onPress={() => save.mutate()}
+                    disabled={isDisabled}
+                    style={{
+                      height: 52,
+                      borderRadius: 16,
+                      // Always use the dark olive bg so the gold label
+                      // reads clearly; dim with opacity when disabled
+                      // instead of switching to a near-background colour
+                      // that erased the label on first paint.
+                      backgroundColor: colors.oliveDeep,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: save.isPending ? 0.7 : isDisabled ? 0.5 : 1,
+                    }}
+                  >
+                    {save.isPending ? (
+                      <ActivityIndicator color={colors.goldSoft} />
+                    ) : (
+                      <Text
+                        variant="body"
+                        style={{
+                          fontSize: 15,
+                          fontWeight: '700',
+                          color: colors.goldSoft,
+                          fontFamily: theme.fontFamilies.display,
+                        }}
+                      >
+                        Saqlash
+                      </Text>
+                    )}
+                  </Pressable>
+                );
+              })()}
             </View>
           </>
         )}

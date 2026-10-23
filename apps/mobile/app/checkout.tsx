@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   TextInput,
   View,
@@ -151,7 +153,21 @@ export default function CheckoutScreen() {
   return (
     <Screen>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 160 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 160 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={false}
+              onRefresh={() => {
+                cartQ.refetch();
+                addressesQ.refetch();
+              }}
+              tintColor={colors.oliveDeep}
+              colors={[colors.oliveDeep]}
+            />
+          }
+        >
           {/* Header */}
           <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <Pressable
@@ -310,7 +326,11 @@ export default function CheckoutScreen() {
                       backgroundColor: 'rgba(138,141,91,0.1)', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {item.productImage ? (
-                        <View style={{ width: '100%', height: '100%', backgroundColor: colors.rule }} />
+                        <Image
+                          source={{ uri: item.productImage }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="contain"
+                        />
                       ) : (
                         <Ionicons name="shirt-outline" size={20} color={colors.olive} />
                       )}
