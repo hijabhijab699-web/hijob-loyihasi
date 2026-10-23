@@ -235,29 +235,53 @@ async def compose_facefusion(
     started = time.perf_counter()
     mannequin_bytes = await _read_upload(mannequin)
     user_bytes = await _read_upload(user)
+    # Decode the mannequin with alpha so a transparent cut-out stays
+    # transparent through facefusion (we swap only the BGR face region
+    # and re-attach the original alpha channel at the end). The user
+    # selfie is read opaque — it's a camera photo, not a cut-out.
     try:
-        mannequin_img = decode_image_bytes(mannequin_bytes)
+        mannequin_rgba = decode_image_bytes_rgba(mannequin_bytes)
         user_img = decode_image_bytes(user_bytes)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    has_alpha = mannequin_rgba.ndim == 3 and mannequin_rgba.shape[2] == 4
+    mannequin_bgr = mannequin_rgba[:, :, :3] if has_alpha else mannequin_rgba
+
     try:
-        result = face_fusion_swap(user_img, mannequin_img, enhance=enhance)
+        result_bgr = face_fusion_swap(user_img, mannequin_bgr, enhance=enhance)
     except NoFaceError as exc:
-        # The mannequin render needs a visible face for swap to work. The
-        # NestJS caller already has a fallback (returning raw mannequin
-        # bytes) when it sees NO_MANNEQUIN_FACE, so keep that contract.
         raise HTTPException(status_code=422, detail="NO_MANNEQUIN_FACE") from exc
     except Exception:  # noqa: BLE001
         logger.exception("facefusion swap failed")
         raise HTTPException(status_code=500, detail="FACEFUSION_FAILED")
 
-    jpeg = encode_output(result)
+    # Facefusion may crop/resize internally — resize the ORIGINAL alpha
+    # channel to the result's shape so transparent padding carries over.
+    if has_alpha:
+        alpha = mannequin_rgba[:, :, 3]
+        if alpha.shape[:2] != result_bgr.shape[:2]:
+            alpha = cv2.resize(
+                alpha,
+                (result_bgr.shape[1], result_bgr.shape[0]),
+                interpolation=cv2.INTER_LINEAR,
+            )
+        result = cv2.merge([
+            result_bgr[:, :, 0],
+            result_bgr[:, :, 1],
+            result_bgr[:, :, 2],
+            alpha,
+        ])
+        payload = encode_output_png(result)
+        media = "image/png"
+    else:
+        payload = encode_output(result_bgr)
+        media = "image/jpeg"
     elapsed_ms = int((time.perf_counter() - started) * 1000)
-    logger.info("facefusion swap in %d ms (enhance=%s)", elapsed_ms, enhance)
+    logger.info("facefusion swap in %d ms (enhance=%s, %s)", elapsed_ms, enhance, media)
     return Response(
-        content=jpeg,
-        media_type="image/jpeg",
+        content=payload,
+        media_type=media,
         headers={"X-Compose-Time-Ms": str(elapsed_ms), "X-Mode": "facefusion"},
     )
 

@@ -111,7 +111,7 @@ export class MlCompositorClient {
     mannequin: { buffer: Buffer; mimetype: string; filename?: string },
     user: Express.Multer.File,
     opts: { enhance?: boolean } = {},
-  ): Promise<Buffer> {
+  ): Promise<{ buffer: Buffer; contentType: string }> {
     const body = new FormData();
     body.append(
       'mannequin',
@@ -148,8 +148,10 @@ export class MlCompositorClient {
     }
 
     const arrayBuffer = await res.arrayBuffer();
-    this.logger.log(`facefusion composed in ${elapsed}ms`);
-    return Buffer.from(arrayBuffer);
+    const rawCt = res.headers.get('content-type') ?? 'image/jpeg';
+    const contentType = (rawCt.split(';')[0] ?? 'image/jpeg').trim();
+    this.logger.log(`facefusion composed in ${elapsed}ms (${contentType})`);
+    return { buffer: Buffer.from(arrayBuffer), contentType };
   }
 
   /**

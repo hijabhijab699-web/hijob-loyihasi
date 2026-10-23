@@ -337,12 +337,17 @@ export class UserFaceRendersService {
 
       if (!jpeg) {
         const selfieBytes = await this.storage.read(job.user.selfieKey);
-        jpeg = await this.compositor.composeFacefusion(mannequinFile, {
+        const fusion = await this.compositor.composeFacefusion(mannequinFile, {
           buffer: selfieBytes,
           mimetype: 'image/jpeg',
           originalname: 'selfie.jpg',
         } as unknown as Express.Multer.File);
-        this.logger.log(`facefusion path for ${job.variantId} (${jpeg.length} B)`);
+        jpeg = fusion.buffer;
+        outContentType = fusion.contentType || 'image/jpeg';
+        outExt = outContentType === 'image/png' ? 'png' : 'jpg';
+        this.logger.log(
+          `facefusion path for ${job.variantId} (${jpeg.length} B, ${outContentType})`,
+        );
 
         // First successful swap for this user → cache its face as a stamp
         // AND persist it to storage so every later variant (even across
