@@ -291,26 +291,54 @@
     const srcW = srcX1 - srcX0;
     const srcH = srcY1 - srcY0;
 
+    // Compose into a transparent-background canvas: the mobile app now
+    // draws its own boutique backdrop behind every render, so leaving
+    // the figure's own near-black bg in the slice would show as a dark
+    // frame on top of that backdrop. We key the near-black colour to
+    // alpha below so only the model's pixels stay opaque.
     const out = document.createElement('canvas');
     out.width = CELL_OUT_W;
     out.height = CELL_OUT_H;
-    const octx = out.getContext('2d');
+    const octx = out.getContext('2d', { willReadFrequently: true });
     if (!octx) return cell;
-    octx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
-    octx.fillRect(0, 0, CELL_OUT_W, CELL_OUT_H);
     octx.imageSmoothingQuality = 'high';
-
-    // "contain": figure keeps its aspect ratio inside the cell. If the
-    // crop is more portrait than the cell, slim bg bands appear on the
-    // sides; if it's wider, bands appear top/bottom. In practice our
-    // cells and figures are both near-portrait, so bands stay thin and
-    // the figure fills most of the frame.
+    // "contain": figure keeps its aspect ratio inside the output canvas
+    // without ever being clipped (padding on either sides or top/bottom
+    // depending on the ratio match).
     const scale = Math.min(CELL_OUT_W / srcW, CELL_OUT_H / srcH);
     const dw = srcW * scale;
     const dh = srcH * scale;
     const destX = (CELL_OUT_W - dw) / 2;
     const destY = (CELL_OUT_H - dh) / 2;
     octx.drawImage(cell, srcX0, srcY0, srcW, srcH, destX, destY, dw, dh);
+
+    // Chroma-key the near-black backdrop → transparent. A soft ramp
+    // (ALPHA_LO…ALPHA_HI) feathers the edge so there is no hard outline
+    // around the figure when it lands on the mobile backdrop. Pixels
+    // well inside the bg colour go to alpha=0; pixels well outside stay
+    // opaque; the thin ring in between dissolves smoothly.
+    // IMPORTANT: skip pixels that are already fully transparent (the
+    // padding bands around the drawn figure when the crop aspect does
+    // not match the output). Otherwise their RGB=0 falsely reads as
+    // "far from the near-black bg" and the alpha pass makes them a
+    // semi-opaque dark rectangle visible against the mobile backdrop.
+    const ALPHA_LO = 35;   // sum(|Δ|) below this → fully transparent
+    const ALPHA_HI = 90;   // above this → fully opaque
+    const id = octx.getImageData(0, 0, CELL_OUT_W, CELL_OUT_H);
+    const dd = id.data;
+    for (let p = 0; p < dd.length; p += 4) {
+      if (dd[p + 3] === 0) continue;
+      const dist =
+        Math.abs(dd[p] - bg[0]) +
+        Math.abs(dd[p + 1] - bg[1]) +
+        Math.abs(dd[p + 2] - bg[2]);
+      if (dist <= ALPHA_LO) {
+        dd[p + 3] = 0;
+      } else if (dist < ALPHA_HI) {
+        dd[p + 3] = Math.round(((dist - ALPHA_LO) / (ALPHA_HI - ALPHA_LO)) * 255);
+      }
+    }
+    octx.putImageData(id, 0, 0);
     return out;
   }
 

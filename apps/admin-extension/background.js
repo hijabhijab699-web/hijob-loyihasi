@@ -412,14 +412,13 @@ function buildPrompt(job) {
     '• Drape the hijab naturally around the head, shoulders, and chest over the beige dress; same drape in every cell.',
     '• The dress and shoes beneath remain fully visible — no bare skin exposed anywhere.',
     '',
-    'Scene (baked INTO every cell, same scene across all 9 cells):',
-    '• A warm BOUTIQUE FITTING-ROOM interior behind every model: soft beige/cream wall, a small velvet sofa or ottoman at the side, a potted plant, a tall standing lamp, and a soft warm carpet on the floor. The scene must be clearly visible BEHIND and AROUND the model, filling the ENTIRE cell including the full width (no empty bands on the left or right, no black bars, no solid flat colour).',
-    '• Soft warm boutique lighting falls from the upper-left; a very soft, short contact shadow at the feet grounds the model on the carpet.',
-    '• The SAME scene composition is behind every one of the 9 models (one scene photographed 9 times from the same angle, with a different model standing in front each time). No chroma / green / magenta screen.',
-    '• NO text, NO labels, NO rulers, NO panel borders between the cells, NO watermarks, NO logos.',
-    '• Equal, FULL boutique-scene gaps between the 9 figures so a 3×3 crop lands cleanly without clipping any figure and without exposing any solid colour band.',
+    'Background (CRITICAL — the mobile app composes its OWN boutique scene behind every mannequin, so this image must NOT contain any scene or room):',
+    '• Behind every model draw a SOLID FLAT NEAR-BLACK colour #1b1b14 (very dark olive-brown). The same flat colour fills EVERY pixel that is not part of the model herself — no gradient, no texture, no vignette, no lamp, no sofa, no plant, no wall, no floor, no shadow pattern, no boutique interior.',
+    '• The 2.5 %-tall solid-black gutter bars BETWEEN cells (described above) are the ONLY other non-model pixels in the image. There is no scene inside any cell either.',
+    '• Soft, even studio lighting on the figures so they composite cleanly later; no cast shadow on the ground (there is no ground — just the flat #1b1b14 colour).',
+    '• NO text, NO labels, NO rulers, NO panel borders beyond the required black gutter bars, NO watermarks, NO logos.',
     '',
-    'Output ONE OPAQUE image (JPEG or PNG without alpha), square or 4:5 portrait, containing all 9 full-body models with the baked-in boutique scene arranged in a clean 3×3 grid ready for mechanical cutting. Do NOT use transparency.',
+    'Output ONE OPAQUE image (JPEG or PNG without alpha), square or 4:5 portrait, containing all 9 full-body models on the flat near-black backdrop arranged in a clean 3×3 grid ready for mechanical cutting. Do NOT use transparency.',
   ].join('\n');
 }
 
