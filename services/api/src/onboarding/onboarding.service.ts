@@ -5,6 +5,7 @@ import { StorageService } from '../storage/storage.service';
 import { BodyParamsDto } from './dto';
 import { ClothingSize, FaceTemplateStatus } from '@prisma/client';
 import { MlFaceClient } from './ml-face.client';
+import { UserFaceRendersService } from '../user-face-renders/user-face-renders.service';
 
 @Injectable()
 export class OnboardingService {
@@ -14,6 +15,7 @@ export class OnboardingService {
     private readonly mlFace: MlFaceClient,
     private readonly config: ConfigService,
     private readonly storage: StorageService,
+    private readonly faceRenders: UserFaceRendersService,
   ) {}
 
   /**
@@ -73,6 +75,29 @@ export class OnboardingService {
         data: { onboardingFaceDone: true },
       }),
     ]);
+
+    // Also hand the raw selfie off to the user-face-renders pipeline right
+    // now so (a) the face stamp is built from the selfie and persisted to
+    // storage, and (b) all variant jobs for this user are already queued
+    // by the time they tap the Primerka tab. The call is fire-and-forget
+    // because the HTTP response doesn't need to wait on the queue work.
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { tryonBodyType: true, tryonHeightCm: true },
+    });
+    const storedBodyType = user?.tryonBodyType as 'slim' | 'medium' | 'full' | null | undefined;
+    void this.faceRenders
+      .prepare(
+        userId,
+        files.front,
+        storedBodyType ?? 'medium',
+        user?.tryonHeightCm ?? null,
+      )
+      .catch((err) =>
+        this.logger.warn(
+          `onboarding prepare() failed for ${userId}: ${(err as Error).message}`,
+        ),
+      );
 
     return {
       status: 'ready' as const,
