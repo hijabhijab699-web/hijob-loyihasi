@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductStatus } from '@prisma/client';
 
@@ -85,6 +85,27 @@ export class AdminService {
     });
   }
 
+  /**
+   * Delete a seller permanently: their products, variants, style jobs,
+   * face renders tied to those variants, cart/wishlist rows, and the
+   * seller + user records themselves. Prisma cascade handles most of
+   * this (every FK on the seller side has onDelete: Cascade); the one
+   * thing we do explicitly is drop the user row so the login row goes
+   * with the store. Orders are kept because they're a financial record.
+   */
+  async deleteSeller(sellerId: string) {
+    const seller = await this.prisma.seller.findUnique({
+      where: { id: sellerId },
+      select: { id: true, userId: true, brandName: true },
+    });
+    if (!seller) throw new NotFoundException('SELLER_NOT_FOUND');
+    await this.prisma.$transaction([
+      this.prisma.seller.delete({ where: { id: sellerId } }),
+      this.prisma.user.delete({ where: { id: seller.userId } }),
+    ]);
+    return { id: seller.id, deleted: true, brandName: seller.brandName };
+  }
+
   /* ────── Products ────── */
 
   async listProducts(status?: ProductStatus) {
@@ -125,6 +146,23 @@ export class AdminService {
     });
   }
 
+  /**
+   * Delete a product permanently. Variants and anything hanging off them
+   * (variant renders, user face renders, cart/wishlist rows) go with it
+   * via Prisma cascade. Orders keep their line-item snapshots, which
+   * live on OrderItem and are copied at purchase time, so order history
+   * stays readable even after a product is gone.
+   */
+  async deleteProduct(productId: string) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true, titleRu: true },
+    });
+    if (!product) throw new NotFoundException('PRODUCT_NOT_FOUND');
+    await this.prisma.product.delete({ where: { id: productId } });
+    return { id: product.id, deleted: true, titleRu: product.titleRu };
+  }
+
   /* ────── Users ────── */
 
   async listUsers(role?: 'buyer' | 'seller' | 'admin' | 'moderator') {
@@ -155,6 +193,30 @@ export class AdminService {
       data: { isActive: !banned },
       select: { id: true, username: true, isActive: true },
     });
+  }
+
+  /**
+   * Delete a user permanently. If the user owns a store (role=seller)
+   * we refuse — the caller has to go through deleteSeller instead so
+   * the brand+products are handled as one unit. Admins can't be
+   * deleted this way either; demote them to buyer first. Everything
+   * else (buyer rows: addresses, cart, wishlist, face renders, otp,
+   * sessions) cascades off the user FK.
+   */
+  async deleteUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, role: true, seller: { select: { id: true } } },
+    });
+    if (!user) throw new NotFoundException('USER_NOT_FOUND');
+    if (user.role === 'admin') {
+      throw new BadRequestException('CANNOT_DELETE_ADMIN');
+    }
+    if (user.seller) {
+      throw new BadRequestException('USE_DELETE_SELLER_INSTEAD');
+    }
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { id: user.id, deleted: true, username: user.username };
   }
 
   /* ────── Orders ────── */

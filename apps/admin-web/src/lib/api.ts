@@ -185,6 +185,13 @@ export async function adminBanSeller(id: string, banned: boolean) {
   });
 }
 
+export async function adminDeleteSeller(id: string) {
+  return request<{ id: string; deleted: boolean; brandName: string }>(
+    `/admin/sellers/${id}`,
+    { method: 'DELETE' },
+  );
+}
+
 export async function adminListProducts(status?: string) {
   const query = status ? `?status=${status}` : '';
   return request<AdminProduct[]>(`/admin/products${query}`);
@@ -197,6 +204,13 @@ export async function adminSetProductStatus(id: string, status: AdminProduct['st
   });
 }
 
+export async function adminDeleteProduct(id: string) {
+  return request<{ id: string; deleted: boolean; titleRu: string }>(
+    `/admin/products/${id}`,
+    { method: 'DELETE' },
+  );
+}
+
 export async function adminListUsers(role?: string) {
   const query = role ? `?role=${role}` : '';
   return request<AdminUser[]>(`/admin/users${query}`);
@@ -207,6 +221,13 @@ export async function adminBanUser(id: string, banned: boolean) {
     method: 'PATCH',
     body: JSON.stringify({ banned }),
   });
+}
+
+export async function adminDeleteUser(id: string) {
+  return request<{ id: string; deleted: boolean; username: string }>(
+    `/admin/users/${id}`,
+    { method: 'DELETE' },
+  );
 }
 
 export async function adminListOrders() {

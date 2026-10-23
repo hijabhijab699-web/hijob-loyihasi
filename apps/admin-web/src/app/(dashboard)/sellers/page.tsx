@@ -1,6 +1,12 @@
 import { revalidatePath } from 'next/cache';
 import { Check, X, Ban, UserCheck } from 'lucide-react';
-import { adminListSellers, adminVerifySeller, adminBanSeller } from '@/lib/api';
+import {
+  adminListSellers,
+  adminVerifySeller,
+  adminBanSeller,
+  adminDeleteSeller,
+} from '@/lib/api';
+import { ConfirmDelete } from '@/components/ConfirmDelete';
 
 export default async function AdminSellersPage() {
   const sellers = await adminListSellers();
@@ -18,6 +24,13 @@ export default async function AdminSellersPage() {
     const id = String(formData.get('id'));
     const banned = String(formData.get('banned')) === 'true';
     await adminBanSeller(id, banned);
+    revalidatePath('/sellers');
+  }
+
+  async function remove(formData: FormData) {
+    'use server';
+    const id = String(formData.get('id'));
+    await adminDeleteSeller(id);
     revalidatePath('/sellers');
   }
 
@@ -95,6 +108,11 @@ export default async function AdminSellersPage() {
                       {s.user.active ? (<><Ban size={12} /> Bloklash</>) : (<><Check size={12} /> Ochish</>)}
                     </button>
                   </form>
+                  <ConfirmDelete
+                    action={remove}
+                    id={s.id}
+                    confirmText={`"${s.brandName}" sotuvchini mahsulotlari bilan birga butunlay o'chirmoqchimisiz?`}
+                  />
                 </td>
               </tr>
             ))}

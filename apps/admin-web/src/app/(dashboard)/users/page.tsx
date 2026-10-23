@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { Ban, Check } from 'lucide-react';
-import { adminListUsers, adminBanUser } from '@/lib/api';
+import { adminListUsers, adminBanUser, adminDeleteUser } from '@/lib/api';
+import { ConfirmDelete } from '@/components/ConfirmDelete';
 
 const ROLE_FILTERS = ['all', 'buyer', 'seller', 'admin', 'moderator'] as const;
 
@@ -19,6 +20,13 @@ export default async function AdminUsersPage({
     const id = String(formData.get('id'));
     const banned = String(formData.get('banned')) === 'true';
     await adminBanUser(id, banned);
+    revalidatePath('/users');
+  }
+
+  async function remove(formData: FormData) {
+    'use server';
+    const id = String(formData.get('id'));
+    await adminDeleteUser(id);
     revalidatePath('/users');
   }
 
@@ -89,7 +97,7 @@ export default async function AdminUsersPage({
                 <td className="px-4 py-3 text-xs text-muted">
                   {u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString() : '—'}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right space-x-2">
                   <form action={toggleBan} className="inline">
                     <input type="hidden" name="id" value={u.id} />
                     <input type="hidden" name="banned" value={u.isActive ? 'true' : 'false'} />
@@ -97,6 +105,13 @@ export default async function AdminUsersPage({
                       {u.isActive ? (<><Ban size={12} /> Bloklash</>) : (<><Check size={12} /> Ochish</>)}
                     </button>
                   </form>
+                  {u.role !== 'admin' && u.role !== 'seller' && (
+                    <ConfirmDelete
+                      action={remove}
+                      id={u.id}
+                      confirmText={`"${u.fullName || u.username}" foydalanuvchini butunlay o'chirmoqchimisiz?`}
+                    />
+                  )}
                 </td>
               </tr>
             ))}

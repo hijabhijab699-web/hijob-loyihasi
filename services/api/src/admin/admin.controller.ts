@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -49,6 +50,11 @@ export class AdminController {
     return this.admin.banSellerUser(id, Boolean(body.banned));
   }
 
+  @Delete('sellers/:id')
+  deleteSeller(@Param('id') id: string) {
+    return this.admin.deleteSeller(id);
+  }
+
   /* ─ products ─ */
 
   @Get('products')
@@ -67,6 +73,11 @@ export class AdminController {
     return this.admin.setProductStatus(id, body.status as ProductStatus);
   }
 
+  @Delete('products/:id')
+  deleteProduct(@Param('id') id: string) {
+    return this.admin.deleteProduct(id);
+  }
+
   /* ─ users ─ */
 
   @Get('users')
@@ -79,6 +90,11 @@ export class AdminController {
   @Patch('users/:id/ban')
   banUser(@Param('id') id: string, @Body() body: { banned: boolean }) {
     return this.admin.banUser(id, Boolean(body.banned));
+  }
+
+  @Delete('users/:id')
+  deleteUser(@Param('id') id: string) {
+    return this.admin.deleteUser(id);
   }
 
   /* ─ orders ─ */

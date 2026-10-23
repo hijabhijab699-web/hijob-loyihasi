@@ -1,7 +1,13 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { Check, X } from 'lucide-react';
-import { adminListProducts, adminSetProductStatus, type AdminProduct } from '@/lib/api';
+import {
+  adminListProducts,
+  adminSetProductStatus,
+  adminDeleteProduct,
+  type AdminProduct,
+} from '@/lib/api';
+import { ConfirmDelete } from '@/components/ConfirmDelete';
 
 const STATUS_LABEL: Record<AdminProduct['status'], { label: string; cls: string }> = {
   draft: { label: 'Draft', cls: 'bg-muted/10 text-muted' },
@@ -27,6 +33,13 @@ export default async function AdminProductsPage({
     const id = String(formData.get('id'));
     const status = String(formData.get('status')) as AdminProduct['status'];
     await adminSetProductStatus(id, status);
+    revalidatePath('/products');
+  }
+
+  async function remove(formData: FormData) {
+    'use server';
+    const id = String(formData.get('id'));
+    await adminDeleteProduct(id);
     revalidatePath('/products');
   }
 
@@ -116,6 +129,11 @@ export default async function AdminProductsPage({
                         <button className="btn-danger"><X size={12} /> Rad</button>
                       </form>
                     )}
+                    <ConfirmDelete
+                      action={remove}
+                      id={p.id}
+                      confirmText={`"${p.titleRu}" mahsulotini butunlay o'chirmoqchimisiz? (variantlari ham o'chadi)`}
+                    />
                   </td>
                 </tr>
               );
