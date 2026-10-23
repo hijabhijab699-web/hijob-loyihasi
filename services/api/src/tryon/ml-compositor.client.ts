@@ -192,7 +192,7 @@ export class MlCompositorClient {
   async composeFaceOverlay(
     mannequin: { buffer: Buffer; mimetype: string; filename?: string },
     stamp: Buffer,
-  ): Promise<Buffer> {
+  ): Promise<{ buffer: Buffer; contentType: string }> {
     const body = new FormData();
     body.append(
       'mannequin',
@@ -219,7 +219,13 @@ export class MlCompositorClient {
       throw new InternalServerErrorException({ code: 'OVERLAY_FAILED', upstream: res.status });
     }
     this.logger.log(`face-overlay composed in ${elapsed}ms`);
-    return Buffer.from(await res.arrayBuffer());
+    const contentType = (res.headers.get('content-type') ?? 'image/jpeg')
+      .split(';')[0]
+      .trim();
+    return {
+      buffer: Buffer.from(await res.arrayBuffer()),
+      contentType,
+    };
   }
 
   async composeScarf(faceImage: Express.Multer.File, spec: ScarfSpec): Promise<Buffer> {

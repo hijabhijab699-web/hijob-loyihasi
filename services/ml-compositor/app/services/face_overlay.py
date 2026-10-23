@@ -152,14 +152,16 @@ def extract_face_stamp(bgr: np.ndarray) -> Optional[np.ndarray]:
 
 
 def apply_face_stamp(
-    target_bgr: np.ndarray,
+    target: np.ndarray,
     stamp_rgba: np.ndarray,
 ) -> Optional[np.ndarray]:
-    """Alpha-composite `stamp_rgba` onto the face region of `target_bgr`
-    (in place). Returns the mutated target or None if the target has no
-    detectable face. The stamp is scaled uniformly to the SMALLER of the
-    width/height fits, so a long selfie face never gets vertically
-    stretched over a shorter mannequin head."""
+    """Alpha-composite `stamp_rgba` onto the face region of `target`.
+    `target` may be BGR (opaque) OR BGRA (transparent cut-out) — in the
+    BGRA case the existing alpha channel is preserved untouched so the
+    output keeps its transparent background. Returns the mutated target
+    (same shape as input) or None if no face is detected."""
+    has_alpha = target.ndim == 3 and target.shape[2] == 4
+    target_bgr = target[:, :, :3] if has_alpha else target
     face = _largest_face(target_bgr)
     if face is None:
         return None
@@ -215,5 +217,8 @@ def apply_face_stamp(
     bgr = stamp_slice[:, :, :3].astype(np.float32)
 
     composite = region * (1.0 - alpha) + bgr * alpha
+    if has_alpha:
+        target[y0:y1, x0:x1, :3] = composite.astype(np.uint8)
+        return target
     target_bgr[y0:y1, x0:x1] = composite.astype(np.uint8)
     return target_bgr

@@ -312,10 +312,20 @@ export class UserFaceRendersService {
       // facefusion swap. The slow path only runs once per user, ever.
       const stamp = await this.getOrBuildFaceStamp(job.userId, job.user.selfieKey);
       let jpeg: Buffer | null = null;
+      // The compositor keeps the mannequin's alpha channel (PNG in,
+      // PNG out) so we store the overlay with the right extension and
+      // the mobile hero can show its boutique backdrop through it.
+      let outContentType = 'image/jpeg';
+      let outExt = 'jpg';
       if (stamp) {
         try {
-          jpeg = await this.compositor.composeFaceOverlay(mannequinFile, stamp);
-          this.logger.log(`overlay path for ${job.variantId} (${jpeg.length} B)`);
+          const overlay = await this.compositor.composeFaceOverlay(mannequinFile, stamp);
+          jpeg = overlay.buffer;
+          outContentType = overlay.contentType || 'image/jpeg';
+          outExt = outContentType === 'image/png' ? 'png' : 'jpg';
+          this.logger.log(
+            `overlay path for ${job.variantId} (${jpeg.length} B, ${outContentType})`,
+          );
         } catch (overlayErr) {
           // Mannequin had no detectable face (or overlay crashed) — fall
           // through to a full facefusion run so this one variant still
@@ -366,8 +376,8 @@ export class UserFaceRendersService {
       const saved = await this.storage.save(
         `tryon/renders/${job.userId}`,
         jpeg,
-        'image/jpeg',
-        `${job.variantId}.jpg`,
+        outContentType,
+        `${job.variantId}.${outExt}`,
       );
 
       await this.prisma.$transaction([

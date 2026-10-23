@@ -17,7 +17,12 @@ from app.services.face_swap import face_swap
 from app.services.facefusion import NoFaceError, face_fusion_swap
 from app.services.face_overlay import apply_face_stamp, extract_face_stamp
 from app.services.template_compose import compose_scarf_template
-from app.utils import decode_image_bytes, encode_output
+from app.utils import (
+    decode_image_bytes,
+    decode_image_bytes_rgba,
+    encode_output,
+    encode_output_png,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -318,8 +323,13 @@ async def compose_face_overlay(
     mannequin_bytes = await _read_upload(mannequin)
     stamp_bytes = await _read_upload(stamp)
 
+    # The mannequin uploaded by the admin extension is a TRANSPARENT PNG
+    # cut-out; decoding it with IMREAD_COLOR would collapse the alpha to
+    # black and the mobile hero would show the figure on a dark card
+    # instead of on its own boutique backdrop. Read with alpha and keep
+    # it through the overlay step.
     try:
-        target = decode_image_bytes(mannequin_bytes)
+        target = decode_image_bytes_rgba(mannequin_bytes)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -332,12 +342,20 @@ async def compose_face_overlay(
     if result is None:
         raise HTTPException(status_code=422, detail="NO_FACE_ON_MANNEQUIN")
 
-    jpeg = encode_output(result)
+    # Keep PNG when the mannequin had an alpha channel so the cut-out
+    # stays transparent for the mobile backdrop to show through; fall
+    # back to JPEG otherwise (older opaque renders).
+    if result.ndim == 3 and result.shape[2] == 4:
+        payload = encode_output_png(result)
+        media = "image/png"
+    else:
+        payload = encode_output(result)
+        media = "image/jpeg"
     elapsed_ms = int((time.perf_counter() - started) * 1000)
-    logger.info("face-overlay in %d ms", elapsed_ms)
+    logger.info("face-overlay in %d ms (%s)", elapsed_ms, media)
     return Response(
-        content=jpeg,
-        media_type="image/jpeg",
+        content=payload,
+        media_type=media,
         headers={"X-Compose-Time-Ms": str(elapsed_ms), "X-Mode": "face-overlay"},
     )
 

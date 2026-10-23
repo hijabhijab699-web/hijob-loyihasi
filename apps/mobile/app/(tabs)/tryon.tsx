@@ -312,14 +312,15 @@ export default function TryOnScreen() {
         </View>
       </View>
 
-      {/* Hero card — matches the composite's own 3:4 aspect so `cover`
-          fills it edge-to-edge without clipping the figure's head or
-          feet (the earlier flex:1 card was taller than the composite and
-          cover cropped vertically). The scrollable thumbnails below take
-          over the leftover screen space. */}
+      {/* Hero card — flex:1 with minHeight:0 so it SHRINKS when the
+          chips + thumbnails strip needs its space (the strip has
+          flexShrink:0 below so it stays whole and the hero gives up
+          height first). Otherwise the strip got pushed below the tab
+          bar on shorter devices. */}
       <View
         style={{
-          aspectRatio: 3 / 4,
+          flex: 1,
+          minHeight: 0,
           marginHorizontal: 14,
           marginBottom: 12,
           borderRadius: 24,
@@ -398,15 +399,14 @@ export default function TryOnScreen() {
                     left: 0,
                     right: 0,
                   }}
-                  // Composite is 600×800 (3:4) with the figure centred
-                  // vertically and ~8%/6% head/foot padding; `cover`
-                  // scales it to fill the whole card so the baked-in
-                  // boutique scene reaches every edge (no matte bands,
-                  // no second backdrop showing through). The crop a
-                  // slightly taller card does to the scene is on its
-                  // sides, where there is only lamp / plant / wall —
-                  // never on the figure.
-                  resizeMode="cover"
+                  // Composite is 3:4 but the hero card flexes to fill
+                  // whatever height is left after the chips + thumbs
+                  // strip; `contain` keeps the whole figure (head +
+                  // feet) visible, and the FITTING_ROOM backdrop drawn
+                  // behind this Image fills the matte bands with the
+                  // same boutique scene so the padding reads as part of
+                  // the room, not an empty frame.
+                  resizeMode="contain"
                 />
               )}
               {lighting.overlay && (
@@ -461,9 +461,34 @@ export default function TryOnScreen() {
                 </Text>
               </Pressable>
 
-              {/* The "AI yuzingizni qo'yyapti…" pending badge used to live
-                  here, tied to the user-face-render queue. The queue now
-                  no longer gates the display, so the badge is gone too. */}
+              {/* First-time face bake badge — appears while the user has
+                  no finished renders yet but the queue is already working
+                  (pending or running). Disappears automatically on the
+                  first successful render. */}
+              {myRendersQuery.data &&
+                (myRendersQuery.data.renders?.length ?? 0) === 0 &&
+                ((myRendersQuery.data.pending ?? 0) > 0 ||
+                  (myRendersQuery.data.running ?? 0) > 0) && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 18,
+                      alignSelf: 'center',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      backgroundColor: 'rgba(26,22,18,0.75)',
+                    }}
+                  >
+                    <ActivityIndicator size="small" color={colors.goldSoft} />
+                    <Text style={{ color: colors.goldSoft, fontSize: 12, fontWeight: '600' }}>
+                      AI yuzingizni manekenga qo'yyapti…
+                    </Text>
+                  </View>
+                )}
             </>
           )}
         </View>
@@ -472,6 +497,7 @@ export default function TryOnScreen() {
       {/* Bottom sheet */}
       <View
         style={{
+          flexShrink: 0,
           marginTop: 0,
           paddingTop: 16,
           paddingBottom: 14,
