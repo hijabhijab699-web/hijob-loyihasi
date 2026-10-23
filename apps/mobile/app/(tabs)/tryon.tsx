@@ -312,10 +312,14 @@ export default function TryOnScreen() {
         </View>
       </View>
 
-      {/* Hero card — fitting-room photo as the card background, render on top */}
+      {/* Hero card — matches the composite's own 3:4 aspect so `cover`
+          fills it edge-to-edge without clipping the figure's head or
+          feet (the earlier flex:1 card was taller than the composite and
+          cover cropped vertically). The scrollable thumbnails below take
+          over the leftover screen space. */}
       <View
         style={{
-          flex: 1,
+          aspectRatio: 3 / 4,
           marginHorizontal: 14,
           marginBottom: 12,
           borderRadius: 24,
