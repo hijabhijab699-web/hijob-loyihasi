@@ -219,9 +219,8 @@ export class MlCompositorClient {
       throw new InternalServerErrorException({ code: 'OVERLAY_FAILED', upstream: res.status });
     }
     this.logger.log(`face-overlay composed in ${elapsed}ms`);
-    const contentType = (res.headers.get('content-type') ?? 'image/jpeg')
-      .split(';')[0]
-      .trim();
+    const rawCt = res.headers.get('content-type') ?? 'image/jpeg';
+    const contentType = (rawCt.split(';')[0] ?? 'image/jpeg').trim();
     return {
       buffer: Buffer.from(await res.arrayBuffer()),
       contentType,
