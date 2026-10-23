@@ -232,14 +232,18 @@
     );
   }
 
-  // Measure the figure's bounding box (both axes), centre it in the cell
-  // horizontally, and ONLY if the figure crosses an edge (head above
-  // y=0, feet below bottom, hijab past a side) scale it down just enough
-  // to fit with a thin ~3 % margin. Figures that already fit keep their
-  // size and vertical position so the row's short/mid/tall heights are
-  // preserved. Blank area is painted with the sampled background colour.
-  const CELL_PAD = 0.03;      // only used when a figure has to be shrunk
-  const CELL_FG_DIST = 40;    // |ΔR|+|ΔG|+|ΔB| threshold vs. background
+  // Find the main figure in the cell (ignoring stray feet / hijab tops
+  // from neighbouring rows that bled across the grid cut), then crop
+  // tightly around that figure and resize the crop into a FIXED-ASPECT
+  // 3:4 output so every one of the 9 variants comes back the same shape
+  // and the hero/thumbnail renderer can place them identically. Dark
+  // hijab / hair / shoes sit very close to the near-black boutique
+  // backdrop, so the detection threshold is low on purpose — too high
+  // and the top of the head or the feet get silently dropped out of the
+  // bbox and chopped off in the final crop.
+  const CELL_FG_DIST = 20;  // |ΔR|+|ΔG|+|ΔB| threshold vs. sampled bg
+  const CELL_OUT_W = 600;
+  const CELL_OUT_H = 800;
 
   function centerFigureInCell(cell) {
     const w = cell.width;
@@ -261,58 +265,52 @@
         ) { colProf[x]++; rowProf[y]++; }
       }
     }
-    const minColHits = Math.max(3, Math.round(h * 0.015));
-    const minRowHits = Math.max(3, Math.round(w * 0.015));
-    let x0 = -1, x1 = -1, y0 = -1, y1 = -1;
-    for (let x = 0; x < w; x++) if (colProf[x] >= minColHits) { if (x0 < 0) x0 = x; x1 = x; }
-    for (let y = 0; y < h; y++) if (rowProf[y] >= minRowHits) { if (y0 < 0) y0 = y; y1 = y; }
-    if (x0 < 0 || y0 < 0 || x1 <= x0 || y1 <= y0) return cell;
+    // mainBand picks the HEAVIEST contiguous run of fg lines on each
+    // axis — this is what rejects a thin stray strip of feet or head at
+    // the top/bottom of the cell (bigger than the stray because they
+    // span the whole figure).
+    const ry = mainBand(rowProf);
+    const rx = mainBand(colProf);
+    if (!ry || !rx) return cell;
+    const [y0, y1] = ry;
+    const [x0, x1] = rx;
+    if (y1 <= y0 || x1 <= x0) return cell;
 
-    // If the figure already sits fully inside the cell with a tiny
-    // breathing room, just horizontally shift it so it is centred.
-    const edgeTol = 2; // pixels — count a 1-2 px touch as inside
-    const touchesEdge =
-      x0 <= edgeTol || x1 >= w - 1 - edgeTol || y0 <= edgeTol || y1 >= h - 1 - edgeTol;
+    // Breathing pad around the figure so the top of the hijab and the
+    // bottom of the shoe don't kiss the output frame — the feet of a
+    // "tall" row benefit the most because the row-cut used to sit a
+    // couple of pixels into the figure's shoe.
+    const figW = x1 - x0 + 1;
+    const figH = y1 - y0 + 1;
+    const padX = Math.round(figW * 0.08);
+    const padY = Math.round(figH * 0.06);
+    const srcX0 = Math.max(0, x0 - padX);
+    const srcY0 = Math.max(0, y0 - padY);
+    const srcX1 = Math.min(w, x1 + padX);
+    const srcY1 = Math.min(h, y1 + padY);
+    const srcW = srcX1 - srcX0;
+    const srcH = srcY1 - srcY0;
 
     const out = document.createElement('canvas');
-    out.width = w;
-    out.height = h;
+    out.width = CELL_OUT_W;
+    out.height = CELL_OUT_H;
     const octx = out.getContext('2d');
     if (!octx) return cell;
     octx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
-    octx.fillRect(0, 0, w, h);
+    octx.fillRect(0, 0, CELL_OUT_W, CELL_OUT_H);
     octx.imageSmoothingQuality = 'high';
 
-    if (!touchesEdge) {
-      const figCx = (x0 + x1 + 1) / 2;
-      const dx = Math.round(w / 2 - figCx);
-      octx.drawImage(cell, dx, 0);
-      return out;
-    }
-
-    // Figure spills past an edge — crop ONLY the band that contains the
-    // figure (horizontal full width to keep the boutique scene behind
-    // it; vertically just the figure's own rows plus a small pad) and
-    // scale that band to fit the cell with a 3 % margin on every edge.
-    // Scaling the WHOLE cell would bring down stray feet/hem from the
-    // row above whenever findGridCuts put the cut a few pixels too high.
-    const figW = x1 - x0 + 1;
-    const figH = y1 - y0 + 1;
-    const vPad = Math.round(h * 0.02);
-    const srcY0 = Math.max(0, y0 - vPad);
-    const srcY1 = Math.min(h, y1 + vPad);
-    const srcH = srcY1 - srcY0;
-    const availW = w * (1 - 2 * CELL_PAD);
-    const availH = h * (1 - 2 * CELL_PAD);
-    // Scale the FIGURE itself to fit — never upscale (that would just
-    // pixelate a tight figure). The scene around the figure moves with
-    // the figure since we keep the full source width.
-    const scale = Math.min(1, availW / figW, availH / figH);
-    const dw = w * scale;
+    // "contain": figure keeps its aspect ratio inside the cell. If the
+    // crop is more portrait than the cell, slim bg bands appear on the
+    // sides; if it's wider, bands appear top/bottom. In practice our
+    // cells and figures are both near-portrait, so bands stay thin and
+    // the figure fills most of the frame.
+    const scale = Math.min(CELL_OUT_W / srcW, CELL_OUT_H / srcH);
+    const dw = srcW * scale;
     const dh = srcH * scale;
-    const destX = (w - dw) / 2;
-    const destY = h * (1 - CELL_PAD) - dh;
-    octx.drawImage(cell, 0, srcY0, w, srcH, destX, destY, dw, dh);
+    const destX = (CELL_OUT_W - dw) / 2;
+    const destY = (CELL_OUT_H - dh) / 2;
+    octx.drawImage(cell, srcX0, srcY0, srcW, srcH, destX, destY, dw, dh);
     return out;
   }
 
@@ -364,27 +362,67 @@
     const bg = sampleBackground(d, w, h);
     const rowProf = new Uint32Array(h);
     const colProf = new Uint32Array(w);
+    // "Blackness" = fraction of near-pure-black pixels on this axis.
+    // The DRESS prompt asks GPT to draw solid-black gutters between
+    // the 3×3 cells, so a row/column that is almost entirely black is
+    // the gutter the slicer should lock onto. Even when GPT ignores
+    // that instruction the near-black count stays low on figure/scene
+    // rows and we fall through to the old empty-band detection.
+    const rowBlack = new Uint32Array(h);
+    const colBlack = new Uint32Array(w);
+    const BLACK_T = 24; // r+g+b <= this → counted as near-black
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
-        if (isFg(d, (y * w + x) * 4, bg)) { rowProf[y]++; colProf[x]++; }
+        const i = (y * w + x) * 4;
+        if (isFg(d, i, bg)) { rowProf[y]++; colProf[x]++; }
+        if (d[i] + d[i + 1] + d[i + 2] <= BLACK_T) { rowBlack[y]++; colBlack[x]++; }
       }
     }
-    return { xs: cutsAlong(colProf, cols), ys: cutsAlong(rowProf, rows), bg };
+    return {
+      xs: cutsAlong(colProf, cols, colBlack, h),
+      ys: cutsAlong(rowProf, rows, rowBlack, w),
+      bg,
+    };
   }
 
-  function cutsAlong(prof, n) {
+  function cutsAlong(prof, n, blackProf, crossLen) {
     const len = prof.length;
     const cuts = [0];
+    // A line counts as "the black gutter" when nearly every pixel along
+    // its cross-axis is pure black. 70 % is enough slack for AA edges.
+    const blackHit = blackProf ? Math.round(crossLen * 0.7) : Infinity;
     for (let k = 1; k < n; k++) {
       const expected = Math.round((len * k) / n);
       const win = Math.round((len / n) * 0.3);
       const lo = Math.max(cuts[cuts.length - 1] + 1, expected - win);
       const hi = Math.min(len - 1, expected + win);
+
+      // 1. First try to lock onto a solid-black gutter bar in the
+      //    window. If one exists, cut through its centre and ignore
+      //    the empty-band fallback — the bar is what the prompt asked
+      //    GPT to draw and it's the only cut that never clips a figure.
+      if (blackProf) {
+        let bestBlack = null;
+        for (let i = lo; i <= hi; ) {
+          if (blackProf[i] < blackHit) { i++; continue; }
+          let j = i;
+          while (j + 1 <= hi && blackProf[j + 1] >= blackHit) j++;
+          const run = { mid: Math.round((i + j) / 2), size: j - i + 1 };
+          if (!bestBlack || run.size > bestBlack.size) bestBlack = run;
+          i = j + 1;
+        }
+        if (bestBlack && bestBlack.size >= 2) {
+          cuts.push(bestBlack.mid);
+          continue;
+        }
+      }
+
+      // 2. Fallback — widest run of lines with the lowest fg density
+      //    near the expected split. Works when GPT drew faint gutters
+      //    instead of solid black bars.
       let min = Infinity;
       for (let i = lo; i <= hi; i++) min = Math.min(min, prof[i]);
       const tol = min + 3;
-      // Widest run of near-empty lines; ties go to the one nearest the
-      // expected split.
       let best = null;
       for (let i = lo; i <= hi; ) {
         if (prof[i] > tol) { i++; continue; }

@@ -77,6 +77,18 @@ export class UserFaceRendersService {
       this.prisma.userFaceRenderJob.deleteMany({ where: { userId } }),
     ]);
 
+    // Pre-compute the face stamp right now, while the user is still at the
+    // onboarding screen, instead of lazily on the first variant job.
+    // Saves ~2 s on the very first variant and makes every later request
+    // for THIS user instant: both the in-process cache and the stamp.png
+    // on disk are warm by the time the worker loop picks up the queue.
+    this.faceStampCache.delete(userId);
+    void this.precomputeFaceStamp(userId, selfie.buffer).catch((err) =>
+      this.logger.warn(
+        `precompute face stamp failed for ${userId}: ${(err as Error).message}`,
+      ),
+    );
+
     const queued = await this.enqueueAll(userId, { sellerId: opts.sellerId ?? null });
 
     this.logger.log(`prepare ${userId}: ${queued} job(s) enqueued`);
@@ -388,13 +400,16 @@ export class UserFaceRendersService {
   // ─── Internals ──────────────────────────────────────────────────
 
   /**
-   * Return a face stamp built straight from the buyer's own selfie — no
-   * facefusion in the loop. The selfie's face is cropped as a soft-oval
-   * RGBA stamp once, cached in-process, and the overlay step drops that
-   * same identity into every mannequin's hijab opening. Keeps the face
-   * looking exactly like the buyer across all 9 variants; facefusion
-   * only kicks in as a fallback when this fails (no face detected in
-   * the selfie, selfie file missing, etc.).
+   * Return the buyer's face stamp. Three tiers so an API restart or a
+   * worker on a different pod stays instant for returning users:
+   *   1. In-process memory cache (warm after any previous read in this
+   *      process).
+   *   2. Persistent storage at `tryon/stamps/<userId>/stamp.png` — the
+   *      stamp is written here the moment the selfie is uploaded during
+   *      onboarding, so every variant job after that reads a pre-built
+   *      PNG instead of recomputing from the selfie.
+   *   3. Fallback: cut a fresh stamp from the selfie right now (and
+   *      write it to the storage key so the next request skips tier 3).
    */
   private async getOrBuildFaceStamp(
     userId: string,
@@ -403,10 +418,35 @@ export class UserFaceRendersService {
     const cached = this.faceStampCache.get(userId);
     if (cached) return cached;
 
+    const stampKey = `tryon/stamps/${userId}/stamp.png`;
+
+    try {
+      const stored = await this.storage.read(stampKey);
+      this.faceStampCache.set(userId, stored);
+      this.logger.log(
+        `face stamp loaded from storage for user ${userId} (${stored.length} B)`,
+      );
+      return stored;
+    } catch {
+      // not written yet — fall through to a fresh build below
+    }
+
     try {
       const selfieBytes = await this.storage.read(selfieKey);
       const stamp = await this.compositor.composeFaceStamp(selfieBytes);
       this.faceStampCache.set(userId, stamp);
+      try {
+        await this.storage.save(
+          `tryon/stamps/${userId}`,
+          stamp,
+          'image/png',
+          'stamp.png',
+        );
+      } catch (saveErr) {
+        this.logger.warn(
+          `could not persist face stamp for ${userId}: ${(saveErr as Error).message}`,
+        );
+      }
       this.logger.log(
         `face stamp cut from selfie for user ${userId} (${stamp.length} B)`,
       );
@@ -416,6 +456,27 @@ export class UserFaceRendersService {
       this.logger.warn(`face stamp build failed for ${userId}: ${detail}`);
       return null;
     }
+  }
+
+  /**
+   * Build the stamp from a selfie buffer and write it to both the
+   * in-process cache and persistent storage. Fire-and-forget from
+   * `prepare()` so the HTTP response doesn't wait on the ~1 s face
+   * detection + crop. If anything fails the worker loop will fall back
+   * to the lazy path in `getOrBuildFaceStamp` the normal way.
+   */
+  private async precomputeFaceStamp(userId: string, selfieBytes: Buffer): Promise<void> {
+    const stamp = await this.compositor.composeFaceStamp(selfieBytes);
+    this.faceStampCache.set(userId, stamp);
+    await this.storage.save(
+      `tryon/stamps/${userId}`,
+      stamp,
+      'image/png',
+      'stamp.png',
+    );
+    this.logger.log(
+      `face stamp pre-built at onboarding for user ${userId} (${stamp.length} B)`,
+    );
   }
 
   private heightBand(cm: number | null): 'short' | 'mid' | 'tall' {
