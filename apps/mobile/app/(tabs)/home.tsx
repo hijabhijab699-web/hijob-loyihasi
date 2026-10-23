@@ -46,12 +46,12 @@ const PLACEHOLDER_BG = ['#B5B891', '#E4CE9A', '#D4C3A0', '#C4C88C', '#D9D0BE', '
 type Ad = { id: string; imageUrl: string; linkUrl: string | null; title: string | null };
 
 /**
- * Horizontal paginated carousel of admin-curated banners, shown just below
- * the welcome header. Pulls `GET /ads` once per app session; renders
- * nothing when the admin hasn't published any banners so the screen
- * doesn't collapse around an empty row.
+ * Horizontal paginated carousel of admin-curated banners, shown as the
+ * hero section just below the welcome header. If no admin ads exist,
+ * returns null so the caller falls back to the static Virtual primerka
+ * banner. Includes pagination dots that mirror the current page.
  */
-function AdsCarousel() {
+function AdsCarousel({ onEmpty }: { onEmpty?: () => void } = {}) {
   const router = useRouter();
   const { colors, theme } = useTheme();
   const { data } = useQuery<Ad[]>({
@@ -62,14 +62,18 @@ function AdsCarousel() {
     },
     staleTime: 5 * 60 * 1000,
   });
+  const [page, setPage] = useState(0);
 
-  if (!data || data.length === 0) return null;
+  if (!data || data.length === 0) {
+    onEmpty?.();
+    return null;
+  }
 
   const screenW = Dimensions.get('window').width;
   const cardW = screenW - 2 * 20;
 
   return (
-    <View style={{ marginTop: 16 }}>
+    <View style={{ marginTop: 20 }}>
       <ScrollView
         horizontal
         pagingEnabled
@@ -78,6 +82,10 @@ function AdsCarousel() {
         snapToAlignment="start"
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+        onMomentumScrollEnd={(e) => {
+          const idx = Math.round(e.nativeEvent.contentOffset.x / (cardW + 12));
+          if (idx !== page) setPage(idx);
+        }}
       >
         {data.map((ad) => (
           <Pressable
@@ -101,6 +109,28 @@ function AdsCarousel() {
           </Pressable>
         ))}
       </ScrollView>
+      {data.length > 1 && (
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: 6,
+            justifyContent: 'center',
+            marginTop: 10,
+          }}
+        >
+          {data.map((_, i) => (
+            <View
+              key={i}
+              style={{
+                width: i === page ? 20 : 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: i === page ? colors.oliveDeep : colors.rule,
+              }}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -113,6 +143,16 @@ export default function HomeScreen() {
   const lang = i18n.language as 'ru' | 'uz';
 
   const queryClient = useQueryClient();
+
+  // Reuse the ads query here so we know whether to render the Virtual
+  // primerka fallback hero below the carousel. Same queryKey as the
+  // AdsCarousel component means it hits the cache instead of re-fetching.
+  const { data: adsData } = useQuery<Ad[]>({
+    queryKey: ['ads'],
+    queryFn: async () => (await api.get<Ad[]>('/ads')).data ?? [],
+    staleTime: 5 * 60 * 1000,
+  });
+  const adsExist = (adsData?.length ?? 0) > 0;
 
   // Surface network/API failures to the UI instead of silently swapping in
   // mock rows — a mocked home feed hides real breakage (bad token, backend
@@ -281,72 +321,74 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {/* ── Ads Carousel ── */}
+        {/* ── Hero carousel ── admin-curated banners replace the static
+            Virtual primerka hero when they exist; otherwise the hero
+            below is the fallback so the home screen never has a hole. */}
         <AdsCarousel />
-
-        {/* ── Hero Try-On Banner ── */}
-        <Pressable
-          onPress={() => router.push('/(tabs)/tryon')}
-          style={{ marginHorizontal: SIDE, marginTop: 20 }}
-        >
-          <LinearGradient
-            colors={[colors.oliveDeep, '#4E5230']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              borderRadius: theme.radii['2xl'],
-              padding: 20,
-              flexDirection: 'row',
-              alignItems: 'center',
-              overflow: 'hidden',
-              minHeight: 110,
-            }}
+        {!adsExist && (
+          <Pressable
+            onPress={() => router.push('/(tabs)/tryon')}
+            style={{ marginHorizontal: SIDE, marginTop: 20 }}
           >
-            <View style={{ flex: 1, gap: 8 }}>
-              <View
-                style={{
-                  backgroundColor: colors.gold,
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  borderRadius: theme.radii.sm,
-                  alignSelf: 'flex-start',
-                }}
-              >
-                <Text variant="caption" style={{ color: '#fff', fontWeight: '700', fontSize: 10, letterSpacing: 1 }}>
-                  AI POWERED
-                </Text>
-              </View>
-              <Text
-                variant="titleMedium"
-                style={{ color: colors.goldSoft, fontSize: 18, lineHeight: 24 }}
-              >
-                {lang === 'ru' ? 'Виртуальная\nпримерка' : 'Virtual\nprimerka'}
-              </Text>
-              <Text
-                variant="caption"
-                style={{ color: 'rgba(228,206,154,0.7)', fontSize: 11, lineHeight: 15 }}
-              >
-                {lang === 'ru'
-                  ? 'Примерьте перед покупкой'
-                  : "Xarid qilishdan oldin kiyib ko'ring"}
-              </Text>
-            </View>
-            <View
+            <LinearGradient
+              colors={[colors.oliveDeep, '#4E5230']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={{
-                width: 72,
-                height: 72,
-                borderRadius: 36,
-                backgroundColor: 'rgba(201,169,110,0.15)',
+                borderRadius: theme.radii['2xl'],
+                padding: 20,
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1.5,
-                borderColor: 'rgba(201,169,110,0.3)',
+                overflow: 'hidden',
+                minHeight: 110,
               }}
             >
-              <Ionicons name="body-outline" size={34} color={colors.goldSoft} />
-            </View>
-          </LinearGradient>
-        </Pressable>
+              <View style={{ flex: 1, gap: 8 }}>
+                <View
+                  style={{
+                    backgroundColor: colors.gold,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: theme.radii.sm,
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  <Text variant="caption" style={{ color: '#fff', fontWeight: '700', fontSize: 10, letterSpacing: 1 }}>
+                    AI POWERED
+                  </Text>
+                </View>
+                <Text
+                  variant="titleMedium"
+                  style={{ color: colors.goldSoft, fontSize: 18, lineHeight: 24 }}
+                >
+                  {lang === 'ru' ? 'Виртуальная\nпримерка' : 'Virtual\nprimerka'}
+                </Text>
+                <Text
+                  variant="caption"
+                  style={{ color: 'rgba(228,206,154,0.7)', fontSize: 11, lineHeight: 15 }}
+                >
+                  {lang === 'ru'
+                    ? 'Примерьте перед покупкой'
+                    : "Xarid qilishdan oldin kiyib ko'ring"}
+                </Text>
+              </View>
+              <View
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 36,
+                  backgroundColor: 'rgba(201,169,110,0.15)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1.5,
+                  borderColor: 'rgba(201,169,110,0.3)',
+                }}
+              >
+                <Ionicons name="body-outline" size={34} color={colors.goldSoft} />
+              </View>
+            </LinearGradient>
+          </Pressable>
+        )}
 
         {/* ── Stores ── */}
         <View style={{ marginTop: 28 }}>
