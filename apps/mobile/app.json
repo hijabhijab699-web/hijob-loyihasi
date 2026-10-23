@@ -10,7 +10,7 @@
     "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash.png",
-      "resizeMode": "cover",
+      "resizeMode": "contain",
       "backgroundColor": "#8A8D5B"
     },
     "assetBundlePatterns": [
@@ -61,6 +61,11 @@
         {
           "ios": {
             "deploymentTarget": "16.4"
+          },
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "buildToolsVersion": "36.0.0"
           }
         }
       ],
@@ -79,7 +84,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "http://192.168.1.6:4000/api/v1"
+      "apiUrl": "https://api.2431.uz/api/v1"
     }
   }
 }
