@@ -1,36 +1,73 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../../src/theme/ThemeProvider';
 
 export default function TabsLayout() {
-  const { colors, theme } = useTheme();
+  const { colors, theme, scheme } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  // Android 3-button nav / iPhone home indicator — lift the bar above the
-  // system gesture area. 10 keeps a comfortable baseline for gesture-nav
-  // Androids where insets.bottom is 0.
   const bottomInset = Math.max(insets.bottom, 10);
+
+  // Translucent blur sits under the tabs so the content behind the bar
+  // reads softly through a frosted layer — the "premium" feel comes from
+  // the glass + warm gold accent + thin hairline over a solid surface
+  // fallback (BlurView falls back to black on Android pre-12 unless we
+  // paint a surface behind it). Theme-aware tint so dark mode doesn't
+  // get a bright glass panel.
+  const blurTint = scheme === 'dark' ? 'dark' : 'light';
+  const barBg =
+    Platform.OS === 'ios'
+      ? 'transparent'
+      : scheme === 'dark'
+        ? 'rgba(26, 23, 20, 0.96)'
+        : 'rgba(252, 248, 240, 0.96)';
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.oliveDeep,
+        tabBarActiveTintColor: colors.goldDark,
         tabBarInactiveTintColor: colors.muted,
+        tabBarShowLabel: true,
+        tabBarItemStyle: {
+          paddingTop: 4,
+        },
+        tabBarBackground: () =>
+          Platform.OS === 'ios' ? (
+            <BlurView
+              tint={blurTint}
+              intensity={70}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            />
+          ) : null,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.rule,
-          height: 58 + bottomInset,
-          paddingTop: 10,
+          backgroundColor: barBg,
+          borderTopWidth: 0,
+          height: 64 + bottomInset,
+          paddingTop: 12,
           paddingBottom: bottomInset,
+          elevation: 20,
+          shadowColor: '#000',
+          shadowOpacity: 0.12,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: -4 },
         },
         tabBarLabelStyle: {
           fontFamily: theme.fontFamilies.body,
-          fontWeight: '500',
-          fontSize: 11,
+          fontWeight: '600',
+          fontSize: 10.5,
+          letterSpacing: 0.3,
+          marginTop: 2,
         },
       }}
     >
@@ -38,14 +75,18 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: t('tabs.home'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={focused ? 24 : 22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="catalog"
         options={{
           title: t('tabs.catalog'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={focused ? 24 : 22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -55,21 +96,23 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <View
               style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: focused ? colors.oliveDeep : colors.olive,
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: focused ? colors.goldDark : colors.oliveDeep,
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: 16,
-                shadowColor: colors.oliveDeep,
-                shadowOpacity: 0.2,
-                shadowOffset: { width: 0, height: 4 },
-                shadowRadius: 12,
-                elevation: 5,
+                marginBottom: 22,
+                borderWidth: 3,
+                borderColor: colors.surface,
+                shadowColor: focused ? colors.gold : colors.oliveDeep,
+                shadowOpacity: 0.45,
+                shadowOffset: { width: 0, height: 6 },
+                shadowRadius: 14,
+                elevation: 10,
               }}
             >
-              <Ionicons name="body-outline" size={26} color={colors.goldSoft} />
+              <Ionicons name="sparkles" size={26} color={colors.goldSoft} />
             </View>
           ),
         }}
@@ -78,14 +121,18 @@ export default function TabsLayout() {
         name="cart"
         options={{
           title: t('tabs.cart'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="bag-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'bag-handle' : 'bag-handle-outline'} size={focused ? 24 : 22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: t('tabs.profile'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'person-circle' : 'person-circle-outline'} size={focused ? 25 : 23} color={color} />
+          ),
         }}
       />
     </Tabs>
