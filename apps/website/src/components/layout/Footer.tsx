@@ -18,6 +18,7 @@ const footerLinks = {
   kompaniya: [
     { label: 'AI Primerka', href: '/primerka' },
     { label: 'Aloqa', href: '/aloqa' },
+    { label: 'Maxfiylik siyosati', href: '/maxfiylik' },
   ],
   yordam: [
     { label: 'Yetkazib berish', href: '/aloqa#yetkazish' },
@@ -167,9 +168,14 @@ export function Footer() {
 
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-white/40">
-            &copy; {new Date().getFullYear()} Hijob. Barcha huquqlar himoyalangan.
-          </p>
+          <div className="flex flex-col md:flex-row items-center gap-3 md:gap-6">
+            <p className="text-xs text-white/40">
+              &copy; {new Date().getFullYear()} Hijob. Barcha huquqlar himoyalangan.
+            </p>
+            <Link href="/maxfiylik" className="text-xs text-white/40 hover:text-white underline">
+              Maxfiylik siyosati
+            </Link>
+          </div>
           <div className="flex items-center gap-2 text-xs text-white/40">
             <span className="px-2 py-1 bg-white/10 rounded">Humo</span>
             <span className="px-2 py-1 bg-white/10 rounded">Uzcard</span>
