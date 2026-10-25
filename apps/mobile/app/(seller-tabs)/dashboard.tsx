@@ -58,8 +58,12 @@ export default function SellerDashboard() {
   const { colors, theme } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
+  const lang = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru' | 'en' | 'ar';
+  // Shared helper for 4-language inline strings that aren't worth a key.
+  const L = (uz: string, ru: string, en: string, ar: string) =>
+    ({ uz, ru, en, ar }[lang] ?? uz);
   const qc = useQueryClient();
 
   const { data: stats } = useQuery<SellerStats>({
@@ -90,28 +94,28 @@ export default function SellerDashboard() {
 
   const STAT_CARDS = [
     {
-      label: isRu ? 'Товары' : 'Mahsulotlar',
+      label: L('Mahsulotlar', 'Товары', 'Products', 'المنتجات'),
       value: String(s.totalProducts),
       icon: 'grid-outline' as const,
       iconColor: colors.oliveDeep,
       iconBg: 'rgba(54,57,36,0.08)',
     },
     {
-      label: isRu ? 'Заказы' : 'Buyurtmalar',
+      label: L('Buyurtmalar', 'Заказы', 'Orders', 'الطلبات'),
       value: String(s.activeOrders),
       icon: 'cube-outline' as const,
       iconColor: '#A88848',
       iconBg: 'rgba(201,169,110,0.15)',
     },
     {
-      label: isRu ? 'Доход' : 'Daromad',
+      label: L('Daromad', 'Доход', 'Revenue', 'الإيرادات'),
       value: revenue,
       icon: 'trending-up-outline' as const,
       iconColor: '#7A8A5B',
       iconBg: 'rgba(122,138,91,0.12)',
     },
     {
-      label: isRu ? 'Примерки' : 'Primerka',
+      label: L('Primerka', 'Примерки', 'Try-ons', 'التجارب'),
       value: String(s.tryOnCount),
       icon: 'body-outline' as const,
       iconColor: colors.oliveDeep,
@@ -156,10 +160,10 @@ export default function SellerDashboard() {
                 fontWeight: '700',
               }}
             >
-              {isRu ? 'Главная' : 'Bosh sahifa'}
+              {L('Bosh sahifa', 'Главная', 'Home', 'الرئيسية')}
             </Text>
             <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
-              {isRu ? 'Состояние вашего магазина' : "Do'koningiz holati"}
+              {L("Do'koningiz holati", 'Состояние вашего магазина', 'Your shop status', 'حالة متجرك')}
             </Text>
           </View>
           <Pressable
@@ -265,7 +269,7 @@ export default function SellerDashboard() {
             color="oliveDeep"
             style={{ fontSize: 13, fontWeight: '600', marginBottom: 12 }}
           >
-            {isRu ? 'Быстрые действия' : 'Tezkor amallar'}
+            {L('Tezkor amallar', 'Быстрые действия', 'Quick actions', 'إجراءات سريعة')}
           </Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Pressable
@@ -285,7 +289,7 @@ export default function SellerDashboard() {
                 variant="caption"
                 style={{ fontSize: 11, fontWeight: '500', color: colors.goldSoft }}
               >
-                {isRu ? 'Новый товар' : 'Yangi mahsulot'}
+                {L('Yangi mahsulot', 'Новый товар', 'New product', 'منتج جديد')}
               </Text>
             </Pressable>
             <Pressable
@@ -305,7 +309,7 @@ export default function SellerDashboard() {
                 variant="caption"
                 style={{ fontSize: 11, fontWeight: '500', color: colors.oliveDeep }}
               >
-                {isRu ? 'Заказы' : 'Buyurtmalar'}
+                {L('Buyurtmalar', 'Заказы', 'Orders', 'الطلبات')}
               </Text>
             </Pressable>
             <Pressable
@@ -325,7 +329,7 @@ export default function SellerDashboard() {
                 variant="caption"
                 style={{ fontSize: 11, fontWeight: '500', color: colors.oliveDeep }}
               >
-                {isRu ? 'Статистика' : 'Statistika'}
+                {L('Statistika', 'Статистика', 'Analytics', 'الإحصاءات')}
               </Text>
             </Pressable>
           </View>
@@ -356,11 +360,11 @@ export default function SellerDashboard() {
               color="oliveDeep"
               style={{ fontSize: 13, fontWeight: '600' }}
             >
-              {isRu ? 'Последние заказы' : "So'nggi buyurtmalar"}
+              {L("So'nggi buyurtmalar", 'Последние заказы', 'Latest orders', 'أحدث الطلبات')}
             </Text>
             <Pressable onPress={() => router.push('/(seller-tabs)/orders' as any)}>
               <Text variant="bodySmall" style={{ fontSize: 12, color: colors.gold }}>
-                {isRu ? 'Все →' : 'Barchasi →'}
+                {L('Barchasi →', 'Все →', 'All →', 'الكل ←')}
               </Text>
             </Pressable>
           </View>
@@ -424,7 +428,7 @@ export default function SellerDashboard() {
             }) : (
               <View style={{ padding: 20, alignItems: 'center' }}>
                 <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
-                  {isRu ? 'Пока нет заказов' : "Hali buyurtmalar yo'q"}
+                  {L("Hali buyurtmalar yo'q", 'Пока нет заказов', 'No orders yet', 'لا توجد طلبات بعد')}
                 </Text>
               </View>
             )}
@@ -455,11 +459,11 @@ export default function SellerDashboard() {
               color="oliveDeep"
               style={{ fontSize: 13, fontWeight: '600' }}
             >
-              {isRu ? 'Топ товары' : 'Top mahsulotlar'}
+              {L('Top mahsulotlar', 'Топ товары', 'Top products', 'المنتجات الأعلى')}
             </Text>
             <Pressable onPress={() => router.push('/(seller-tabs)/products' as any)}>
               <Text variant="bodySmall" style={{ fontSize: 12, color: colors.gold }}>
-                {isRu ? 'Все →' : 'Barchasi →'}
+                {L('Barchasi →', 'Все →', 'All →', 'الكل ←')}
               </Text>
             </Pressable>
           </View>
@@ -513,7 +517,7 @@ export default function SellerDashboard() {
           ) : (
             <View style={{ padding: 20, alignItems: 'center' }}>
               <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
-                {isRu ? 'Товары ещё не добавлены' : "Hali mahsulot qo'shilmagan"}
+                {L("Hali mahsulot qo'shilmagan", 'Товары ещё не добавлены', 'No products yet', 'لا توجد منتجات بعد')}
               </Text>
             </View>
           )}

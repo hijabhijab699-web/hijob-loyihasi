@@ -48,6 +48,8 @@ export default function SellerProductsScreen() {
   const router = useRouter();
   const { i18n } = useTranslation();
   const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
+  const lang = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru' | 'en' | 'ar';
+  const L = (uz: string, ru: string, en: string, ar: string) => ({ uz, ru, en, ar }[lang] ?? uz);
   const [filter, setFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
 
@@ -88,10 +90,10 @@ export default function SellerProductsScreen() {
               fontWeight: '700',
             }}
           >
-            {isRu ? 'Товары' : 'Mahsulotlar'}
+            {L('Mahsulotlar', 'Товары', 'Products', 'المنتجات')}
           </Text>
           <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
-            {items.length} {isRu ? 'товара' : 'ta mahsulot'}
+            {items.length} {L('ta mahsulot', 'товара', 'products', 'منتج')}
           </Text>
         </View>
         <Pressable
@@ -128,7 +130,7 @@ export default function SellerProductsScreen() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder={isRu ? 'Поиск...' : 'Qidirish...'}
+            placeholder={L('Qidirish...', 'Поиск...', 'Search...', 'بحث...')}
             placeholderTextColor={colors.muted}
             style={{ flex: 1, fontSize: 14, color: colors.ink, padding: 0 }}
           />
@@ -161,9 +163,9 @@ export default function SellerProductsScreen() {
                 }}
               >
                 {f.key === 'all'
-                  ? (isRu ? 'Все' : 'Barchasi')
+                  ? L('Barchasi', 'Все', 'All', 'الكل')
                   : f.key === 'pending'
-                  ? (isRu ? 'Ожидает' : 'Kutmoqda')
+                  ? L('Kutmoqda', 'Ожидает', 'Pending', 'قيد الانتظار')
                   : f.label}
               </Text>
             </Pressable>
@@ -189,7 +191,7 @@ export default function SellerProductsScreen() {
           <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
             <Ionicons name="pricetag-outline" size={48} color={colors.muted} />
             <Text variant="body" color="muted">
-              {isRu ? 'Товары не найдены' : 'Mahsulot topilmadi'}
+              {L('Mahsulot topilmadi', 'Товары не найдены', 'No products found', 'لم يتم العثور على منتجات')}
             </Text>
           </View>
         }

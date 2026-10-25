@@ -24,12 +24,14 @@ export default function SellerProfileScreen() {
   const { user, logout } = useAuth();
   const { i18n } = useTranslation();
   const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
+  const lang = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru' | 'en' | 'ar';
+  const L = (uz: string, ru: string, en: string, ar: string) => ({ uz, ru, en, ar }[lang] ?? uz);
 
   // Payment/delivery seller controls aren't backed yet. Tell the seller
   // outright rather than silently dropping them onto buyer-only screens.
   const comingSoon = (what: string) => {
     Alert.alert(
-      isRu ? 'Скоро' : 'Tez orada',
+      L('Tez orada', 'Скоро', 'Coming soon', 'قريبًا'),
       isRu
         ? `Раздел «${what}» будет добавлен в следующей версии.`
         : `«${what}» bo'limi keyingi versiyada qo'shiladi.`,
@@ -38,42 +40,42 @@ export default function SellerProfileScreen() {
 
   const storeMenu: MenuItem[] = [
     {
-      label: isRu ? 'Данные магазина' : "Do'kon ma'lumotlari",
+      label: L("Do'kon ma'lumotlari", 'Данные магазина', 'Shop info', 'معلومات المتجر'),
       icon: 'storefront-outline',
       route: '/seller/shop-profile',
     },
     {
-      label: isRu ? 'Подписка' : 'Obuna',
+      label: L('Obuna', 'Подписка', 'Subscription', 'الاشتراك'),
       icon: 'star-outline',
       route: '/seller/subscription',
     },
     {
-      label: isRu ? 'Платежные реквизиты' : "To'lov rekvizitlari",
+      label: L("To'lov rekvizitlari", 'Платежные реквизиты', 'Payment details', 'بيانات الدفع'),
       icon: 'card-outline',
-      action: () => comingSoon(isRu ? 'Платежные реквизиты' : "To'lov rekvizitlari"),
+      action: () => comingSoon(L("To'lov rekvizitlari", 'Платежные реквизиты', 'Payment details', 'بيانات الدفع')),
     },
     {
-      label: isRu ? 'Доставка и выдача' : 'Yetkazib berish va topshirish',
+      label: L('Yetkazib berish va topshirish', 'Доставка и выдача', 'Delivery & pickup', 'التوصيل والاستلام'),
       icon: 'car-outline',
-      action: () => comingSoon(isRu ? 'Доставка и выдача' : 'Yetkazib berish'),
+      action: () => comingSoon(L('Yetkazib berish', 'Доставка и выдача', 'Delivery', 'التوصيل')),
     },
     {
-      label: isRu ? 'Сообщения' : 'Xabarlar',
+      label: L('Xabarlar', 'Сообщения', 'Messages', 'الرسائل'),
       icon: 'chatbubbles-outline',
       route: '/chats',
     },
     {
-      label: isRu ? 'Внешний вид' : "Ko'rinish",
+      label: L("Ko'rinish", 'Внешний вид', 'Appearance', 'المظهر'),
       icon: 'moon-outline',
       route: '/settings/theme',
     },
     {
-      label: isRu ? 'Уведомления' : 'Bildirishnomalar',
+      label: L('Bildirishnomalar', 'Уведомления', 'Notifications', 'الإشعارات'),
       icon: 'notifications-outline',
       route: '/notifications',
     },
     {
-      label: isRu ? 'Язык' : 'Til',
+      label: L('Til', 'Язык', 'Language', 'اللغة'),
       icon: 'language-outline',
       route: '/settings/language',
     },
@@ -104,7 +106,7 @@ export default function SellerProfileScreen() {
               fontWeight: '700',
             }}
           >
-            {isRu ? 'Профиль' : 'Profil'}
+            {L('Profil', 'Профиль', 'Profile', 'الملف الشخصي')}
           </Text>
         </View>
 
@@ -151,7 +153,7 @@ export default function SellerProfileScreen() {
                 color="ink"
                 style={{ fontSize: 16, fontWeight: '600' }}
               >
-                {user?.fullName ?? (isRu ? 'Продавец' : 'Sotuvchi')}
+                {user?.fullName ?? L('Sotuvchi', 'Продавец', 'Seller', 'بائع')}
               </Text>
               <Text variant="bodySmall" color="muted" style={{ fontSize: 13 }}>
                 @{user?.username ?? '—'}
@@ -183,7 +185,7 @@ export default function SellerProfileScreen() {
                 paddingBottom: 10,
               }}
             >
-              {isRu ? 'Режим' : 'Rejim tanlash'}
+              {L('Rejim tanlash', 'Режим', 'Mode', 'الوضع')}
             </Text>
 
             <View style={{ paddingHorizontal: 12, paddingBottom: 12, gap: 8 }}>
@@ -219,10 +221,10 @@ export default function SellerProfileScreen() {
                     color="ink"
                     style={{ fontSize: 14, fontWeight: '600' }}
                   >
-                    {isRu ? 'Режим покупателя' : 'Xaridor rejimi'}
+                    {L('Xaridor rejimi', 'Режим покупателя', 'Buyer mode', 'وضع المشتري')}
                   </Text>
                   <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
-                    {isRu ? 'Просмотр и покупка товаров' : "Mahsulotlarni ko'rish va xarid qilish"}
+                    {L("Mahsulotlarni ko'rish va xarid qilish", 'Просмотр и покупка товаров', 'Browse and shop', 'تصفح وشراء')}
                   </Text>
                 </View>
                 <View
@@ -267,10 +269,10 @@ export default function SellerProfileScreen() {
                     color="ink"
                     style={{ fontSize: 14, fontWeight: '600' }}
                   >
-                    {isRu ? 'Режим продавца' : 'Sotuvchi rejimi'}
+                    {L('Sotuvchi rejimi', 'Режим продавца', 'Seller mode', 'وضع البائع')}
                   </Text>
                   <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
-                    {isRu ? 'Управление магазином и продажи' : "Do'kon boshqaruvi va sotish"}
+                    {L("Do'kon boshqaruvi va sotish", 'Управление магазином и продажи', 'Manage shop & sales', 'إدارة المتجر والمبيعات')}
                   </Text>
                 </View>
                 <View
@@ -320,7 +322,7 @@ export default function SellerProfileScreen() {
                 paddingBottom: 10,
               }}
             >
-              {isRu ? 'Настройки магазина' : "Do'kon sozlamalari"}
+              {L("Do'kon sozlamalari", 'Настройки магазина', 'Shop settings', 'إعدادات المتجر')}
             </Text>
 
             {storeMenu.map((item, idx) => (
@@ -376,7 +378,7 @@ export default function SellerProfileScreen() {
               color="ink"
               style={{ flex: 1, fontSize: 14 }}
             >
-              {isRu ? 'Центр помощи' : 'Yordam markazi'}
+              {L('Yordam markazi', 'Центр помощи', 'Help center', 'مركز المساعدة')}
             </Text>
             <Ionicons name="chevron-forward" size={16} color={colors.muted} />
           </Pressable>
@@ -404,7 +406,7 @@ export default function SellerProfileScreen() {
               variant="body"
               style={{ fontSize: 14, fontWeight: '500', color: colors.danger }}
             >
-              {isRu ? 'Выйти' : 'Chiqish'}
+              {L('Chiqish', 'Выйти', 'Log out', 'تسجيل الخروج')}
             </Text>
           </Pressable>
         </View>

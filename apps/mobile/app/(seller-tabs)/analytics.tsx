@@ -53,6 +53,8 @@ export default function SellerAnalyticsScreen() {
   const { colors, theme } = useTheme();
   const { i18n } = useTranslation();
   const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
+  const lang = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru' | 'en' | 'ar';
+  const L = (uz: string, ru: string, en: string, ar: string) => ({ uz, ru, en, ar }[lang] ?? uz);
   const [period, setPeriod] = useState<Period>('week');
 
   const { data, isLoading, isError, refetch } = useQuery<AnalyticsResponse>({
@@ -77,7 +79,7 @@ export default function SellerAnalyticsScreen() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 }}>
           <Ionicons name="cloud-offline-outline" size={48} color={colors.muted} />
           <Text variant="body" color="ink" style={{ fontSize: 15, fontWeight: '600' }}>
-            {isRu ? 'Не удалось загрузить статистику' : "Statistikani yuklab bo'lmadi"}
+            {L("Statistikani yuklab bo'lmadi", 'Не удалось загрузить статистику', 'Could not load analytics', 'تعذر تحميل الإحصاءات')}
           </Text>
           <Pressable
             onPress={() => refetch()}
@@ -87,7 +89,7 @@ export default function SellerAnalyticsScreen() {
             }}
           >
             <Text variant="bodySmall" style={{ fontSize: 13, fontWeight: '600', color: colors.goldSoft }}>
-              {isRu ? 'Повторить' : 'Qaytadan urinish'}
+              {L('Qaytadan urinish', 'Повторить', 'Retry', 'إعادة المحاولة')}
             </Text>
           </Pressable>
         </View>
@@ -107,10 +109,10 @@ export default function SellerAnalyticsScreen() {
   const maxTopCount = Math.max(...topVariants.map((p) => p.count), 1);
 
   const STATS = [
-    { label: isRu ? 'Товары' : 'Mahsulotlar', value: String(data.totals.products) },
-    { label: isRu ? 'Варианты' : 'Variantlar', value: String(data.totals.variants) },
-    { label: isRu ? 'Примерки' : 'Primerka', value: String(data.totals.tryOnSessions) },
-    { label: isRu ? 'Заказы' : 'Buyurtma', value: String(data.totals.orderItems) },
+    { label: L('Mahsulotlar', 'Товары', 'Products', 'المنتجات'), value: String(data.totals.products) },
+    { label: L('Variantlar', 'Варианты', 'Variants', 'المتغيرات'), value: String(data.totals.variants) },
+    { label: L('Primerka', 'Примерки', 'Try-ons', 'التجارب'), value: String(data.totals.tryOnSessions) },
+    { label: L('Buyurtma', 'Заказы', 'Orders', 'الطلبات'), value: String(data.totals.orderItems) },
   ];
 
   return (
@@ -133,10 +135,10 @@ export default function SellerAnalyticsScreen() {
             color="oliveDeep"
             style={{ fontFamily: theme.fontFamilies.display, fontSize: 26, fontWeight: '700' }}
           >
-            {isRu ? 'Статистика' : 'Statistika'}
+            {L('Statistika', 'Статистика', 'Analytics', 'الإحصاءات')}
           </Text>
           <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
-            {isRu ? 'Показатели магазина' : "Do'kon ko'rsatgichlari"}
+            {L("Do'kon ko'rsatgichlari", 'Показатели магазина', 'Shop metrics', 'مؤشرات المتجر')}
           </Text>
         </View>
 
@@ -170,12 +172,12 @@ export default function SellerAnalyticsScreen() {
                   style={{ fontSize: 12, fontWeight: '500', color: active ? colors.goldSoft : colors.muted }}
                 >
                   {tab.key === 'today'
-                  ? (isRu ? 'Сегодня' : 'Bugun')
+                  ? (L('Bugun', 'Сегодня', 'Today', 'اليوم'))
                   : tab.key === 'week'
-                  ? (isRu ? 'Неделя' : 'Hafta')
+                  ? (L('Hafta', 'Неделя', 'Week', 'الأسبوع'))
                   : tab.key === 'month'
-                  ? (isRu ? 'Месяц' : 'Oy')
-                  : (isRu ? 'Год' : 'Yil')}
+                  ? (L('Oy', 'Месяц', 'Month', 'الشهر'))
+                  : (L('Yil', 'Год', 'Year', 'السنة'))}
                 </Text>
               </Pressable>
             );
@@ -189,7 +191,7 @@ export default function SellerAnalyticsScreen() {
               variant="caption"
               style={{ fontSize: 11, color: colors.oliveSoft, textTransform: 'uppercase', letterSpacing: 0.5 }}
             >
-              {isRu ? 'Общий доход' : 'Umumiy daromad'}
+              {L('Umumiy daromad', 'Общий доход', 'Total revenue', 'إجمالي الإيرادات')}
             </Text>
             <Text
               variant="displayLarge"
@@ -201,8 +203,8 @@ export default function SellerAnalyticsScreen() {
               ${data.totals.grossUsd.toLocaleString()}
             </Text>
             <Text variant="caption" style={{ fontSize: 12, color: colors.oliveSoft, marginTop: 6 }}>
-              {data.totals.orderUnits} {isRu ? 'шт · ' : "ta dona · "}
-              {data.totals.orderItems} {isRu ? 'заказов' : 'ta buyurtma'}
+              {data.totals.orderUnits} {L('ta dona · ', 'шт · ', 'pcs · ', 'قطعة · ')}
+              {data.totals.orderItems} {L('ta buyurtma', 'заказов', 'orders', 'طلب')}
             </Text>
 
             {chartBars.length > 0 ? (
@@ -239,7 +241,7 @@ export default function SellerAnalyticsScreen() {
               </>
             ) : (
               <Text variant="caption" style={{ fontSize: 11, color: colors.oliveSoft, marginTop: 16 }}>
-                {isRu ? 'Данных примерок за 7 дней пока нет' : "7 kunlik primerka ma'lumoti hali yo'q"}
+                {L("7 kunlik primerka ma'lumoti hali yo'q", 'Данных примерок за 7 дней пока нет', 'No 7-day try-on data yet', 'لا توجد بيانات تجربة لمدة 7 أيام')}
               </Text>
             )}
           </View>
@@ -289,12 +291,12 @@ export default function SellerAnalyticsScreen() {
               color="oliveDeep"
               style={{ fontSize: 13, fontWeight: '600', marginBottom: 12 }}
             >
-              {isRu ? 'Топ примеренных' : "Top sinab ko'rilgan"}
+              {L("Top sinab ko'rilgan", 'Топ примеренных', 'Most tried on', 'الأكثر تجربة')}
             </Text>
 
             {topVariants.length === 0 ? (
               <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
-                {isRu ? 'Пока никто не примерял товары' : "Hali primerka qilingan mahsulot yo'q"}
+                {L("Hali primerka qilingan mahsulot yo'q", 'Пока никто не примерял товары', 'No try-ons yet', 'لا توجد تجارب بعد')}
               </Text>
             ) : (
               <View style={{ gap: 8 }}>

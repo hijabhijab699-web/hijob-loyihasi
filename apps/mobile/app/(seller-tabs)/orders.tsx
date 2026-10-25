@@ -30,18 +30,18 @@ interface SellerOrder {
   tracking?: string;
 }
 
-const STATUS_TABS: { key: OrderStatus; label: string }[] = [
-  { key: 'new', label: 'Yangi' },
-  { key: 'preparing', label: 'Tayyorlanm.' },
-  { key: 'shipping', label: "Yo'lda" },
-  { key: 'delivered', label: 'Yetkazildi' },
-];
+const STATUS_LABELS: Record<OrderStatus, Record<'uz' | 'ru' | 'en' | 'ar', string>> = {
+  new: { uz: 'Yangi', ru: 'Новый', en: 'New', ar: 'جديد' },
+  preparing: { uz: 'Tayyorlanm.', ru: 'Готовится', en: 'Preparing', ar: 'قيد التجهيز' },
+  shipping: { uz: "Yo'lda", ru: 'В пути', en: 'Shipping', ar: 'في الطريق' },
+  delivered: { uz: 'Yetkazildi', ru: 'Доставлено', en: 'Delivered', ar: 'تم التسليم' },
+};
 
-const STATUS_BADGE: Record<OrderStatus, { bg: string; color: string; label: string }> = {
-  new: { bg: 'rgba(217,162,75,0.12)', color: '#D9A24B', label: 'Yangi' },
-  preparing: { bg: 'rgba(122,138,91,0.12)', color: '#7A8A5B', label: 'Tayyorlanmoqda' },
-  shipping: { bg: 'rgba(95,122,148,0.12)', color: '#5F7A94', label: "Yo'lda" },
-  delivered: { bg: 'rgba(122,138,91,0.12)', color: '#7A8A5B', label: 'Yetkazildi' },
+const STATUS_COLORS: Record<OrderStatus, { bg: string; color: string }> = {
+  new: { bg: 'rgba(217,162,75,0.12)', color: '#D9A24B' },
+  preparing: { bg: 'rgba(122,138,91,0.12)', color: '#7A8A5B' },
+  shipping: { bg: 'rgba(95,122,148,0.12)', color: '#5F7A94' },
+  delivered: { bg: 'rgba(122,138,91,0.12)', color: '#7A8A5B' },
 };
 
 const ITEM_BG = ['#EDE5D0', '#D9D0BE', '#EDE5D0', '#D9D0BE'];
@@ -52,6 +52,12 @@ export default function SellerOrdersScreen() {
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<OrderStatus>('new');
   const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';
+  const lang = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru' | 'en' | 'ar';
+  const L = (uz: string, ru: string, en: string, ar: string) =>
+    ({ uz, ru, en, ar }[lang] ?? uz);
+  const STATUS_TABS: { key: OrderStatus; label: string }[] = (
+    ['new', 'preparing', 'shipping', 'delivered'] as const
+  ).map((k) => ({ key: k, label: STATUS_LABELS[k][lang] ?? STATUS_LABELS[k].uz }));
 
   // Fetch once; filter in memory by tab so the badge counts stay in sync
   // without extra round trips.
@@ -70,8 +76,8 @@ export default function SellerOrdersScreen() {
     },
     onError: (e: any) => {
       Alert.alert(
-        isRu ? 'Ошибка' : 'Xatolik',
-        e?.response?.data?.message ?? e?.message ?? (isRu ? 'Повторите позже' : 'Qayta urining'),
+        L('Xatolik', 'Ошибка', 'Error', 'خطأ'),
+        e?.response?.data?.message ?? e?.message ?? L('Qayta urining', 'Повторите позже', 'Try again later', 'حاول لاحقًا'),
       );
     },
   });
@@ -110,11 +116,11 @@ export default function SellerOrdersScreen() {
               fontWeight: '700',
             }}
           >
-            {isRu ? 'Заказы' : 'Buyurtmalar'}
+            {L('Buyurtmalar', 'Заказы', 'Orders', 'الطلبات')}
           </Text>
           <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
             {counts.new + counts.preparing + counts.shipping}{' '}
-            {isRu ? 'активных заказов' : 'ta faol buyurtma'}
+            {L('ta faol buyurtma', 'активных заказов', 'active orders', 'طلبات نشطة')}
           </Text>
         </View>
         <Pressable
@@ -195,11 +201,14 @@ export default function SellerOrdersScreen() {
         ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
             <Ionicons name="receipt-outline" size={48} color={colors.muted} />
-            <Text variant="body" color="muted">{isRu ? 'Заказов нет' : "Buyurtma yo'q"}</Text>
+            <Text variant="body" color="muted">{L("Buyurtma yo'q", 'Заказов нет', 'No orders', 'لا توجد طلبات')}</Text>
           </View>
         }
         renderItem={({ item, index }) => {
-          const badge = STATUS_BADGE[item.status];
+          const badge = {
+            ...STATUS_COLORS[item.status],
+            label: STATUS_LABELS[item.status][lang] ?? STATUS_LABELS[item.status].uz,
+          };
           return (
             <View
               style={{
@@ -342,7 +351,7 @@ export default function SellerOrdersScreen() {
                         variant="caption"
                         style={{ fontSize: 12, fontWeight: '500', color: colors.danger }}
                       >
-                        {isRu ? 'Отклонить' : 'Rad etish'}
+                        {L('Rad etish', 'Отклонить', 'Reject', 'رفض')}
                       </Text>
                     </Pressable>
                     <Pressable
@@ -360,7 +369,7 @@ export default function SellerOrdersScreen() {
                         variant="caption"
                         style={{ fontSize: 12, fontWeight: '500', color: colors.goldSoft }}
                       >
-                        {isRu ? 'Принять' : 'Qabul qilish'}
+                        {L('Qabul qilish', 'Принять', 'Accept', 'قبول')}
                       </Text>
                     </Pressable>
                   </View>
@@ -382,15 +391,37 @@ export default function SellerOrdersScreen() {
                       variant="caption"
                       style={{ fontSize: 12, fontWeight: '500', color: '#fff' }}
                     >
-                      {isRu ? 'Готово к отправке' : "Jo'natishga tayyor"}
+                      {L("Jo'natishga tayyor", 'Готово к отправке', 'Ready to ship', 'جاهز للشحن')}
                     </Text>
                   </Pressable>
                 )}
 
-                {item.status === 'shipping' && item.tracking && (
-                  <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
-                    Tracking: {item.tracking}
-                  </Text>
+                {item.status === 'shipping' && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    {item.tracking && (
+                      <Text variant="caption" color="muted" style={{ fontSize: 12 }}>
+                        Tracking: {item.tracking}
+                      </Text>
+                    )}
+                    <Pressable
+                      onPress={() => act(item.id, 'deliver')}
+                      disabled={statusMutation.isPending}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        backgroundColor: '#363924',
+                        opacity: statusMutation.isPending ? 0.5 : 1,
+                      }}
+                    >
+                      <Text
+                        variant="caption"
+                        style={{ fontSize: 12, fontWeight: '600', color: '#E4CE9A' }}
+                      >
+                        {L('Yetkazildi', 'Доставлено', 'Delivered', 'تم التسليم')}
+                      </Text>
+                    </Pressable>
+                  </View>
                 )}
               </View>
             </View>

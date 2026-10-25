@@ -215,10 +215,14 @@ export default function CatalogScreen() {
       {/* Title */}
       <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
         <Text variant="displayLarge" color="oliveDeep">
-          {t(`catalog.${category === 'scarves' ? 'scarves' : 'dresses'}.title`)}
+          {t(`home.categories.${category}` as never, {
+            defaultValue: category,
+          })}
         </Text>
         <Text variant="bodySmall" color="muted" style={{ marginTop: 2 }}>
-          {t(`catalog.${category === 'scarves' ? 'scarves' : 'dresses'}.subtitle`)}
+          {t(`catalog.${category}.subtitle` as never, {
+            defaultValue: t('catalog.scarves.subtitle'),
+          })}
         </Text>
       </View>
 
