@@ -232,7 +232,7 @@ export default function CatalogScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, gap: 10 }}
       >
-        {(['scarves', 'dresses', 'shoes', 'bags', 'accessories'] as CategoryId[]).map((c) => {
+        {(['scarves', 'dresses', 'bags', 'accessories'] as CategoryId[]).map((c) => {
           const active = c === category;
           return (
             <Pressable
