@@ -534,7 +534,7 @@ export default function ProductScreen() {
             <Ionicons name="body-outline" size={20} color={colors.ink} />
             <Text
               variant="bodySmall"
-              style={{ fontSize: 14, fontWeight: '600', color: colors.oliveDeep }}
+              style={{ fontSize: 14, fontWeight: '600', color: colors.ink }}
             >
               Sinab ko'rish
             </Text>

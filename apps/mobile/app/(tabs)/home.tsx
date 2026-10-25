@@ -757,12 +757,12 @@ export default function HomeScreen() {
                         width: 32,
                         height: 32,
                         borderRadius: 16,
-                        backgroundColor: 'rgba(255,255,255,0.85)',
+                        backgroundColor: 'rgba(0,0,0,0.45)',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      <Ionicons name="heart-outline" size={16} color={colors.ink} />
+                      <Ionicons name="heart-outline" size={16} color="#fff" />
                     </Pressable>
                     {/* Try-on badge */}
                     <View

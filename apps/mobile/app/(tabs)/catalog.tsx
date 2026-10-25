@@ -550,12 +550,12 @@ function ProductCard({
             width: 30,
             height: 30,
             borderRadius: 15,
-            backgroundColor: 'rgba(255,255,255,0.8)',
+            backgroundColor: 'rgba(0,0,0,0.45)',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="heart-outline" size={16} color={colors.ink} />
+          <Ionicons name="heart-outline" size={16} color="#fff" />
         </Pressable>
         {/* TRY-ON Badge */}
         <View
