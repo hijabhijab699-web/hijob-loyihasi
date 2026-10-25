@@ -43,24 +43,28 @@ export const light = {
 } as const;
 
 export const dark = {
-  bg: '#1B1B14',
-  bgAlt: '#22221A',
+  bg: '#15150F',
+  bgAlt: '#1C1C14',
   surface: '#23231B',
   surfaceAlt: '#2D2C22',
   surface2: '#2D2C22',
-  surfaceGlass: 'rgba(35, 35, 27, 0.7)',
+  surfaceGlass: 'rgba(45, 44, 34, 0.7)',
 
   ink: '#F0EBDA',
   ink2: '#C9C3AE',
   text: '#F0EBDA',
-  muted: '#948E7E',
-  textMuted: '#948E7E',
+  muted: '#A8A290',
+  textMuted: '#A8A290',
 
-  olive: '#ABAF75',
-  oliveDark: '#C4C88C',
-  oliveDeep: '#DBDDA2',
-  oliveSoft: '#8A8D5B',
+  // Keep brand olive DARK even in dark mode — the UI uses oliveDeep as the
+  // background for primary buttons and chips and expects a dark fill. A
+  // light oliveDeep made every "Yangi mahsulot" / tier card wash out.
+  olive: '#8A8D5B',
+  oliveDark: '#5C5F3C',
+  oliveDeep: '#2E3024',
+  oliveSoft: '#B5B891',
 
+  // Gold stays warm so it keeps its "accent on dark" job.
   gold: '#E4CE9A',
   goldSoft: '#F1DFB2',
   goldDark: '#C9A96E',

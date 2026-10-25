@@ -47,6 +47,15 @@ export default function ChatScreen() {
     refetchInterval: 5000,
   });
 
+  // Pull the chat row from the chats list so the header can show the
+  // partner's name (shop brand for buyers, buyer name for sellers)
+  // without a dedicated detail endpoint.
+  const partnerQ = useQuery<{ id: string; partner: { name: string; avatarUrl: string | null; kind: 'buyer' | 'seller' } }>({
+    queryKey: ['chats'],
+    queryFn: async () => (await api.get('/chats')).data,
+    select: (list: any) => list?.find?.((c: any) => c.id === id) ?? null,
+  });
+
   const send = useMutation({
     mutationFn: async (body: string) => {
       const res = await api.post(`/chats/${id}/messages`, { body });
@@ -76,9 +85,25 @@ export default function ChatScreen() {
         >
           <Ionicons name="arrow-back" size={20} color={colors.ink} />
         </Pressable>
+        <View style={{
+          width: 36, height: 36, borderRadius: 18,
+          backgroundColor: colors.oliveDeep,
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Text style={{ color: colors.goldSoft, fontWeight: '700', fontSize: 14 }}>
+            {(partnerQ.data?.partner?.name ?? '?').slice(0, 1).toUpperCase()}
+          </Text>
+        </View>
         <View style={{ flex: 1 }}>
           <Text variant="body" color="ink" style={{ fontWeight: '600', fontSize: 15 }} numberOfLines={1}>
-            {isRu ? 'Чат' : 'Suhbat'}
+            {partnerQ.data?.partner?.name ?? (isRu ? 'Чат' : 'Suhbat')}
+          </Text>
+          <Text variant="caption" color="muted" style={{ fontSize: 11 }} numberOfLines={1}>
+            {partnerQ.data?.partner?.kind === 'seller'
+              ? (isRu ? 'Магазин' : "Do'kon")
+              : partnerQ.data?.partner?.kind === 'buyer'
+                ? (isRu ? 'Покупатель' : 'Mijoz')
+                : ''}
           </Text>
         </View>
       </View>
@@ -159,8 +184,12 @@ export default function ChatScreen() {
             disabled={!text.trim() || send.isPending}
             style={{
               width: 44, height: 44, borderRadius: 22,
-              backgroundColor: text.trim() && !send.isPending ? colors.oliveDeep : colors.rule,
+              // Always olive deep — don't fade into the surface. Opacity
+              // signals disabled, not a color change (that made the button
+              // invisible on dark mode with a cream rule color).
+              backgroundColor: colors.oliveDeep,
               alignItems: 'center', justifyContent: 'center',
+              opacity: text.trim() && !send.isPending ? 1 : 0.45,
             }}
           >
             {send.isPending ? (
