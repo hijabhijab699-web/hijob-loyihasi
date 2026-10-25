@@ -30,10 +30,11 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        // Dark mode: bright gold active + muted olive-gray inactive so
-        // the current tab is clearly brighter than the others.
+        // Dark mode: warm gold active + semi-transparent cream inactive —
+        // all tabs feel part of the same light family, the active one is
+        // simply saturated.
         tabBarActiveTintColor: scheme === 'dark' ? colors.gold : colors.goldDark,
-        tabBarInactiveTintColor: scheme === 'dark' ? '#6B6758' : colors.muted,
+        tabBarInactiveTintColor: scheme === 'dark' ? 'rgba(240,235,218,0.45)' : colors.muted,
         tabBarShowLabel: true,
         tabBarItemStyle: {
           paddingTop: 4,

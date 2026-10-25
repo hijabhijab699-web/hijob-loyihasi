@@ -15,7 +15,7 @@ export default function SellerTabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: scheme === 'dark' ? colors.gold : colors.oliveDeep,
-        tabBarInactiveTintColor: scheme === 'dark' ? '#6B6758' : colors.muted,
+        tabBarInactiveTintColor: scheme === 'dark' ? 'rgba(240,235,218,0.45)' : colors.muted,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.rule,
