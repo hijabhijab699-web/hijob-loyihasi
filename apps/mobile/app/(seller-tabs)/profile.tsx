@@ -50,6 +50,11 @@ export default function SellerProfileScreen() {
       route: '/seller/subscription',
     },
     {
+      label: L('Bannerlar', 'Баннеры', 'Banners', 'اللافتات'),
+      icon: 'image-outline',
+      route: '/seller/banners',
+    },
+    {
       label: L('Xabarlar', 'Сообщения', 'Messages', 'الرسائل'),
       icon: 'chatbubbles-outline',
       route: '/chats',

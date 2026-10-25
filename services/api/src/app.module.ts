@@ -27,6 +27,7 @@ import { ChatsModule } from './chats/chats.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { SettingsModule } from './settings/settings.module';
 import { AgentsModule } from './agents/agents.module';
+import { BannersModule } from './banners/banners.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { AgentsModule } from './agents/agents.module';
     SubscriptionsModule,
     SettingsModule,
     AgentsModule,
+    BannersModule,
   ],
 })
 export class AppModule {}

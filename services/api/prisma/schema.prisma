@@ -238,6 +238,54 @@ enum SubscriptionStatus {
   cancelled
 }
 
+// TZ: Banner templates admin uploads (background images). Sellers (paid)
+// pick one, write their own title + subtitle and optionally pin a product.
+model BannerTemplate {
+  id         String   @id @default(uuid()) @db.Uuid
+  bgUrl      String   @map("bg_url")
+  previewUrl String?  @map("preview_url")
+  nameUz     String?  @map("name_uz") @db.VarChar(80)
+  nameRu     String?  @map("name_ru") @db.VarChar(80)
+  // Default text colour on top of the bg: "light" (cream) or "dark"
+  // (olive). Seller UI uses this to render preview.
+  textStyle  String   @default("light") @map("text_style") @db.VarChar(16)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  banners SellerBanner[]
+
+  @@map("banner_templates")
+}
+
+model SellerBanner {
+  id          String   @id @default(uuid()) @db.Uuid
+  sellerId    String   @map("seller_id") @db.Uuid
+  templateId  String?  @map("template_id") @db.Uuid
+  // Alternative to templateId: seller uploads their own fully-designed
+  // banner image. One of (templateId, customImageUrl) must be set.
+  customImageUrl String? @map("custom_image_url")
+  title       String?  @db.VarChar(80)
+  subtitle    String?  @db.VarChar(160)
+  productId   String?  @map("product_id") @db.Uuid
+  ctaLabelUz  String?  @map("cta_label_uz") @db.VarChar(40)
+  ctaLabelRu  String?  @map("cta_label_ru") @db.VarChar(40)
+  isActive    Boolean  @default(false) @map("is_active")
+  // Admin moderation state so a fresh banner stays off the home page
+  // until an admin OKs it.
+  isApproved  Boolean  @default(false) @map("is_approved")
+  startAt     DateTime? @map("start_at")
+  endAt       DateTime? @map("end_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  seller   Seller          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  template BannerTemplate? @relation(fields: [templateId], references: [id])
+
+  @@index([sellerId, isActive])
+  @@index([isActive, isApproved, startAt])
+  @@map("seller_banners")
+}
+
 model SellerSubscription {
   id         String             @id @default(uuid()) @db.Uuid
   sellerId   String             @map("seller_id") @db.Uuid
@@ -407,6 +455,7 @@ model Seller {
   styleJobs      ProductStyleJob[]
   chats          Chat[]
   subscriptions  SellerSubscription[]
+  banners        SellerBanner[]
 
   @@map("sellers")
 }
