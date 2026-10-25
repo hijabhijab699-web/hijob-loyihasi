@@ -70,16 +70,18 @@ export async function initI18n() {
 export async function setLanguage(lang: SupportedLanguage) {
   await i18n.changeLanguage(lang);
   await AsyncStorage.setItem(STORAGE_KEY, lang).catch(() => {});
-  const needsReload = applyRtl(lang);
-  if (needsReload) {
-    // Soft reload if expo-updates is available; otherwise the next cold
-    // launch picks up the direction. Guarded so this still runs in
-    // development with no updates module installed.
-    try {
-      const updates = require('expo-updates');
-      await updates.reloadAsync?.();
-    } catch {}
-  }
+  // RTL change only takes real effect after a reload — but calling
+  // Updates.reloadAsync in development or on a build without expo-updates
+  // was crashing the app (user reported "ilovadan chiqib ketyabdi").
+  // Just flip the I18nManager flag; it comes into effect on next launch.
+  applyRtl(lang);
+}
+
+export function needsReloadForRtl(lang: string): boolean {
+  // Caller shows a "reopen the app" hint when switching to/from RTL,
+  // instead of us forcing a reload that may crash the shell.
+  const { I18nManager } = require('react-native');
+  return I18nManager.isRTL !== isRtl(lang);
 }
 
 export { i18n };

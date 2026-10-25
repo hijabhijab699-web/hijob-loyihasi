@@ -134,7 +134,14 @@
       "buttons": "بأزرار", "aLine": "A-line", "straight": "مستقيم", "ruffled": "بكشاكش", "abaya": "عباية"
     },
     "lengths": { "ankle": "حتى الكاحل", "midi": "ميدي", "maxi": "ماكسي" },
-    "sleeves": { "long": "طويل", "threeQuarter": "3/4", "sleeveless": "بدون أكمام" }
+    "sleeves": { "long": "طويل", "threeQuarter": "3/4", "sleeveless": "بدون أكمام" },
+    "bodyFit": {
+      "title": "لأي بنية جسم",
+      "all": "للجميع",
+      "slim": "نحيفة",
+      "regular": "متوسطة",
+      "plus": "ممتلئة"
+    }
   },
   "tryon": {
     "title": "جرّبي الإطلالة",

@@ -392,7 +392,7 @@ export default function CatalogScreen() {
           <View style={{ marginTop: 20 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text variant="titleSmall" color="ink">
-                {lang === 'ru' ? 'Для какого телосложения' : "Qanday jussa uchun"}
+                {t('catalog.bodyFit.title')}
               </Text>
               {bodyFit && (
                 <Pressable onPress={() => setBodyFit(null)}>
@@ -403,16 +403,12 @@ export default function CatalogScreen() {
               )}
             </View>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-              {([
-                { key: 'slim' as const, uz: "Ozg'iz / nozik", ru: 'Худощавое' },
-                { key: 'regular' as const, uz: "O'rtacha", ru: 'Среднее' },
-                { key: 'plus' as const, uz: "To'la / semiz", ru: 'Полное' },
-              ]).map((b) => {
-                const active = bodyFit === b.key;
+              {(['slim', 'regular', 'plus'] as const).map((key) => {
+                const active = bodyFit === key;
                 return (
                   <Pressable
-                    key={b.key}
-                    onPress={() => setBodyFit(active ? null : b.key)}
+                    key={key}
+                    onPress={() => setBodyFit(active ? null : key)}
                     style={{
                       flex: 1,
                       paddingVertical: 10,
@@ -431,7 +427,7 @@ export default function CatalogScreen() {
                         fontWeight: '600',
                       }}
                     >
-                      {lang === 'ru' ? b.ru : b.uz}
+                      {t(`catalog.bodyFit.${key}`)}
                     </Text>
                   </Pressable>
                 );

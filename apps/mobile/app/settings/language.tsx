@@ -1,11 +1,11 @@
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
-import { setLanguage } from '../../src/i18n/i18n';
+import { setLanguage, needsReloadForRtl } from '../../src/i18n/i18n';
 import { safeBack } from '../../src/lib/safe-back';
 
 const LANGUAGES = [
@@ -52,7 +52,19 @@ export default function LanguageScreen() {
               <Pressable
                 key={lang.code}
                 onPress={() => {
-                  setLanguage(lang.code);
+                  (async () => {
+                    const willNeedReload = needsReloadForRtl(lang.code);
+                    await setLanguage(lang.code);
+                    if (willNeedReload) {
+                      const hint = {
+                        uz: "Ilovani yopib qayta oching — arab tilida matn o'ngdan chapga yoziladi",
+                        ru: 'Закройте и откройте приложение заново — арабский текст идёт справа налево',
+                        en: 'Close and reopen the app — Arabic text runs right-to-left',
+                        ar: 'أغلق التطبيق وأعد فتحه — النص العربي يُكتب من اليمين إلى اليسار',
+                      };
+                      Alert.alert('⟲', hint[lang.code]);
+                    }
+                  })();
                 }}
                 style={{
                   flexDirection: 'row', alignItems: 'center', gap: 14,

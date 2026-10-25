@@ -167,6 +167,13 @@
       "long": "Uzun",
       "threeQuarter": "3/4",
       "sleeveless": "Yengsiz"
+    },
+    "bodyFit": {
+      "title": "Qanday jussa uchun",
+      "all": "Hamma uchun",
+      "slim": "Ozg'iz / nozik",
+      "regular": "O'rtacha",
+      "plus": "To'la / semiz"
     }
   },
   "tryon": {

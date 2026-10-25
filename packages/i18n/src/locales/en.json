@@ -134,7 +134,14 @@
       "buttons": "Buttoned", "aLine": "A-line", "straight": "Straight", "ruffled": "Ruffled", "abaya": "Abaya"
     },
     "lengths": { "ankle": "Ankle-length", "midi": "Midi", "maxi": "Maxi" },
-    "sleeves": { "long": "Long", "threeQuarter": "3/4", "sleeveless": "Sleeveless" }
+    "sleeves": { "long": "Long", "threeQuarter": "3/4", "sleeveless": "Sleeveless" },
+    "bodyFit": {
+      "title": "For what body type",
+      "all": "For everyone",
+      "slim": "Slim / petite",
+      "regular": "Average",
+      "plus": "Fuller / plus"
+    }
   },
   "tryon": {
     "title": "Try-on",
