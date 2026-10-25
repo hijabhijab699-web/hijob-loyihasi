@@ -18,21 +18,23 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.n2431.mobile",
+      "bundleIdentifier": "uz.hijab.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Kamera yuzingizni skanerdan o'tkazish va kiyimlarni kiyib ko'rish uchun kerak.",
+        "NSCameraUsageDescription": "24:31 real-time try-on uchun kameraga ruxsat so'raydi.",
         "NSPhotoLibraryUsageDescription": "Kutubxonaga faqat sizning ruxsatingiz bilan kirish."
       }
     },
     "android": {
-      "package": "app.n2431.mobile",
+      "package": "uz.hijab.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#8A8D5B"
       },
       "permissions": [
         "CAMERA",
-        "READ_EXTERNAL_STORAGE"
+        "READ_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -50,6 +52,12 @@
         }
       ],
       [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "24:31 do'kon lokatsiyasini belgilash va yaqin do'konlarni ko'rsatish uchun joylashuvni ishlatadi."
+        }
+      ],
+      [
         "react-native-vision-camera",
         {
           "cameraPermissionText": "24:31 real-time try-on uchun kameraga ruxsat so'raydi.",
@@ -63,9 +71,7 @@
             "deploymentTarget": "16.4"
           },
           "android": {
-            "compileSdkVersion": 36,
-            "targetSdkVersion": 36,
-            "buildToolsVersion": "36.0.0"
+            "kotlinVersion": "1.9.25"
           }
         }
       ],
@@ -84,7 +90,14 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "https://api.2431.uz/api/v1"
-    }
+      "apiUrl": "https://api.2431.uz/api/v1",
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "4ef75232-4085-433d-b613-6fb7e46092bb"
+      }
+    },
+    "owner": "umidjon_looksave_developer"
   }
 }

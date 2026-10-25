@@ -1,7 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CategoryId, Prisma, ProductStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CatalogFiltersDto } from './dto';
+import { CatalogFiltersDto, StoreFiltersDto } from './dto';
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 6371; // km
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
 
 @Injectable()
 export class CatalogService {
@@ -167,13 +178,28 @@ export class CatalogService {
     return this.toProductDto(product, renderedBySize, resultVariants);
   }
 
-  async listStores() {
-    // Show every seller for now — a `verified` filter made sense in prod
-    // (admin review flow) but blocks fresh self-registered sellers from
-    // seeing their own shop in the buyer catalog. The storefront UI
-    // separately shows a verified badge where appropriate.
-    return this.prisma.seller.findMany({
-      orderBy: [{ verified: 'desc' }, { rating: 'desc' }],
+  async listStores(filters: StoreFiltersDto = {}) {
+    const q = filters.q?.trim();
+    const where: Prisma.SellerWhereInput = {
+      ...(filters.country && { country: filters.country }),
+      ...(filters.city && { city: filters.city }),
+      ...(filters.district && { district: filters.district }),
+      ...(q && q.length >= 2 && {
+        brandName: { contains: q, mode: 'insensitive' },
+      }),
+    };
+
+    const sellers = await this.prisma.seller.findMany({
+      where,
+      // Premium > Top > verified > rating. `isTop` / `isPremium` were added
+      // in migration 20261024223900 with defaults false, so legacy rows sort
+      // last within each tier.
+      orderBy: [
+        { isPremium: 'desc' },
+        { isTop: 'desc' },
+        { verified: 'desc' },
+        { rating: 'desc' },
+      ],
       select: {
         id: true,
         brandName: true,
@@ -182,8 +208,180 @@ export class CatalogService {
         rating: true,
         reviewsCount: true,
         verified: true,
+        isTop: true,
+        isPremium: true,
+        country: true,
+        city: true,
+        district: true,
+        addressLine: true,
+        latitude: true,
+        longitude: true,
       },
     });
+
+    // Proximity-sort when coordinates are given. Haversine distance is cheap
+    // in JS for a few hundred rows; a DB-level solution needs postgis which
+    // isn't wired in yet. radiusKm defaults to 50.
+    if (filters.latitude !== undefined && filters.longitude !== undefined) {
+      const radiusKm = filters.radiusKm ?? 50;
+      const withDistance = sellers
+        .map((s) => {
+          const lat = s.latitude ? Number(s.latitude) : null;
+          const lng = s.longitude ? Number(s.longitude) : null;
+          const distanceKm =
+            lat !== null && lng !== null
+              ? haversineKm(filters.latitude!, filters.longitude!, lat, lng)
+              : null;
+          return { ...s, distanceKm };
+        })
+        .filter((s) => s.distanceKm !== null && s.distanceKm <= radiusKm)
+        .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+      return withDistance;
+    }
+
+    return sellers.map((s) => ({ ...s, distanceKm: null }));
+  }
+
+  async getStore(id: string) {
+    const seller = await this.prisma.seller.findUnique({
+      where: { id },
+      include: {
+        user: { select: { fullName: true, phone: true } },
+        _count: { select: { products: { where: { status: ProductStatus.published } } } },
+      },
+    });
+    if (!seller) throw new NotFoundException('STORE_NOT_FOUND');
+    // Category breakdown so the shop page can show "Ro'mollar 24 · Ko'ylaklar 12".
+    const byCategory = await this.prisma.product.groupBy({
+      by: ['categoryId'],
+      where: { sellerId: id, status: ProductStatus.published },
+      _count: true,
+    });
+    return {
+      id: seller.id,
+      brandName: seller.brandName,
+      ownerName: seller.user?.fullName ?? null,
+      phone: seller.user?.phone ?? null,
+      logoUrl: seller.logoUrl,
+      description: seller.description,
+      rating: Number(seller.rating),
+      reviewsCount: seller.reviewsCount,
+      verified: seller.verified,
+      isTop: seller.isTop,
+      isPremium: seller.isPremium,
+      country: seller.country,
+      city: seller.city,
+      district: seller.district,
+      addressLine: seller.addressLine,
+      latitude: seller.latitude ? Number(seller.latitude) : null,
+      longitude: seller.longitude ? Number(seller.longitude) : null,
+      productsCount: seller._count.products,
+      productsByCategory: byCategory.map((b) => ({ categoryId: b.categoryId, count: b._count })),
+      createdAt: seller.createdAt.toISOString(),
+    };
+  }
+
+  /**
+   * TZ Phase 4: Home shows products from the buyer's nearest stores. When
+   * (latitude, longitude) are provided, stores are ranked by proximity
+   * (Haversine) and up to `radiusKm` (default 50) are considered. Without
+   * coordinates we fall back to filtering by city + district, and finally
+   * to all published products if nothing is set.
+   */
+  async nearbyProducts(filters: StoreFiltersDto) {
+    const where: Prisma.SellerWhereInput = {
+      ...(filters.country && { country: filters.country }),
+      ...(filters.city && { city: filters.city }),
+      ...(filters.district && { district: filters.district }),
+    };
+
+    let sellerIds: string[] | null = null;
+    if (filters.latitude !== undefined && filters.longitude !== undefined) {
+      const radiusKm = filters.radiusKm ?? 50;
+      const geo = await this.prisma.seller.findMany({
+        where,
+        select: { id: true, latitude: true, longitude: true },
+      });
+      sellerIds = geo
+        .map((s) => ({
+          id: s.id,
+          d:
+            s.latitude != null && s.longitude != null
+              ? haversineKm(filters.latitude!, filters.longitude!, Number(s.latitude), Number(s.longitude))
+              : Infinity,
+        }))
+        .filter((s) => s.d <= radiusKm)
+        .sort((a, b) => a.d - b.d)
+        .slice(0, 20)
+        .map((s) => s.id);
+    } else if (filters.city || filters.district || filters.country) {
+      const nearby = await this.prisma.seller.findMany({
+        where,
+        select: { id: true },
+        take: 20,
+      });
+      sellerIds = nearby.map((s) => s.id);
+    }
+
+    const products = await this.prisma.product.findMany({
+      where: {
+        status: ProductStatus.published,
+        ...(sellerIds && sellerIds.length > 0 && { sellerId: { in: sellerIds } }),
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: 16,
+      include: {
+        variants: { take: 1 },
+        seller: { select: { brandName: true, logoUrl: true, rating: true, reviewsCount: true } },
+      },
+    });
+
+    return { items: products.map((p) => this.toProductDto(p)) };
+  }
+
+  /**
+   * TZ Phase 4: TOP + Premium stores shown as their own strip on the home
+   * screen. Premium always appears first and is visually distinct in the
+   * mobile client. Admin assigns both tiers through PATCH /admin/sellers/:id/tier.
+   */
+  async topStores() {
+    return this.prisma.seller.findMany({
+      where: { OR: [{ isPremium: true }, { isTop: true }] },
+      orderBy: [{ isPremium: 'desc' }, { isTop: 'desc' }, { rating: 'desc' }],
+      take: 12,
+      select: {
+        id: true,
+        brandName: true,
+        logoUrl: true,
+        description: true,
+        rating: true,
+        reviewsCount: true,
+        verified: true,
+        isTop: true,
+        isPremium: true,
+        city: true,
+        district: true,
+      },
+    });
+  }
+
+  async storeFilterOptions() {
+    const sellers = await this.prisma.seller.findMany({
+      select: { country: true, city: true, district: true },
+    });
+    const countries = new Set<string>();
+    const cities = new Set<string>();
+    const districts = new Set<string>();
+    for (const s of sellers) {
+      if (s.country) countries.add(s.country);
+      if (s.city) cities.add(s.city);
+      if (s.district) districts.add(s.district);
+    }
+    return {
+      countries: Array.from(countries).sort(),
+      cities: Array.from(cities).sort(),
+      districts: Array.from(districts).sort(),
+    };
   }
 
   private toProductDto = (
@@ -196,6 +394,7 @@ export class CatalogService {
       titleEn: string | null;
       basePriceUsd: Prisma.Decimal;
       coverUrl: string;
+      styledImageUrl?: string | null;
       gallery: string[];
       attributes: Prisma.JsonValue;
       createdAt: Date;
@@ -224,7 +423,13 @@ export class CatalogService {
     categoryId: p.categoryId,
     title: { ru: p.titleRu, uz: p.titleUz ?? p.titleRu, en: p.titleEn ?? p.titleRu },
     basePriceUsd: Number(p.basePriceUsd),
-    coverUrl: p.coverUrl,
+    // TZ §3.2 — kiyimlar maneken ustida ko'rinishi kerak. Prefer the
+    // ml-garment styled image (seller upload composited onto a studio
+    // mannequin) over the raw seller photo so cards always show the
+    // product worn, not laid flat on a table.
+    coverUrl: p.styledImageUrl ?? p.coverUrl,
+    rawCoverUrl: p.coverUrl,
+    styledImageUrl: p.styledImageUrl ?? null,
     gallery: p.gallery,
     attributes: p.attributes,
     createdAt: p.createdAt.toISOString(),

@@ -4,6 +4,8 @@ import {
   IsArray,
   IsIn,
   IsInt,
+  IsLatitude,
+  IsLongitude,
   IsNumber,
   IsObject,
   IsOptional,
@@ -60,8 +62,8 @@ export class CreateProductDto {
   @IsString()
   descriptionRu?: string;
 
-  @IsIn(['scarves', 'dresses', 'bags', 'accessories'])
-  categoryId!: 'scarves' | 'dresses' | 'bags' | 'accessories';
+  @IsIn(['scarves', 'dresses', 'shoes', 'bags', 'accessories'])
+  categoryId!: 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
 
   @IsNumber()
   @Min(1)
@@ -79,4 +81,48 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => VariantDto)
   variants!: VariantDto[];
+}
+
+export class UpdateSellerProfileDto {
+  @IsOptional()
+  @IsString()
+  @Length(1, 120)
+  brandName?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 2000)
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  logoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 80)
+  country?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 80)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 120)
+  district?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 300)
+  addressLine?: string;
+
+  @IsOptional()
+  @IsLatitude()
+  latitude?: number;
+
+  @IsOptional()
+  @IsLongitude()
+  longitude?: number;
 }

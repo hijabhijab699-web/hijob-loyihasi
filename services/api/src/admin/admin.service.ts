@@ -14,24 +14,100 @@ export class AdminService {
 
   /* ────── Dashboard ────── */
 
+  async listCategories() {
+    const [cats, counts] = await Promise.all([
+      this.prisma.category.findMany({ orderBy: { order: 'asc' } }),
+      this.prisma.product.groupBy({
+        by: ['categoryId'],
+        _count: true,
+      }),
+    ]);
+    const countMap = new Map(counts.map((c) => [c.categoryId, c._count]));
+    return cats.map((c) => ({
+      id: c.id,
+      nameUz: c.nameUz,
+      nameRu: c.nameRu,
+      nameEn: c.nameEn,
+      iconUrl: c.iconUrl,
+      coverUrl: c.coverUrl,
+      order: c.order,
+      productsCount: countMap.get(c.id) ?? 0,
+    }));
+  }
+
+  async updateCategory(
+    id: string,
+    patch: {
+      nameUz?: string;
+      nameRu?: string;
+      nameEn?: string;
+      iconUrl?: string | null;
+      coverUrl?: string | null;
+      order?: number;
+    },
+  ) {
+    const cat = await this.prisma.category.findUnique({ where: { id: id as any } });
+    if (!cat) throw new NotFoundException('CATEGORY_NOT_FOUND');
+    return this.prisma.category.update({
+      where: { id: id as any },
+      data: {
+        ...(patch.nameUz !== undefined && { nameUz: patch.nameUz }),
+        ...(patch.nameRu !== undefined && { nameRu: patch.nameRu }),
+        ...(patch.nameEn !== undefined && { nameEn: patch.nameEn }),
+        ...(patch.iconUrl !== undefined && { iconUrl: patch.iconUrl }),
+        ...(patch.coverUrl !== undefined && { coverUrl: patch.coverUrl }),
+        ...(patch.order !== undefined && { order: patch.order }),
+      },
+    });
+  }
+
   async dashboard() {
-    const [users, buyers, sellersTotal, sellersVerified, products, published, orders, pending] =
-      await Promise.all([
-        this.prisma.user.count(),
-        this.prisma.user.count({ where: { role: 'buyer' } }),
-        this.prisma.seller.count(),
-        this.prisma.seller.count({ where: { verified: true } }),
-        this.prisma.product.count(),
-        this.prisma.product.count({ where: { status: 'published' } }),
-        this.prisma.order.count(),
-        this.prisma.product.count({ where: { status: 'pending' } }),
-      ]);
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [
+      users,
+      buyers,
+      sellersTotal,
+      sellersVerified,
+      sellersPremium,
+      sellersTop,
+      products,
+      published,
+      pending,
+      orders,
+      ordersDay,
+      chats,
+      pendingSubs,
+      activeSubs,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.user.count({ where: { role: 'buyer' } }),
+      this.prisma.seller.count(),
+      this.prisma.seller.count({ where: { verified: true } }),
+      this.prisma.seller.count({ where: { isPremium: true } }),
+      this.prisma.seller.count({ where: { isTop: true } }),
+      this.prisma.product.count(),
+      this.prisma.product.count({ where: { status: 'published' } }),
+      this.prisma.product.count({ where: { status: 'pending' } }),
+      this.prisma.order.count(),
+      this.prisma.order.count({ where: { createdAt: { gte: dayAgo } } }),
+      this.prisma.chat.count(),
+      this.prisma.sellerSubscription.count({ where: { status: 'pending' } }),
+      this.prisma.sellerSubscription.count({ where: { status: 'active' } }),
+    ]);
 
     return {
       users: { total: users, buyers, sellers: sellersTotal },
-      sellers: { total: sellersTotal, verified: sellersVerified, pending: sellersTotal - sellersVerified },
+      sellers: {
+        total: sellersTotal,
+        verified: sellersVerified,
+        pending: sellersTotal - sellersVerified,
+        premium: sellersPremium,
+        top: sellersTop,
+      },
       products: { total: products, published, pendingReview: pending },
-      orders: { total: orders },
+      orders: { total: orders, last24h: ordersDay },
+      chats: { total: chats },
+      subscriptions: { pending: pendingSubs, active: activeSubs },
     };
   }
 
@@ -50,7 +126,11 @@ export class AdminService {
       brandName: s.brandName,
       logoUrl: s.logoUrl,
       verified: s.verified,
+      isTop: s.isTop,
+      isPremium: s.isPremium,
+      country: s.country,
       city: s.city,
+      district: s.district,
       rating: Number(s.rating),
       reviewsCount: s.reviewsCount,
       productsCount: s._count.products,
@@ -69,6 +149,22 @@ export class AdminService {
       where: { id: sellerId },
       data: { verified },
       select: { id: true, brandName: true, verified: true },
+    });
+  }
+
+  async setSellerTier(
+    sellerId: string,
+    patch: { isTop?: boolean; isPremium?: boolean },
+  ) {
+    const seller = await this.prisma.seller.findUnique({ where: { id: sellerId } });
+    if (!seller) throw new NotFoundException('SELLER_NOT_FOUND');
+    return this.prisma.seller.update({
+      where: { id: sellerId },
+      data: {
+        ...(patch.isTop !== undefined && { isTop: patch.isTop }),
+        ...(patch.isPremium !== undefined && { isPremium: patch.isPremium }),
+      },
+      select: { id: true, brandName: true, isTop: true, isPremium: true },
     });
   }
 
@@ -165,7 +261,7 @@ export class AdminService {
 
   /* ────── Users ────── */
 
-  async listUsers(role?: 'buyer' | 'seller' | 'admin' | 'moderator') {
+  async listUsers(role?: 'buyer' | 'seller' | 'admin' | 'moderator' | 'agent') {
     const users = await this.prisma.user.findMany({
       where: role ? { role } : undefined,
       select: {
@@ -183,6 +279,48 @@ export class AdminService {
       take: 200,
     });
     return users;
+  }
+
+  async listAgents() {
+    const rows = await this.prisma.user.findMany({
+      where: { role: 'agent' },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        username: true,
+        phone: true,
+        fullName: true,
+        isActive: true,
+        createdAt: true,
+        lastSeenAt: true,
+      },
+    });
+    const counts = await this.prisma.seller.groupBy({
+      by: ['onboardedByAgentId'],
+      _count: true,
+      where: { onboardedByAgentId: { not: null } },
+    });
+    const map = new Map(counts.map((c) => [c.onboardedByAgentId ?? '', c._count]));
+    return rows.map((r) => ({ ...r, shopsOnboarded: map.get(r.id) ?? 0 }));
+  }
+
+  async setUserRole(
+    userId: string,
+    role: 'buyer' | 'seller' | 'admin' | 'moderator' | 'agent',
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('USER_NOT_FOUND');
+    // Guard against orphaning: a user who runs a shop cannot be demoted
+    // from seller — the admin needs to delete the shop first.
+    if (user.role === 'seller' && role !== 'seller') {
+      const seller = await this.prisma.seller.findUnique({ where: { userId } });
+      if (seller) throw new BadRequestException('SELLER_HAS_SHOP');
+    }
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { role },
+      select: { id: true, username: true, role: true },
+    });
   }
 
   async banUser(userId: string, banned: boolean) {

@@ -1,10 +1,11 @@
 import { revalidatePath } from 'next/cache';
-import { Check, X, Ban, UserCheck } from 'lucide-react';
+import { Check, X, Ban, UserCheck, Star, Crown } from 'lucide-react';
 import {
   adminListSellers,
   adminVerifySeller,
   adminBanSeller,
   adminDeleteSeller,
+  adminSetSellerTier,
 } from '@/lib/api';
 import { ConfirmDelete } from '@/components/ConfirmDelete';
 
@@ -31,6 +32,22 @@ export default async function AdminSellersPage() {
     'use server';
     const id = String(formData.get('id'));
     await adminDeleteSeller(id);
+    revalidatePath('/sellers');
+  }
+
+  async function toggleTop(formData: FormData) {
+    'use server';
+    const id = String(formData.get('id'));
+    const isTop = String(formData.get('isTop')) === 'true';
+    await adminSetSellerTier(id, { isTop });
+    revalidatePath('/sellers');
+  }
+
+  async function togglePremium(formData: FormData) {
+    'use server';
+    const id = String(formData.get('id'));
+    const isPremium = String(formData.get('isPremium')) === 'true';
+    await adminSetSellerTier(id, { isPremium });
     revalidatePath('/sellers');
   }
 
@@ -80,6 +97,16 @@ export default async function AdminSellersPage() {
                       Kutmoqda
                     </span>
                   )}
+                  {s.isPremium && (
+                    <span className="inline-flex items-center gap-1 text-xs text-gold bg-gold/10 rounded-pill px-2 py-0.5">
+                      <Crown size={12} /> PREMIUM
+                    </span>
+                  )}
+                  {s.isTop && !s.isPremium && (
+                    <span className="inline-flex items-center gap-1 text-xs text-ink bg-ink/10 rounded-pill px-2 py-0.5">
+                      <Star size={12} /> TOP
+                    </span>
+                  )}
                   {!s.user.active && (
                     <span className="inline-flex items-center gap-1 text-xs text-danger bg-danger/10 rounded-pill px-2 py-0.5">
                       <Ban size={12} /> Bloklangan
@@ -101,6 +128,20 @@ export default async function AdminSellersPage() {
                       <button className="btn-secondary text-xs"><X size={12} /> Bekor qilish</button>
                     </form>
                   )}
+                  <form action={togglePremium} className="inline">
+                    <input type="hidden" name="id" value={s.id} />
+                    <input type="hidden" name="isPremium" value={s.isPremium ? 'false' : 'true'} />
+                    <button className="btn-secondary text-xs" title="Premium status">
+                      <Crown size={12} /> {s.isPremium ? 'Premium o\'chirish' : 'Premium qilish'}
+                    </button>
+                  </form>
+                  <form action={toggleTop} className="inline">
+                    <input type="hidden" name="id" value={s.id} />
+                    <input type="hidden" name="isTop" value={s.isTop ? 'false' : 'true'} />
+                    <button className="btn-secondary text-xs" title="TOP status">
+                      <Star size={12} /> {s.isTop ? 'TOP o\'chirish' : 'TOP qilish'}
+                    </button>
+                  </form>
                   <form action={toggleBan} className="inline">
                     <input type="hidden" name="id" value={s.id} />
                     <input type="hidden" name="banned" value={s.user.active ? 'true' : 'false'} />

@@ -63,8 +63,10 @@ const BASE_GRID_PROMPT = [
   '  • NO text, NO labels, NO rulers, NO watermarks drawn into the image.',
   '  • Output ONE OPAQUE image (JPEG or PNG without alpha), 1:1 or 4:5 aspect ratio. Do NOT use transparency.',
 ].join('\n');
-const PAUSE_MS = 8_000; // between tasks — don't trip rate limiting
-const IDLE_POLL_MS = 60_000; // when queue is empty
+const PAUSE_MS = 3_000; // between tasks — short so the queue drains fast
+const IDLE_POLL_MS = 3_000; // when queue is empty — poll every 3 s so new
+                            // style jobs start within seconds of being
+                            // enqueued by a seller, not up to a minute later
 const MAX_FAILS = 3;
 const COOLDOWN_MS = 10 * 60_000; // bad task shelved 10 min
 

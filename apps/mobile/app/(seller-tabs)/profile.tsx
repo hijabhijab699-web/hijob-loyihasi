@@ -40,7 +40,12 @@ export default function SellerProfileScreen() {
     {
       label: isRu ? 'Данные магазина' : "Do'kon ma'lumotlari",
       icon: 'storefront-outline',
-      route: '/settings/profile-details',
+      route: '/seller/shop-profile',
+    },
+    {
+      label: isRu ? 'Подписка' : 'Obuna',
+      icon: 'star-outline',
+      route: '/seller/subscription',
     },
     {
       label: isRu ? 'Платежные реквизиты' : "To'lov rekvizitlari",
@@ -51,6 +56,11 @@ export default function SellerProfileScreen() {
       label: isRu ? 'Доставка и выдача' : 'Yetkazib berish va topshirish',
       icon: 'car-outline',
       action: () => comingSoon(isRu ? 'Доставка и выдача' : 'Yetkazib berish'),
+    },
+    {
+      label: isRu ? 'Сообщения' : 'Xabarlar',
+      icon: 'chatbubbles-outline',
+      route: '/chats',
     },
     {
       label: isRu ? 'Уведомления' : 'Bildirishnomalar',

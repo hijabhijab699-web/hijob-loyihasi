@@ -23,6 +23,10 @@ import { StyleJobsModule } from './style-jobs/style-jobs.module';
 import { MannequinTemplatesModule } from './mannequin-templates/mannequin-templates.module';
 import { UserFaceRendersModule } from './user-face-renders/user-face-renders.module';
 import { AdsModule } from './ads/ads.module';
+import { ChatsModule } from './chats/chats.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { SettingsModule } from './settings/settings.module';
+import { AgentsModule } from './agents/agents.module';
 
 @Module({
   imports: [
@@ -56,6 +60,10 @@ import { AdsModule } from './ads/ads.module';
     MannequinTemplatesModule,
     UserFaceRendersModule,
     AdsModule,
+    ChatsModule,
+    SubscriptionsModule,
+    SettingsModule,
+    AgentsModule,
   ],
 })
 export class AppModule {}

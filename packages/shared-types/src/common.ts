@@ -1,4 +1,4 @@
-export type Language = 'uz' | 'ru' | 'en';
+export type Language = 'uz' | 'ru' | 'en' | 'ar';
 
 export type LocalizedString = Partial<Record<Language, string>> & { ru: string };
 

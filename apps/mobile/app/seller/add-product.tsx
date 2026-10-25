@@ -32,11 +32,12 @@ import { api } from '../../src/api/client';
 import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 import { safeBack } from '../../src/lib/safe-back';
 
-type CategoryId = 'scarves' | 'dresses' | 'bags' | 'accessories';
+type CategoryId = 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
 
 const CATEGORIES: Array<{ id: CategoryId; labelUz: string; labelRu: string }> = [
   { id: 'scarves', labelUz: "Ro'mollar / hijoblar", labelRu: 'Платки / хиджабы' },
   { id: 'dresses', labelUz: "Ko'ylaklar / abayalar", labelRu: 'Платья / абайи' },
+  { id: 'shoes', labelUz: 'Poyabzallar', labelRu: 'Обувь' },
   { id: 'bags', labelUz: 'Sumkalar', labelRu: 'Сумки' },
   { id: 'accessories', labelUz: 'Aksessuarlar', labelRu: 'Аксессуары' },
 ];
@@ -49,16 +50,24 @@ const COLOR_SWATCHES: Array<{ hex: string; label: string }> = [
   { hex: '#9A3C3C', label: 'Qizil' },
   { hex: '#2D3B5C', label: 'Ko\'k' },
   { hex: '#4B7A4B', label: 'Yashil' },
+  { hex: '#B5CDA3', label: 'Och yashil' },
   { hex: '#B38B4A', label: 'Oltin' },
   { hex: '#8E8E76', label: 'Zaytun' },
+  { hex: '#8F7E4F', label: 'Xaki' },
   { hex: '#D4C3A0', label: 'Qum' },
   { hex: '#B85C4A', label: 'Terakot' },
+  { hex: '#F5894A', label: 'Apelsin' },
+  { hex: '#E8B0B0', label: 'Pushti' },
   { hex: '#B097C6', label: 'Lavanda' },
+  { hex: '#8B5CF6', label: 'Binafsha' },
+  { hex: '#E8E3D4', label: 'Rang-barang' },
+  { hex: '#D4B86A', label: 'Noodatiy' },
 ];
 
 const SIZE_PRESETS: Record<CategoryId, string[]> = {
   scarves: ['one-size', '110x110', '140x140'],
   dresses: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+  shoes: ['35', '36', '37', '38', '39', '40', '41', '42'],
   bags: ['one-size'],
   accessories: ['one-size'],
 };

@@ -55,6 +55,46 @@ export class AdminController {
     return this.admin.deleteSeller(id);
   }
 
+  @Patch('sellers/:id/tier')
+  setSellerTier(
+    @Param('id') id: string,
+    @Body() body: { isTop?: boolean; isPremium?: boolean },
+  ) {
+    return this.admin.setSellerTier(id, {
+      isTop: body.isTop,
+      isPremium: body.isPremium,
+    });
+  }
+
+  /* ─ agents (TZ Phase 11) ─ */
+
+  @Get('agents')
+  listAgents() {
+    return this.admin.listAgents();
+  }
+
+  /* ─ categories ─ */
+
+  @Get('categories')
+  listCategories() {
+    return this.admin.listCategories();
+  }
+
+  @Patch('categories/:id')
+  updateCategory(
+    @Param('id') id: string,
+    @Body() body: {
+      nameUz?: string;
+      nameRu?: string;
+      nameEn?: string;
+      iconUrl?: string | null;
+      coverUrl?: string | null;
+      order?: number;
+    },
+  ) {
+    return this.admin.updateCategory(id, body);
+  }
+
   /* ─ products ─ */
 
   @Get('products')
@@ -85,6 +125,18 @@ export class AdminController {
     const allowed = ['buyer', 'seller', 'admin', 'moderator'];
     if (role && !allowed.includes(role)) throw new BadRequestException('INVALID_ROLE');
     return this.admin.listUsers(role as 'buyer' | 'seller' | 'admin' | 'moderator' | undefined);
+  }
+
+  @Patch('users/:id/role')
+  setUserRole(
+    @Param('id') id: string,
+    @Body() body: { role: 'buyer' | 'seller' | 'admin' | 'moderator' | 'agent' },
+  ) {
+    const allowed = ['buyer', 'seller', 'admin', 'moderator', 'agent'];
+    if (!allowed.includes(body?.role)) {
+      throw new BadRequestException('INVALID_ROLE');
+    }
+    return this.admin.setUserRole(id, body.role);
   }
 
   @Patch('users/:id/ban')

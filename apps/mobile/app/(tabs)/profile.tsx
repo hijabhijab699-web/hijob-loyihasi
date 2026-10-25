@@ -1,4 +1,4 @@
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -99,6 +99,13 @@ export default function ProfileScreen() {
       iconColor: '#B85450',
       iconBg: 'rgba(184,84,80,0.1)',
       route: '/wishlist',
+    },
+    {
+      label: lang === 'ru' ? 'Сообщения' : 'Xabarlar',
+      icon: 'chatbubbles-outline',
+      iconColor: '#8A8D5B',
+      iconBg: 'rgba(138,141,91,0.1)',
+      route: '/chats',
     },
     {
       label: L.myAddresses,
@@ -322,19 +329,24 @@ export default function ProfileScreen() {
               backgroundColor: colors.oliveDeep,
               alignItems: 'center',
               justifyContent: 'center',
+              overflow: 'hidden',
             }}
           >
-            <Text
-              variant="displayLarge"
-              style={{
-                fontFamily: theme.fontFamilies.display,
-                fontSize: 24,
-                fontWeight: '700',
-                color: colors.goldSoft,
-              }}
-            >
-              {user?.fullName?.slice(0, 1).toUpperCase() ?? 'U'}
-            </Text>
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+            ) : (
+              <Text
+                variant="displayLarge"
+                style={{
+                  fontFamily: theme.fontFamilies.display,
+                  fontSize: 24,
+                  fontWeight: '700',
+                  color: colors.goldSoft,
+                }}
+              >
+                {user?.fullName?.slice(0, 1).toUpperCase() ?? 'U'}
+              </Text>
+            )}
           </View>
           <View style={{ flex: 1 }}>
             <Text

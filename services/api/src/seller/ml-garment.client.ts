@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-export type GarmentCategory = 'scarves' | 'dresses' | 'bags' | 'accessories';
+export type GarmentCategory = 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
 
 export interface GarmentTemplateResponse {
   version: string;

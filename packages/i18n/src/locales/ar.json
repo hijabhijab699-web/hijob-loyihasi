@@ -1,0 +1,257 @@
+{
+  "common": {
+    "continue": "متابعة",
+    "back": "رجوع",
+    "next": "التالي",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "delete": "حذف",
+    "confirm": "تأكيد",
+    "loading": "جارٍ التحميل…",
+    "error": "حدث خطأ ما",
+    "retry": "إعادة المحاولة",
+    "seeAll": "عرض الكل",
+    "reset": "إعادة ضبط",
+    "apply": "تطبيق",
+    "search": "بحث"
+  },
+  "language": {
+    "russian": "Русский",
+    "uzbek": "O'zbekcha",
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "auth": {
+    "register": {
+      "title": "إنشاء حساب",
+      "subtitle": "أنشئ حسابًا لتبدأ التجربة الافتراضية والتسوق",
+      "name": "اسمك",
+      "usernamePlaceholder": "@username",
+      "usernameHint": "مثال: @diyor، @n2431",
+      "phone": "رقم الهاتف",
+      "roleQuestion": "من أنت؟",
+      "roleBuyer": "مشترٍ",
+      "roleSeller": "بائع",
+      "password": "كلمة المرور",
+      "passwordConfirm": "تأكيد كلمة المرور",
+      "submit": "تسجيل",
+      "or": "أو",
+      "google": "Google",
+      "apple": "Apple",
+      "facebook": "Facebook",
+      "terms": "بالتسجيل فإنك توافق على",
+      "termsLink": "شروط الخدمة",
+      "termsAnd": "و",
+      "privacyLink": "سياسة الخصوصية",
+      "haveAccount": "لديك حساب بالفعل؟",
+      "login": "تسجيل الدخول"
+    },
+    "login": {
+      "title": "تسجيل الدخول",
+      "subtitle": "مرحبًا بعودتك",
+      "identifier": "الهاتف أو @username",
+      "password": "كلمة المرور",
+      "forgotPassword": "نسيت كلمة المرور؟",
+      "submit": "تسجيل الدخول",
+      "noAccount": "ليس لديك حساب؟",
+      "signUp": "إنشاء حساب"
+    },
+    "otp": {
+      "title": "أدخل الرمز",
+      "subtitle": "أرسلنا الرمز إلى",
+      "resend": "إعادة الإرسال",
+      "resendIn": "إعادة الإرسال بعد {{seconds}} ث"
+    }
+  },
+  "onboarding": {
+    "face": {
+      "title": "ضع وجهك داخل الإطار",
+      "subtitle": "انظر مباشرة إلى الكاميرا",
+      "safe": "آمن",
+      "safeDesc": "بياناتك محمية",
+      "onlyApp": "للاستخدام داخل التطبيق فقط",
+      "onlyAppDesc": "الصورة تُحفظ على جهازك",
+      "private": "خاص",
+      "privateDesc": "لن نشارك الصورة مع أي طرف ثالث",
+      "capture": "التقاط",
+      "retake": "إعادة الالتقاط",
+      "step": "الخطوة {{step}} من {{total}}",
+      "front": "أمامي",
+      "left": "يسار",
+      "right": "يمين"
+    },
+    "body": {
+      "title": "أدخل مقاساتك",
+      "subtitle": "هذا يساعدنا على اختيار الفساتين والحجاب بدقة أكبر",
+      "height": "طولك",
+      "heightUnit": "سم",
+      "weight": "وزنك",
+      "weightUnit": "كغ",
+      "age": "عمرك",
+      "ageUnit": "سنة",
+      "preferredSize": "مقاس الملابس المفضّل"
+    }
+  },
+  "home": {
+    "stores": "متاجر جديدة",
+    "allStores": "كل المتاجر",
+    "categories": {
+      "scarves": "طرحات",
+      "dresses": "فساتين",
+      "bags": "حقائب",
+      "accessories": "إكسسوارات"
+    },
+    "newArrivals": "الجديد"
+  },
+  "catalog": {
+    "scarves": { "title": "طرحات", "subtitle": "اعثري على إطلالتك المثالية" },
+    "dresses": { "title": "فساتين", "subtitle": "الاحتشام في كل تفصيلة" },
+    "filters": "الفلاتر",
+    "sort": {
+      "popularity": "الأكثر شيوعًا",
+      "priceLow": "الأرخص أولًا",
+      "priceHigh": "الأغلى أولًا",
+      "new": "الأحدث أولًا"
+    },
+    "color": "اللون",
+    "scarfModel": "نوع الطرحة",
+    "dressCut": "قصّة الفستان",
+    "size": "المقاس",
+    "length": "الطول",
+    "sleeve": "الكمّ",
+    "all": "الكل",
+    "colors": {
+      "yellow": "أصفر", "white": "أبيض", "beige": "بيج", "pink": "وردي",
+      "gray": "رمادي", "green": "أخضر", "blue": "أزرق", "black": "أسود",
+      "brown": "بني", "burgundy": "عنابي", "multi": "متعدد الألوان", "unusual": "غير اعتيادي"
+    },
+    "scarfModels": {
+      "classical": "كلاسيكي", "withCap": "مع قبعة (2 في 1)", "withUnder": "مع تحت الحجاب",
+      "long": "طويل", "short": "قصير", "cape": "عباءة", "turban": "تربان"
+    },
+    "dressCuts": {
+      "classical": "كلاسيكي", "loose": "واسع", "belted": "بحزام",
+      "buttons": "بأزرار", "aLine": "A-line", "straight": "مستقيم", "ruffled": "بكشاكش", "abaya": "عباية"
+    },
+    "lengths": { "ankle": "حتى الكاحل", "midi": "ميدي", "maxi": "ماكسي" },
+    "sleeves": { "long": "طويل", "threeQuarter": "3/4", "sleeveless": "بدون أكمام" }
+  },
+  "tryon": {
+    "title": "جرّبي الإطلالة",
+    "tyingStyle": "طريقة الربط",
+    "styles": { "classical": "كلاسيكي", "loose": "واسع", "double": "مزدوج" },
+    "changeCamera": "تبديل الكاميرا",
+    "lighting": "الإضاءة",
+    "reset": "إعادة ضبط",
+    "addToCart": "أضف إلى السلة",
+    "outfit": "التجربة الافتراضية"
+  },
+  "cart": {
+    "title": "السلة",
+    "empty": "السلة فارغة",
+    "emptyAction": "تصفّحي المنتجات",
+    "brand": "الماركة",
+    "color": "اللون",
+    "size": "المقاس",
+    "delivery": {
+      "title": "طريقة الاستلام",
+      "details": "التفاصيل",
+      "courier": "توصيل",
+      "courierDesc": "عبر مندوب التوصيل إلى عنوانك",
+      "pickup": "استلام من المتجر",
+      "pickupDesc": "استلمي من المتجر",
+      "proba": "تجربة قبل الشراء",
+      "probaDesc": "جرّبي قبل أن تقرري",
+      "probaNote": "تدفعين تكلفة التوصيل فقط",
+      "today": "اليوم",
+      "tomorrow": "غدًا",
+      "scheduled": "في وقت محدد",
+      "scheduledDesc": "اختاري التاريخ والوقت"
+    },
+    "address": { "title": "عنوان التوصيل", "change": "تغيير" },
+    "comment": "ملاحظة للبائع (اختياري)",
+    "summary": {
+      "items": "المنتجات ({{count}})",
+      "delivery": "التوصيل ({{when}})",
+      "total": "الإجمالي"
+    },
+    "payment": { "title": "طريقة الدفع" },
+    "checkout": "الدفع"
+  },
+  "wishlist": {
+    "title": "المفضلة",
+    "empty": "ستظهر المنتجات التي أعجبتك هنا"
+  },
+  "profile": {
+    "title": "الملف الشخصي",
+    "orders": "طلباتي",
+    "addresses": "العناوين",
+    "measurements": "مقاساتي",
+    "faceTemplate": "بيانات الوجه",
+    "notifications": "الإشعارات",
+    "language": "اللغة",
+    "support": "المساعدة",
+    "logout": "تسجيل الخروج",
+    "switchToSeller": "التحويل إلى وضع البائع"
+  },
+  "tabs": {
+    "home": "الرئيسية",
+    "catalog": "الكتالوج",
+    "tryon": "التجربة",
+    "wishlist": "المفضلة",
+    "cart": "السلة",
+    "profile": "الملف"
+  },
+  "seller": {
+    "tabs": { "dashboard": "الرئيسية", "products": "المنتجات", "orders": "الطلبات", "analytics": "الإحصاءات" },
+    "dashboard": {
+      "title": "الرئيسية",
+      "quickActions": "إجراءات سريعة",
+      "stats": {
+        "totalProducts": "إجمالي المنتجات",
+        "activeOrders": "الطلبات النشطة",
+        "revenue": "الإيرادات",
+        "tryOnCount": "التجارب"
+      },
+      "actions": {
+        "addProduct": "إضافة منتج",
+        "viewOrders": "الطلبات",
+        "viewStats": "الإحصاءات"
+      }
+    },
+    "products": {
+      "title": "المنتجات",
+      "add": "إضافة",
+      "empty": "لا توجد منتجات بعد",
+      "variants": "متغير",
+      "stock": "المخزون",
+      "status": { "all": "الكل", "live": "منشور", "draft": "مسودة", "pending": "قيد المراجعة" }
+    },
+    "orders": {
+      "title": "الطلبات",
+      "empty": "لا توجد طلبات بعد",
+      "accept": "قبول",
+      "reject": "رفض",
+      "status": { "new": "جديد", "preparing": "قيد التجهيز", "shipping": "في الطريق", "delivered": "تم التسليم" }
+    },
+    "analytics": {
+      "title": "الإحصاءات",
+      "revenue": "الإيرادات",
+      "topProducts": "الأكثر تجربة",
+      "period": { "today": "اليوم", "week": "الأسبوع", "month": "الشهر", "year": "السنة" },
+      "metrics": { "orders": "الطلبات", "tryOns": "التجارب", "conversion": "التحويل", "avgCheck": "متوسط الطلب" }
+    },
+    "profile": {
+      "currentMode": "الوضع الحالي",
+      "buyerMode": "مشترٍ",
+      "sellerMode": "بائع",
+      "menu": {
+        "storeInfo": "معلومات المتجر",
+        "payment": "إعدادات الدفع",
+        "delivery": "التوصيل",
+        "notifications": "الإشعارات",
+        "settings": "الإعدادات"
+      }
+    }
+  }
+}

@@ -107,9 +107,63 @@ export async function me(): Promise<AuthUser | null> {
 
 export interface AdminDashboard {
   users: { total: number; buyers: number; sellers: number };
-  sellers: { total: number; verified: number; pending: number };
+  sellers: { total: number; verified: number; pending: number; premium?: number; top?: number };
   products: { total: number; published: number; pendingReview: number };
-  orders: { total: number };
+  orders: { total: number; last24h?: number };
+  chats?: { total: number };
+  subscriptions?: { pending: number; active: number };
+}
+
+export interface AdminCategory {
+  id: string;
+  nameUz: string;
+  nameRu: string;
+  nameEn: string;
+  iconUrl: string | null;
+  coverUrl: string | null;
+  order: number;
+  productsCount: number;
+}
+
+export async function adminListCategories() {
+  return request<AdminCategory[]>('/admin/categories');
+}
+
+export async function adminUpdateCategory(
+  id: string,
+  patch: Partial<Pick<AdminCategory, 'nameUz' | 'nameRu' | 'nameEn' | 'iconUrl' | 'coverUrl' | 'order'>>,
+) {
+  return request<AdminCategory>(`/admin/categories/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+// ─── Agents (TZ Phase 11) ──────────────────────────────────────
+
+export interface AdminAgent {
+  id: string;
+  username: string;
+  phone: string;
+  fullName: string | null;
+  isActive: boolean;
+  createdAt: string;
+  lastSeenAt: string | null;
+  shopsOnboarded: number;
+}
+
+export async function adminListAgents() {
+  return request<AdminAgent[]>('/admin/agents');
+}
+
+export async function adminSetUserRole(
+  id: string,
+  role: 'buyer' | 'seller' | 'admin' | 'moderator' | 'agent',
+) {
+  return request<{ id: string; username: string; role: string }>(
+    `/admin/users/${id}/role`,
+    { method: 'PATCH', body: JSON.stringify({ role }) },
+  );
 }
 
 export interface AdminSeller {
@@ -117,7 +171,11 @@ export interface AdminSeller {
   brandName: string;
   logoUrl: string | null;
   verified: boolean;
+  isTop: boolean;
+  isPremium: boolean;
+  country: string | null;
   city: string | null;
+  district: string | null;
   rating: number;
   reviewsCount: number;
   productsCount: number;
@@ -190,6 +248,62 @@ export async function adminDeleteSeller(id: string) {
     `/admin/sellers/${id}`,
     { method: 'DELETE' },
   );
+}
+
+export async function adminSetSellerTier(
+  id: string,
+  patch: { isTop?: boolean; isPremium?: boolean },
+) {
+  return request<{ id: string; brandName: string; isTop: boolean; isPremium: boolean }>(
+    `/admin/sellers/${id}/tier`,
+    { method: 'PATCH', body: JSON.stringify(patch) },
+  );
+}
+
+export interface AdminSubscription {
+  id: string;
+  sellerId: string;
+  brandName: string;
+  phone: string;
+  plan: 'monthly' | 'halfyear' | 'yearly';
+  status: 'pending' | 'active' | 'expired' | 'cancelled';
+  priceUsd: number;
+  priceUzs: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  createdAt: string;
+}
+
+export async function adminListSubscriptions(status?: string) {
+  const query = status ? `?status=${status}` : '';
+  return request<AdminSubscription[]>(`/admin/subscriptions${query}`);
+}
+
+export async function adminActivateSubscription(id: string, priceUzs?: string) {
+  return request<AdminSubscription>(`/admin/subscriptions/${id}/activate`, {
+    method: 'PATCH',
+    body: JSON.stringify(priceUzs ? { priceUzs } : {}),
+  });
+}
+
+export async function adminCancelSubscription(id: string) {
+  return request<AdminSubscription>(`/admin/subscriptions/${id}/cancel`, {
+    method: 'PATCH',
+    body: JSON.stringify({}),
+  });
+}
+
+// ─── Settings (TZ Phase 8) ─────────────────────────────────────
+
+export async function adminGetRate() {
+  return request<{ usdToUzsRate: number }>(`/settings/rate`);
+}
+
+export async function adminSetRate(rate: number) {
+  return request<{ usdToUzsRate: number; updatedAt: string }>(`/admin/settings/rate`, {
+    method: 'PATCH',
+    body: JSON.stringify({ rate }),
+  });
 }
 
 export async function adminListProducts(status?: string) {

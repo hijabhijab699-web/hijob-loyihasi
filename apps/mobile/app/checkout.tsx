@@ -22,6 +22,7 @@ import { useTheme } from '../src/theme/ThemeProvider';
 import { api } from '../src/api/client';
 import { errorMessage, errorTitle } from '../src/lib/api-errors';
 import { safeBack } from '../src/lib/safe-back';
+import { formatUsdAsUzs, formatUzs, useUzsRate, usdToUzs } from '../src/lib/currency';
 
 // Backend contracts (/cart, /addresses, /orders/checkout).
 interface CartItem {
@@ -50,7 +51,7 @@ interface Address {
   isDefault: boolean;
 }
 
-type DeliveryType = 'delivery' | 'pickup' | 'proba';
+type DeliveryType = 'delivery' | 'pickup' | 'proba' | 'reserve' | 'hold';
 
 // There is no in-app payment anymore — the seller contacts the buyer after
 // the order lands. The backend contract still wants a paymentMethod enum,
@@ -61,6 +62,8 @@ const DELIVERY_FEES: Record<DeliveryType, number> = {
   delivery: 5,
   pickup: 0,
   proba: 5,
+  reserve: 0,
+  hold: 0,
 };
 
 export default function CheckoutScreen() {
@@ -104,6 +107,7 @@ export default function CheckoutScreen() {
   }, [addressesQ.data, addressId]);
 
   const items = cartQ.data?.items ?? [];
+  const uzsRate = useUzsRate();
   const subtotal = cartQ.data?.subtotalUsd ?? 0;
   const deliveryFee = DELIVERY_FEES[deliveryType];
   const total = subtotal + deliveryFee;
@@ -122,7 +126,12 @@ export default function CheckoutScreen() {
         items: checkoutItems,
         addressId,
         deliveryType,
-        deliverySpeed: deliveryType === 'pickup' ? undefined : 'tomorrow',
+        // Pickup / Reserve / Hold have no "speed" — the seller agrees the
+        // handover time with the buyer in chat afterwards.
+        deliverySpeed:
+          deliveryType === 'pickup' || deliveryType === 'reserve' || deliveryType === 'hold'
+            ? undefined
+            : 'tomorrow',
         paymentMethod: DEFAULT_PAYMENT_METHOD,
         comment: comment.trim() || undefined,
       });
@@ -259,11 +268,15 @@ export default function CheckoutScreen() {
           <SectionLabel>{isRu ? 'Способ доставки' : 'Yetkazish usuli'}</SectionLabel>
           <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
             <View style={{ backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.rule, overflow: 'hidden' }}>
-              {([
-                { id: 'delivery' as const, label: 'Kuryer', sub: `1-2 kun · $${DELIVERY_FEES.delivery}`, icon: 'bicycle-outline' as const },
-                { id: 'pickup' as const, label: 'Olib ketish', sub: 'Do\'kondan · bepul', icon: 'storefront-outline' as const },
-                { id: 'proba' as const, label: 'Proba (kiyib ko\'rish)', sub: `Kuryer kelsin · $${DELIVERY_FEES.proba}`, icon: 'shirt-outline' as const },
-              ]).map((m, i) => {
+              {(() => {
+                const items = [
+                  { id: 'delivery' as const, label: isRu ? 'Курьер' : 'Kuryer', sub: isRu ? `1-2 дня · $${DELIVERY_FEES.delivery}` : `1-2 kun · $${DELIVERY_FEES.delivery}`, icon: 'bicycle-outline' as const },
+                  { id: 'pickup' as const, label: isRu ? 'Самовывоз' : 'Olib ketish', sub: isRu ? 'Из магазина · бесплатно' : 'Do\'kondan · bepul', icon: 'storefront-outline' as const },
+                  { id: 'proba' as const, label: isRu ? 'Проба (примерка)' : 'Proba (kiyib ko\'rish)', sub: isRu ? `Курьер · $${DELIVERY_FEES.proba}` : `Kuryer kelsin · $${DELIVERY_FEES.proba}`, icon: 'shirt-outline' as const },
+                  { id: 'reserve' as const, label: isRu ? 'Бронь' : 'Bron qilish', sub: isRu ? 'Магазин свяжется' : 'Do\'kon bog\'lanadi · bepul', icon: 'bookmark-outline' as const },
+                  { id: 'hold' as const, label: isRu ? 'Отложить' : 'Saqlab turish', sub: isRu ? 'Магазин свяжется' : 'Muddat kelishiladi · bepul', icon: 'time-outline' as const },
+                ];
+                return items.map((m, i) => {
                 const selected = deliveryType === m.id;
                 return (
                   <Pressable
@@ -272,7 +285,7 @@ export default function CheckoutScreen() {
                     style={{
                       flexDirection: 'row', alignItems: 'center', gap: 12,
                       padding: 14, paddingHorizontal: 16,
-                      borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: colors.rule,
+                      borderBottomWidth: i < items.length - 1 ? 1 : 0, borderBottomColor: colors.rule,
                       backgroundColor: selected ? 'rgba(54,57,36,0.04)' : 'transparent',
                     }}
                   >
@@ -295,7 +308,8 @@ export default function CheckoutScreen() {
                     </View>
                   </Pressable>
                 );
-              })}
+                });
+              })()}
             </View>
           </View>
 
@@ -343,7 +357,7 @@ export default function CheckoutScreen() {
                         {item.color} · {item.size}
                       </Text>
                       <Text variant="bodySmall" color="oliveDeep" style={{ fontSize: 13, fontWeight: '600', marginTop: 4 }}>
-                        ${item.priceUsd.toFixed(2)}
+                        {formatUsdAsUzs(item.priceUsd, uzsRate)}
                       </Text>
                     </View>
                     <View style={{ backgroundColor: 'rgba(54,57,36,0.06)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
@@ -378,16 +392,16 @@ export default function CheckoutScreen() {
           {/* Summary */}
           <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
             <View style={{ backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.rule, padding: 16 }}>
-              <Row label="Mahsulotlar" value={`$${subtotal.toFixed(2)}`} />
+              <Row label={isRu ? 'Товары' : 'Mahsulotlar'} value={formatUsdAsUzs(subtotal, uzsRate)} />
               <Row
                 label="Yetkazish"
-                value={deliveryFee === 0 ? 'Bepul' : `$${deliveryFee.toFixed(2)}`}
+                value={deliveryFee === 0 ? (isRu ? 'Бесплатно' : 'Bepul') : formatUsdAsUzs(deliveryFee, uzsRate)}
                 accent={deliveryFee === 0 ? colors.success : undefined}
               />
               <View style={{ height: 1, backgroundColor: colors.rule, marginVertical: 10 }} />
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <Text variant="body" color="oliveDeep" style={{ fontSize: 15, fontWeight: '700' }}>Jami</Text>
-                <Text variant="body" color="oliveDeep" style={{ fontSize: 15, fontWeight: '700' }}>${total.toFixed(2)}</Text>
+                <Text variant="body" color="oliveDeep" style={{ fontSize: 15, fontWeight: '700' }}>{formatUsdAsUzs(total, uzsRate)}</Text>
               </View>
             </View>
           </View>
@@ -421,7 +435,7 @@ export default function CheckoutScreen() {
                   <>
                     <Ionicons name="checkmark-circle" size={20} color={colors.goldSoft} />
                     <Text variant="body" style={{ fontSize: 15, fontWeight: '700', color: colors.goldSoft, fontFamily: theme.fontFamilies.display }}>
-                      {isRu ? 'Отправить заказ' : "Buyurtma yuborish"} · ${total.toFixed(2)}
+                      {isRu ? 'Отправить заказ' : "Buyurtma yuborish"} · {formatUsdAsUzs(total, uzsRate)}
                     </Text>
                   </>
                 )}

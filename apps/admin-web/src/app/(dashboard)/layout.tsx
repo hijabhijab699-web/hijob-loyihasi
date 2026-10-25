@@ -1,16 +1,20 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, UserCog, Package, Users, ShoppingCart, LogOut, Sparkles, Megaphone } from 'lucide-react';
+import { LayoutDashboard, UserCog, Package, Users, ShoppingCart, LogOut, Sparkles, Megaphone, CreditCard, Settings, Tags, Briefcase } from 'lucide-react';
 import { me, logout } from '@/lib/api';
 
 const NAV = [
   { href: '/', label: 'Umumiy', icon: LayoutDashboard },
   { href: '/sellers', label: 'Sotuvchilar', icon: UserCog },
+  { href: '/agents', label: 'Agentlar', icon: Briefcase },
+  { href: '/subscriptions', label: 'Obunalar', icon: CreditCard },
   { href: '/products', label: 'Mahsulotlar', icon: Package },
+  { href: '/categories', label: 'Kategoriyalar', icon: Tags },
   { href: '/ads', label: 'Reklama', icon: Megaphone },
   { href: '/dev-ai', label: 'Dev AI panel', icon: Sparkles },
   { href: '/users', label: 'Foydalanuvchilar', icon: Users },
   { href: '/orders', label: 'Buyurtmalar', icon: ShoppingCart },
+  { href: '/settings', label: 'Sozlamalar', icon: Settings },
 ] as const;
 
 // Auth gate for every admin page. Non-admin/moderator tokens are logged out

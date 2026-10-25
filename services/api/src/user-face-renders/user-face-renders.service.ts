@@ -77,18 +77,40 @@ export class UserFaceRendersService {
       this.prisma.userFaceRenderJob.deleteMany({ where: { userId } }),
     ]);
 
-    // The face stamp used by the overlay pipeline is derived from the
-    // FIRST facefusion result (not straight from the selfie) — that
-    // result has GFPGAN already blended into the hijab opening at the
-    // right angle, so dropping it onto every other variant looks
-    // natural. Wipe the previous stamp (both cache and disk) so the
-    // next queued job builds a fresh one on the new selfie.
+    // Wipe the previous stamp (both cache and disk).
     this.faceStampCache.delete(userId);
     void this.deleteStoredStamp(userId).catch((err) =>
       this.logger.warn(
         `could not clear old face stamp for ${userId}: ${(err as Error).message}`,
       ),
     );
+
+    // Phase 2 (TZ §4) — face preservation: build the stamp from the user's
+    // ACTUAL selfie right now, not from a later facefusion result. This
+    // guarantees the face identity (eyes, nose, lips, skin tone, jawline)
+    // is the user's own on every variant from the very first render,
+    // instead of being a facefusion-warped version of it. The slow
+    // facefusion only runs when the selfie-derived stamp cannot be built
+    // (e.g. no face detected on the selfie).
+    try {
+      const stamp = await this.compositor.composeFaceStamp(selfie.buffer);
+      this.faceStampCache.set(userId, stamp);
+      await this.storage.save(
+        `tryon/stamps/${userId}`,
+        stamp,
+        'image/png',
+        'stamp.png',
+      );
+      this.logger.log(
+        `face stamp pre-built from selfie for user ${userId} (${stamp.length} B)`,
+      );
+    } catch (err) {
+      // Not fatal — the worker will fall back to facefusion on the first
+      // variant and build the stamp from that result (legacy path).
+      this.logger.warn(
+        `selfie-direct stamp build failed for ${userId}: ${(err as Error).message}; worker will fall back to facefusion`,
+      );
+    }
 
     const queued = await this.enqueueAll(userId, { sellerId: opts.sellerId ?? null });
 

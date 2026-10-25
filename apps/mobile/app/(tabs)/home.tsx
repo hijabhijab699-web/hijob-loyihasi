@@ -37,7 +37,8 @@ const STORE_COLORS = ['#C9A96E', '#8A8D5B', '#B85450', '#5F7A94', '#D9A24B'];
 const CATEGORY_DATA = [
   { id: 'scarves', image: require('../../assets/category-ipak.webp') },
   { id: 'dresses', image: require('../../assets/category-shoyi.webp') },
-  { id: 'bags', image: require('../../assets/category-pashmina.webp') },
+  { id: 'shoes', image: require('../../assets/category-pashmina.webp') },
+  { id: 'bags', image: require('../../assets/category-shifon.webp') },
   { id: 'accessories', image: require('../../assets/category-shifon.webp') },
 ] as const;
 
@@ -186,7 +187,31 @@ export default function HomeScreen() {
   });
 
   const stores = data?.stores ?? [];
-  const arrivals = data?.newArrivals ?? [];
+
+  // TZ Phase 4: swap the "Yangi kelgan kiyimlar" strip for products from the
+  // buyer's nearest stores. Falls back to the home-feed newArrivals when the
+  // nearby endpoint has nothing (first run / no sellers nearby).
+  const nearbyQuery = useQuery<{ items: typeof data extends { newArrivals: infer A } ? A : never[] }>({
+    queryKey: ['home-nearby'],
+    queryFn: async () => (await api.get('/catalog/nearby-products')).data,
+  });
+  const arrivals = (nearbyQuery.data?.items?.length ? nearbyQuery.data.items : data?.newArrivals) ?? [];
+
+  const topStoresQuery = useQuery<Array<{
+    id: string;
+    brandName: string;
+    logoUrl: string | null;
+    rating: number;
+    reviewsCount: number;
+    verified: boolean;
+    isTop: boolean;
+    isPremium: boolean;
+    city: string | null;
+  }>>({
+    queryKey: ['home-top-stores'],
+    queryFn: async () => (await api.get('/catalog/top-stores')).data,
+  });
+  const topStores = topStoresQuery.data ?? [];
 
   // Backend offline / token invalid — tell the user instead of leaving them
   // with an empty "Welcome" shell and no visible stores or arrivals.
@@ -404,7 +429,7 @@ export default function HomeScreen() {
               {t('home.stores')}
             </Text>
             <Pressable
-              onPress={() => router.push('/(tabs)/catalog')}
+              onPress={() => router.push('/stores')}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
             >
               <Text variant="caption" color="gold" style={{ fontWeight: '600' }}>
@@ -425,7 +450,7 @@ export default function HomeScreen() {
                 <Pressable
                   key={store.id}
                   onPress={() =>
-                    router.push({ pathname: '/(tabs)/catalog', params: { seller: store.id } })
+                    router.push({ pathname: '/shop/[id]', params: { id: store.id } })
                   }
                   style={{ alignItems: 'center', gap: 6, width: 72 }}
                 >
@@ -577,7 +602,88 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        {/* ── New Arrivals ── */}
+        {/* ── TOP + Premium stores strip (TZ Phase 4) ── */}
+        {topStores.length > 0 && (
+          <View style={{ marginTop: 24 }}>
+            <View style={{ paddingHorizontal: SIDE, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="star" size={16} color={colors.gold} />
+                <Text variant="titleMedium" color="oliveDeep" style={{ fontSize: 18 }}>
+                  {lang === 'ru' ? 'Избранные магазины' : "Tanlangan do'konlar"}
+                </Text>
+              </View>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: SIDE, paddingTop: 12, gap: 10 }}
+            >
+              {topStores.map((s) => {
+                const premium = s.isPremium;
+                return (
+                  <Pressable
+                    key={s.id}
+                    onPress={() => router.push({ pathname: '/shop/[id]', params: { id: s.id } })}
+                    style={{
+                      width: 180,
+                      padding: 14,
+                      borderRadius: 18,
+                      borderWidth: premium ? 2 : 1,
+                      borderColor: premium ? colors.gold : colors.rule,
+                      backgroundColor: premium ? colors.oliveDeep : colors.surface,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={{
+                        width: 44, height: 44, borderRadius: 22,
+                        backgroundColor: premium ? colors.gold : colors.oliveDeep,
+                        alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden',
+                      }}>
+                        <Text variant="displayLarge" style={{ fontFamily: theme.fontFamilies.display, fontSize: 18, color: premium ? colors.oliveDeep : colors.goldSoft, fontWeight: '700' }}>
+                          {s.brandName.slice(0, 1).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text variant="caption" style={{
+                            fontSize: 9,
+                            fontWeight: '800',
+                            letterSpacing: 1,
+                            color: premium ? colors.gold : colors.oliveDeep,
+                          }}>
+                            {premium ? 'PREMIUM' : 'TOP'}
+                          </Text>
+                        </View>
+                        <Text numberOfLines={1} variant="body" style={{
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: premium ? colors.goldSoft : colors.ink,
+                          marginTop: 2,
+                        }}>
+                          {s.brandName}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 }}>
+                      <Ionicons name="star" size={11} color={colors.gold} />
+                      <Text variant="caption" style={{ fontSize: 11, color: premium ? 'rgba(245,241,232,0.7)' : colors.muted }}>
+                        {s.rating.toFixed(1)} · {s.reviewsCount}
+                      </Text>
+                      {s.city && (
+                        <Text variant="caption" style={{ fontSize: 11, color: premium ? 'rgba(245,241,232,0.5)' : colors.muted }}>
+                          · {s.city}
+                        </Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ── Nearby products (replaces New Arrivals, TZ Phase 4) ── */}
         <View style={{ marginTop: 28 }}>
           <View
             style={{
@@ -588,7 +694,7 @@ export default function HomeScreen() {
             }}
           >
             <Text variant="titleMedium" color="oliveDeep" style={{ fontSize: 18 }}>
-              {t('home.newArrivals')}
+              {lang === 'ru' ? 'Магазины рядом' : "Yaqin atrofdagi do'konlar"}
             </Text>
             <Pressable
               onPress={() => router.push('/(tabs)/catalog')}

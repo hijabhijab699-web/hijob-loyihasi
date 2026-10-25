@@ -1,6 +1,6 @@
 import type { LocalizedString, Paginated } from './common';
 
-export type CategoryId = 'scarves' | 'dresses' | 'bags' | 'accessories';
+export type CategoryId = 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
 
 export type ScarfModel =
   | 'classical'

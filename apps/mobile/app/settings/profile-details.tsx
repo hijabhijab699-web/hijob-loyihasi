@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -16,6 +17,7 @@ interface Me {
   username: string;
   phone: string;
   fullName: string | null;
+  avatarUrl: string | null;
   role: string;
   language: 'uz' | 'ru' | 'en';
 }
@@ -75,6 +77,39 @@ export default function ProfileDetailsScreen() {
     onError: (e: any) => Alert.alert(errorTitle(), errorMessage(e)),
   });
 
+  const uploadAvatar = useMutation({
+    mutationFn: async (uri: string) => {
+      const form = new FormData();
+      const name = uri.split('/').pop() || 'avatar.jpg';
+      const type = /\.png$/i.test(name) ? 'image/png' : 'image/jpeg';
+      form.append('avatar', { uri, name, type } as any);
+      await api.post('/users/me/avatar', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['me'] });
+      await refreshMe();
+    },
+    onError: (e: any) => Alert.alert(errorTitle(), errorMessage(e)),
+  });
+
+  async function pickAvatar() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Ruxsat kerak', 'Rasm tanlash uchun galereyaga ruxsat bering');
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (res.canceled || !res.assets?.[0]?.uri) return;
+    uploadAvatar.mutate(res.assets[0].uri);
+  }
+
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
@@ -101,14 +136,44 @@ export default function ProfileDetailsScreen() {
         ) : (
           <>
             <View style={{ alignItems: 'center', marginBottom: 28 }}>
-              <View style={{
-                width: 90, height: 90, borderRadius: 45,
-                backgroundColor: 'rgba(138,141,91,0.12)',
-                alignItems: 'center', justifyContent: 'center',
-                borderWidth: 2, borderColor: colors.goldSoft,
-              }}>
-                <Ionicons name="person" size={36} color={colors.olive} />
-              </View>
+              <Pressable
+                onPress={pickAvatar}
+                disabled={uploadAvatar.isPending}
+                style={{
+                  width: 108, height: 108, borderRadius: 54,
+                  backgroundColor: 'rgba(138,141,91,0.12)',
+                  alignItems: 'center', justifyContent: 'center',
+                  borderWidth: 2, borderColor: colors.goldSoft,
+                  overflow: 'hidden',
+                }}
+              >
+                {data.avatarUrl ? (
+                  <Image source={{ uri: data.avatarUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                ) : (
+                  <Ionicons name="person" size={44} color={colors.olive} />
+                )}
+                {uploadAvatar.isPending && (
+                  <View style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.35)',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <ActivityIndicator color="#fff" />
+                  </View>
+                )}
+                <View style={{
+                  position: 'absolute', right: 4, bottom: 4,
+                  width: 30, height: 30, borderRadius: 15,
+                  backgroundColor: colors.oliveDeep,
+                  alignItems: 'center', justifyContent: 'center',
+                  borderWidth: 2, borderColor: colors.surface,
+                }}>
+                  <Ionicons name="camera" size={14} color={colors.surface} />
+                </View>
+              </Pressable>
+              <Text variant="caption" color="muted" style={{ marginTop: 10, fontSize: 11 }}>
+                Rasm o'zgartirish uchun bosing
+              </Text>
             </View>
 
             <View style={{ paddingHorizontal: 20 }}>

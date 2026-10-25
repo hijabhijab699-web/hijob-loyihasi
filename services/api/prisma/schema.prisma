@@ -17,12 +17,14 @@ enum UserRole {
   seller
   admin
   moderator
+  agent
 }
 
 enum Language {
   uz
   ru
   en
+  ar
 }
 
 enum ClothingSize {
@@ -51,6 +53,7 @@ enum ProductStatus {
 enum CategoryId {
   scarves
   dresses
+  shoes
   bags
   accessories
 }
@@ -59,6 +62,8 @@ enum DeliveryType {
   delivery
   pickup
   proba
+  reserve
+  hold
 }
 
 enum DeliverySpeed {
@@ -101,6 +106,7 @@ model User {
   username      String   @unique @db.VarChar(32)
   phone         String   @unique @db.VarChar(20)
   fullName      String?  @map("full_name") @db.VarChar(120)
+  avatarUrl     String?  @map("avatar_url")
   role          UserRole @default(buyer)
   passwordHash  String   @map("password_hash")
   language      Language @default(ru)
@@ -141,8 +147,111 @@ model User {
   refreshTokens RefreshToken[]
   pushTokens    PushToken[]
   notifications Notification[]
+  chatsAsBuyer  Chat[] @relation("buyer_chats")
+  chatMessages  ChatMessage[]
 
   @@map("users")
+}
+
+// TZ Phase 5.2 — chats between a buyer and a seller shop. One chat per
+// (buyerUserId, sellerId) pair; messages are kept forever (no auto-prune)
+// so both sides see the whole history on re-open.
+model Chat {
+  id             String   @id @default(uuid()) @db.Uuid
+  buyerUserId    String   @map("buyer_user_id") @db.Uuid
+  sellerId       String   @map("seller_id") @db.Uuid
+  lastMessageAt  DateTime @default(now()) @map("last_message_at")
+  buyerUnread    Int      @default(0) @map("buyer_unread")
+  sellerUnread   Int      @default(0) @map("seller_unread")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  buyer    User          @relation("buyer_chats", fields: [buyerUserId], references: [id], onDelete: Cascade)
+  seller   Seller        @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@unique([buyerUserId, sellerId])
+  @@index([buyerUserId, lastMessageAt])
+  @@index([sellerId, lastMessageAt])
+  @@map("chats")
+}
+
+enum ChatMessageKind {
+  text
+  product
+  payment_link
+  receipt
+}
+
+model ChatMessage {
+  id        String          @id @default(uuid()) @db.Uuid
+  chatId    String          @map("chat_id") @db.Uuid
+  senderId  String          @map("sender_id") @db.Uuid
+  kind      ChatMessageKind @default(text)
+  body      String
+  // Rich payload (product id, price, payment link URL, …) rendered by the
+  // mobile client based on `kind`. Null for plain text messages.
+  payload   Json?
+  readAt    DateTime?       @map("read_at")
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, createdAt])
+  @@map("chat_messages")
+}
+
+// TZ Phase 8 — single-row app settings. Admin changes the USD→UZS rate
+// here; every price-returning endpoint uses it to compute UZS alongside the
+// stored USD values. Singleton: `id` is pinned to the string "singleton".
+model AppSettings {
+  id              String   @id @default("singleton")
+  // How many Uzbek som one USD buys. Admin updates it from the admin panel
+  // whenever the Central Bank rate moves meaningfully. Decimal keeps the
+  // rounding sane without BigInt in JS.
+  usdToUzsRate    Decimal  @default(12500) @map("usd_to_uzs_rate") @db.Decimal(12, 2)
+  updatedBy       String?  @map("updated_by") @db.Uuid
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+// TZ Phase 7 — seller subscription plans. Admin activates each after the
+// seller pays off-platform; the sellers UI shows pending/active/expired.
+enum SubscriptionPlan {
+  monthly
+  halfyear
+  yearly
+}
+
+enum SubscriptionStatus {
+  pending
+  active
+  expired
+  cancelled
+}
+
+model SellerSubscription {
+  id         String             @id @default(uuid()) @db.Uuid
+  sellerId   String             @map("seller_id") @db.Uuid
+  plan       SubscriptionPlan
+  status     SubscriptionStatus @default(pending)
+  priceUsd   Int                @map("price_usd")
+  // Price in Uzbek som captured at purchase time so the receipt stays
+  // stable even after the USD→UZS rate drifts.
+  priceUzs   BigInt?            @map("price_uzs")
+  startAt    DateTime?          @map("start_at")
+  endAt      DateTime?          @map("end_at")
+  activatedBy String?           @map("activated_by") @db.Uuid
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+
+  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId, status])
+  @@index([status, endAt])
+  @@map("seller_subscriptions")
 }
 
 enum NotificationKind {
@@ -273,16 +382,25 @@ model Seller {
   description   String?
   rating        Decimal  @default(0) @db.Decimal(3, 2)
   reviewsCount  Int      @default(0) @map("reviews_count")
+  country       String?  @default("Uzbekistan")
   city          String?
+  district      String?
   addressLine   String?  @map("address_line")
   latitude      Decimal? @db.Decimal(9, 6)
   longitude     Decimal? @db.Decimal(9, 6)
   verified      Boolean  @default(false)
+  isTop         Boolean  @default(false) @map("is_top")
+  isPremium     Boolean  @default(false) @map("is_premium")
+  // TZ Phase 11 — who onboarded this shop. Null for self-signups; set to
+  // the agent user id when an agent walked the owner through registration.
+  onboardedByAgentId String?  @map("onboarded_by_agent_id") @db.Uuid
   createdAt     DateTime @default(now()) @map("created_at")
 
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products  Product[]
-  styleJobs ProductStyleJob[]
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products       Product[]
+  styleJobs      ProductStyleJob[]
+  chats          Chat[]
+  subscriptions  SellerSubscription[]
 
   @@map("sellers")
 }

@@ -1,20 +1,31 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckoutDto } from './dto';
 import { DeliveryType, DeliverySpeed, PaymentMethod } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PushService } from '../push/push.service';
+import { SettingsService } from '../settings/settings.service';
 
 const DELIVERY_FEES: Record<DeliveryType, Record<DeliverySpeed | 'default', number>> = {
   delivery: { today: 5, tomorrow: 3, scheduled: 4, default: 5 },
   pickup: { today: 0, tomorrow: 0, scheduled: 0, default: 0 },
   proba: { today: 5, tomorrow: 5, scheduled: 5, default: 5 },
+  // Bron qilish / Saqlab turish: fizik yetkazib berish bo'lmaganligi
+  // uchun bepul, do'konchi narx/muddat va yetkazib berish chat orqali
+  // kelishib oladi.
+  reserve: { today: 0, tomorrow: 0, scheduled: 0, default: 0 },
+  hold: { today: 0, tomorrow: 0, scheduled: 0, default: 0 },
 };
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly push: PushService,
+    private readonly settings: SettingsService,
   ) {}
 
   async checkout(userId: string, dto: CheckoutDto) {
@@ -27,7 +38,15 @@ export class OrdersService {
       const variantIds = dto.items.map((i) => i.variantId);
       const variants = await tx.productVariant.findMany({
         where: { id: { in: variantIds } },
-        include: { product: { select: { titleRu: true, coverUrl: true } } },
+        include: {
+          product: {
+            select: {
+              titleRu: true,
+              coverUrl: true,
+              seller: { select: { id: true, userId: true, brandName: true } },
+            },
+          },
+        },
       });
 
       if (variants.length !== dto.items.length) {
@@ -95,11 +114,31 @@ export class OrdersService {
         where: { userId, variantId: { in: variantIds } },
       });
 
+      // Collect distinct seller user ids so the post-tx hook can notify
+      // every shop whose variant is in this order. One notification per
+      // seller user, even if the buyer bought several items from them.
+      const sellerUserIds = Array.from(
+        new Set(
+          variants
+            .map((v) => v.product.seller?.userId)
+            .filter((v): v is string => !!v),
+        ),
+      );
+      const sellerBrand =
+        variants[0]?.product.seller?.brandName ?? '';
+
+      // TZ Phase 8 — snapshot the UZS total at order time so the receipt
+      // never drifts after admin changes the rate.
+      const uzsTotal = await this.settings.toUzs(total);
+
       const result = {
         orderId: order.id,
         totalUsd: total,
+        totalUzs: uzsTotal,
         // TODO: integrate Payme/Click. For MVP return placeholder.
         paymentUrl: `https://payme.dev/checkout/${order.id}`,
+        sellerUserIds,
+        sellerBrand,
       };
       return result;
     }).then(async (result) => {
@@ -114,7 +153,42 @@ export class OrdersService {
           data: { orderId: result.orderId, kind: 'created' },
         })
         .catch(() => undefined);
-      return result;
+
+      // TZ Phase 5.1 — notify each seller whose variant is in this order:
+      // in-app inbox row + Expo push to any registered device of theirs.
+      // Failures here never roll back the buyer's order.
+      const orderShort = `#${result.orderId.slice(0, 8).toUpperCase()}`;
+      await Promise.all(
+        result.sellerUserIds.map(async (sellerUserId) => {
+          try {
+            await this.notifications.create({
+              userId: sellerUserId,
+              kind: 'order_update',
+              title: 'Yangi buyurtma',
+              body: `${orderShort} — $${result.totalUsd.toFixed(2)}`,
+              data: { orderId: result.orderId, kind: 'seller_new' },
+            });
+            await this.push.sendToUser(
+              sellerUserId,
+              'Yangi buyurtma',
+              `${orderShort} — $${result.totalUsd.toFixed(2)} savatga tushdi`,
+              { orderId: result.orderId, kind: 'seller_new' },
+            );
+          } catch (err) {
+            this.logger.warn(
+              `seller notification failed for ${sellerUserId}: ${(err as Error).message}`,
+            );
+          }
+        }),
+      );
+
+      // Caller only cares about the buyer-facing fields.
+      return {
+        orderId: result.orderId,
+        totalUsd: result.totalUsd,
+        totalUzs: result.totalUzs,
+        paymentUrl: result.paymentUrl,
+      };
     });
   }
 

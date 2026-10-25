@@ -8,6 +8,7 @@ import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 import { safeBack } from '../../src/lib/safe-back';
+import { formatUsdAsUzs, useUzsRate } from '../../src/lib/currency';
 
 interface ProductDetail {
   id: string;
@@ -45,6 +46,7 @@ export default function ProductScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
   const qc = useQueryClient();
+  const uzsRate = useUzsRate();
 
   const { data, isLoading, isError, refetch } = useQuery<ProductDetail>({
     queryKey: ['product', id],
@@ -315,7 +317,7 @@ export default function ProductScreen() {
                 marginBottom: 16,
               }}
             >
-              ${product.basePriceUsd}
+              {formatUsdAsUzs(product.basePriceUsd, uzsRate)}
             </Text>
 
             {/* Divider */}

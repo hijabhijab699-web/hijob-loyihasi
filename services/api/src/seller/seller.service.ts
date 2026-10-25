@@ -290,6 +290,42 @@ export class SellerService {
     }
   }
 
+  // Seller accepts / rejects / advances an order. We only let the seller
+  // touch orders that contain at least one of their own line items, and
+  // we only allow transitions that make sense for the seller side of the
+  // flow (buyers handle payment/cancel elsewhere).
+  async setOrderStatus(
+    userId: string,
+    orderId: string,
+    action: 'accept' | 'reject' | 'ship' | 'deliver',
+  ) {
+    const seller = await this.requireSeller(userId);
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        items: { some: { variant: { product: { sellerId: seller.id } } } },
+      },
+      select: { id: true, orderStatus: true },
+    });
+    if (!order) throw new NotFoundException('ORDER_NOT_FOUND');
+    const nextStatus = {
+      accept: 'confirmed',
+      reject: 'cancelled',
+      ship: 'shipped',
+      deliver: 'delivered',
+    }[action];
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: { orderStatus: nextStatus as any },
+      select: { id: true, orderStatus: true },
+    });
+    return {
+      id: updated.id,
+      orderStatus: updated.orderStatus,
+      status: this.mapOrderStatus(updated.orderStatus),
+    };
+  }
+
   async listProducts(userId: string) {
     const seller = await this.requireSeller(userId);
     const rows = await this.prisma.product.findMany({
@@ -365,6 +401,73 @@ export class SellerService {
     );
 
     return { id: created.id };
+  }
+
+  async getProfile(userId: string) {
+    const seller = await this.requireSeller(userId);
+    return {
+      id: seller.id,
+      brandName: seller.brandName,
+      logoUrl: seller.logoUrl,
+      description: seller.description,
+      country: seller.country,
+      city: seller.city,
+      district: seller.district,
+      addressLine: seller.addressLine,
+      latitude: seller.latitude ? Number(seller.latitude) : null,
+      longitude: seller.longitude ? Number(seller.longitude) : null,
+      verified: seller.verified,
+      isTop: seller.isTop,
+      isPremium: seller.isPremium,
+      rating: Number(seller.rating),
+      reviewsCount: seller.reviewsCount,
+    };
+  }
+
+  async updateProfile(
+    userId: string,
+    dto: {
+      brandName?: string;
+      description?: string;
+      logoUrl?: string;
+      country?: string;
+      city?: string;
+      district?: string;
+      addressLine?: string;
+      latitude?: number;
+      longitude?: number;
+    },
+  ) {
+    const seller = await this.requireSeller(userId);
+    const updated = await this.prisma.seller.update({
+      where: { id: seller.id },
+      data: {
+        ...(dto.brandName !== undefined && { brandName: dto.brandName }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
+        ...(dto.country !== undefined && { country: dto.country }),
+        ...(dto.city !== undefined && { city: dto.city }),
+        ...(dto.district !== undefined && { district: dto.district }),
+        ...(dto.addressLine !== undefined && { addressLine: dto.addressLine }),
+        ...(dto.latitude !== undefined && { latitude: dto.latitude }),
+        ...(dto.longitude !== undefined && { longitude: dto.longitude }),
+      },
+    });
+    return {
+      id: updated.id,
+      brandName: updated.brandName,
+      logoUrl: updated.logoUrl,
+      description: updated.description,
+      country: updated.country,
+      city: updated.city,
+      district: updated.district,
+      addressLine: updated.addressLine,
+      latitude: updated.latitude ? Number(updated.latitude) : null,
+      longitude: updated.longitude ? Number(updated.longitude) : null,
+      verified: updated.verified,
+      isTop: updated.isTop,
+      isPremium: updated.isPremium,
+    };
   }
 
   async submit(userId: string, productId: string) {

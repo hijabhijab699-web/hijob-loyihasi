@@ -11,13 +11,17 @@ import { safeBack } from '../../src/lib/safe-back';
 const LANGUAGES = [
   { code: 'uz', label: "O'zbekcha", short: 'UZ' },
   { code: 'ru', label: 'Русский', short: 'RU' },
+  { code: 'en', label: 'English', short: 'EN' },
+  { code: 'ar', label: 'العربية', short: 'AR' },
 ] as const;
+
+type Lang = (typeof LANGUAGES)[number]['code'];
 
 export default function LanguageScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
   const { i18n } = useTranslation();
-  const selected = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru';
+  const selected = (i18n.language?.slice(0, 2) ?? 'uz') as Lang;
 
   return (
     <Screen>
@@ -33,13 +37,13 @@ export default function LanguageScreen() {
           <Ionicons name="arrow-back" size={18} color={colors.ink} />
         </Pressable>
         <Text variant="displayLarge" color="oliveDeep" style={{ fontSize: 22, fontWeight: '700', fontFamily: theme.fontFamilies.display }}>
-          {selected === 'ru' ? 'Язык' : 'Til'}
+          {{ uz: 'Til', ru: 'Язык', en: 'Language', ar: 'اللغة' }[selected]}
         </Text>
       </View>
 
       <View style={{ paddingHorizontal: 20 }}>
         <Text variant="caption" color="muted" style={{ fontSize: 11, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, paddingLeft: 4 }}>
-          {selected === 'ru' ? 'Язык приложения' : 'Ilova tili'}
+          {{ uz: 'Ilova tili', ru: 'Язык приложения', en: 'App language', ar: 'لغة التطبيق' }[selected]}
         </Text>
         <View style={{ backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.rule, overflow: 'hidden' }}>
           {LANGUAGES.map((lang, i) => {

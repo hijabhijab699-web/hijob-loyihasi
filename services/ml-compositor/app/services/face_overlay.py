@@ -172,8 +172,27 @@ def apply_face_stamp(
     tx1, ty1, tx2, ty2 = face.bbox.astype(int)
     tw = tx2 - tx1
     th = ty2 - ty1
-    tcx = (tx1 + tx2) // 2
-    tcy = (ty1 + ty2) // 2
+
+    # Anchor on the eye midpoint (landmark[0..1]: left eye, right eye)
+    # instead of the raw bbox centre: the bbox drifts a few px on each
+    # detection pass because the detector hugs cheeks/chin differently
+    # across mannequins, while the eye line is a stable face landmark.
+    # A stable anchor keeps the user's face landing at the SAME spot on
+    # every variant, so the identity does not visibly shift between swaps.
+    kps = getattr(face, "kps", None) if hasattr(face, "kps") else None
+    if kps is not None and len(kps) >= 2:
+        left_eye = kps[0]
+        right_eye = kps[1]
+        eye_cx = float(left_eye[0] + right_eye[0]) / 2.0
+        eye_cy = float(left_eye[1] + right_eye[1]) / 2.0
+        # Face centre sits ~55% down from the eye line (eyes → chin is
+        # longer than eyes → crown). Shift the anchor down by 20% of the
+        # bbox height so the oval mask stays over the face, not forehead.
+        tcx = int(eye_cx)
+        tcy = int(eye_cy + th * 0.20)
+    else:
+        tcx = (tx1 + tx2) // 2
+        tcy = (ty1 + ty2) // 2
 
     sh, sw = stamp_rgba.shape[:2]
     # Pick the uniform scale that fits BOTH the width and the height of

@@ -31,8 +31,8 @@ export class CheckoutDto {
   @Type(() => CheckoutItemDto)
   items!: CheckoutItemDto[];
 
-  @IsIn(['delivery', 'pickup', 'proba'])
-  deliveryType!: 'delivery' | 'pickup' | 'proba';
+  @IsIn(['delivery', 'pickup', 'proba', 'reserve', 'hold'])
+  deliveryType!: 'delivery' | 'pickup' | 'proba' | 'reserve' | 'hold';
 
   @IsOptional()
   @IsIn(['today', 'tomorrow', 'scheduled'])

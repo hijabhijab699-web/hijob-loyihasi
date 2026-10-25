@@ -13,6 +13,7 @@ import { safeBack } from '../src/lib/safe-back';
 const POPULAR = [
   { id: 'scarves', labelUz: "Ro'mollar", labelRu: 'Платки', icon: 'ribbon-outline' as const },
   { id: 'dresses', labelUz: "Ko'ylaklar", labelRu: 'Платья', icon: 'shirt-outline' as const },
+  { id: 'shoes', labelUz: 'Poyabzallar', labelRu: 'Обувь', icon: 'footsteps-outline' as const },
   { id: 'bags', labelUz: 'Sumkalar', labelRu: 'Сумки', icon: 'bag-handle-outline' as const },
   { id: 'accessories', labelUz: 'Aksessuarlar', labelRu: 'Аксессуары', icon: 'diamond-outline' as const },
 ];

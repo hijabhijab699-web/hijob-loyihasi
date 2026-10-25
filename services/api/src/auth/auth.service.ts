@@ -182,6 +182,7 @@ export class AuthService {
     username: string;
     phone: string;
     fullName: string | null;
+    avatarUrl?: string | null;
     role: string;
     language: string;
     createdAt: Date;
@@ -193,6 +194,7 @@ export class AuthService {
       username: user.username,
       phone: user.phone,
       fullName: user.fullName,
+      avatarUrl: user.avatarUrl ?? null,
       role: user.role,
       language: user.language,
       createdAt: user.createdAt.toISOString(),

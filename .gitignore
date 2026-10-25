@@ -65,3 +65,8 @@ snapshots-actual/
 # Assets: large model weights (downloaded on demand)
 u2net.onnx
 u2netp.onnx
+
+# Android signing — NEVER commit
+*.jks
+*.keystore
+apps/mobile/android/

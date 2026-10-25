@@ -1,0 +1,257 @@
+{
+  "common": {
+    "continue": "Continue",
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "seeAll": "See all",
+    "reset": "Reset",
+    "apply": "Apply",
+    "search": "Search"
+  },
+  "language": {
+    "russian": "Русский",
+    "uzbek": "O'zbekcha",
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "auth": {
+    "register": {
+      "title": "Sign up",
+      "subtitle": "Create an account to start try-on and shopping",
+      "name": "Your name",
+      "usernamePlaceholder": "@username",
+      "usernameHint": "For example: @diyor, @n2431",
+      "phone": "Phone number",
+      "roleQuestion": "What's your role?",
+      "roleBuyer": "Buyer",
+      "roleSeller": "Seller",
+      "password": "Password",
+      "passwordConfirm": "Confirm password",
+      "submit": "Sign up",
+      "or": "or",
+      "google": "Google",
+      "apple": "Apple",
+      "facebook": "Facebook",
+      "terms": "By signing up you agree to the",
+      "termsLink": "Terms of Service",
+      "termsAnd": "and",
+      "privacyLink": "Privacy Policy",
+      "haveAccount": "Already have an account?",
+      "login": "Log in"
+    },
+    "login": {
+      "title": "Log in",
+      "subtitle": "Welcome back",
+      "identifier": "Phone or @username",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Log in",
+      "noAccount": "No account?",
+      "signUp": "Sign up"
+    },
+    "otp": {
+      "title": "Enter the code",
+      "subtitle": "We sent a code to",
+      "resend": "Resend",
+      "resendIn": "Resend in {{seconds}}s"
+    }
+  },
+  "onboarding": {
+    "face": {
+      "title": "Fit your face in the frame",
+      "subtitle": "Look straight at the camera",
+      "safe": "Safe",
+      "safeDesc": "Your data is protected",
+      "onlyApp": "App-only use",
+      "onlyAppDesc": "The photo stays on your device",
+      "private": "Private",
+      "privateDesc": "We don't share photos with third parties",
+      "capture": "Capture",
+      "retake": "Retake",
+      "step": "Step {{step}} of {{total}}",
+      "front": "Front",
+      "left": "Turn left",
+      "right": "Turn right"
+    },
+    "body": {
+      "title": "Enter your measurements",
+      "subtitle": "This helps us fit dresses, hijabs and other items more precisely",
+      "height": "Your height",
+      "heightUnit": "cm",
+      "weight": "Your weight",
+      "weightUnit": "kg",
+      "age": "Your age",
+      "ageUnit": "yrs",
+      "preferredSize": "Preferred clothing size"
+    }
+  },
+  "home": {
+    "stores": "New shops",
+    "allStores": "All shops",
+    "categories": {
+      "scarves": "Scarves",
+      "dresses": "Dresses",
+      "bags": "Bags",
+      "accessories": "Accessories"
+    },
+    "newArrivals": "New arrivals"
+  },
+  "catalog": {
+    "scarves": { "title": "Scarves", "subtitle": "Find your perfect look" },
+    "dresses": { "title": "Dresses", "subtitle": "Modesty in every detail" },
+    "filters": "Filters",
+    "sort": {
+      "popularity": "By popularity",
+      "priceLow": "Cheapest first",
+      "priceHigh": "Most expensive first",
+      "new": "Newest first"
+    },
+    "color": "Color",
+    "scarfModel": "Scarf style",
+    "dressCut": "Dress cut",
+    "size": "Size",
+    "length": "Length",
+    "sleeve": "Sleeve",
+    "all": "All",
+    "colors": {
+      "yellow": "Yellow", "white": "White", "beige": "Beige", "pink": "Pink",
+      "gray": "Gray", "green": "Green", "blue": "Blue", "black": "Black",
+      "brown": "Brown", "burgundy": "Burgundy", "multi": "Multicolor", "unusual": "Unusual"
+    },
+    "scarfModels": {
+      "classical": "Classic", "withCap": "With cap (2-in-1)", "withUnder": "With under-hijab",
+      "long": "Long", "short": "Short", "cape": "Cape", "turban": "Turban"
+    },
+    "dressCuts": {
+      "classical": "Classic", "loose": "Loose (oversize)", "belted": "Belted",
+      "buttons": "Buttoned", "aLine": "A-line", "straight": "Straight", "ruffled": "Ruffled", "abaya": "Abaya"
+    },
+    "lengths": { "ankle": "Ankle-length", "midi": "Midi", "maxi": "Maxi" },
+    "sleeves": { "long": "Long", "threeQuarter": "3/4", "sleeveless": "Sleeveless" }
+  },
+  "tryon": {
+    "title": "Try-on",
+    "tyingStyle": "Tying style",
+    "styles": { "classical": "Classic", "loose": "Loose", "double": "Double" },
+    "changeCamera": "Switch camera",
+    "lighting": "Lighting",
+    "reset": "Reset",
+    "addToCart": "Add to cart",
+    "outfit": "Try-on"
+  },
+  "cart": {
+    "title": "Cart",
+    "empty": "Your cart is empty",
+    "emptyAction": "Find something",
+    "brand": "Brand",
+    "color": "Color",
+    "size": "Size",
+    "delivery": {
+      "title": "Delivery method",
+      "details": "Details",
+      "courier": "Delivery",
+      "courierDesc": "Courier to your address",
+      "pickup": "Pickup",
+      "pickupDesc": "Pick up from the shop",
+      "proba": "Try before you buy",
+      "probaDesc": "Try first",
+      "probaNote": "You pay only for the delivery",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "scheduled": "Scheduled",
+      "scheduledDesc": "Choose a date and time"
+    },
+    "address": { "title": "Delivery address", "change": "Change" },
+    "comment": "Note to seller (optional)",
+    "summary": {
+      "items": "Items ({{count}})",
+      "delivery": "Delivery ({{when}})",
+      "total": "Total"
+    },
+    "payment": { "title": "Payment method" },
+    "checkout": "Checkout"
+  },
+  "wishlist": {
+    "title": "Favorites",
+    "empty": "Items you like will show up here"
+  },
+  "profile": {
+    "title": "Profile",
+    "orders": "My orders",
+    "addresses": "Addresses",
+    "measurements": "My measurements",
+    "faceTemplate": "Face data",
+    "notifications": "Notifications",
+    "language": "Language",
+    "support": "Help",
+    "logout": "Log out",
+    "switchToSeller": "Switch to seller mode"
+  },
+  "tabs": {
+    "home": "Home",
+    "catalog": "Catalog",
+    "tryon": "Try-on",
+    "wishlist": "Favorites",
+    "cart": "Cart",
+    "profile": "Profile"
+  },
+  "seller": {
+    "tabs": { "dashboard": "Home", "products": "Products", "orders": "Orders", "analytics": "Analytics" },
+    "dashboard": {
+      "title": "Home",
+      "quickActions": "Quick actions",
+      "stats": {
+        "totalProducts": "Total products",
+        "activeOrders": "Active orders",
+        "revenue": "Revenue",
+        "tryOnCount": "Try-ons"
+      },
+      "actions": {
+        "addProduct": "Add product",
+        "viewOrders": "Orders",
+        "viewStats": "Analytics"
+      }
+    },
+    "products": {
+      "title": "Products",
+      "add": "Add",
+      "empty": "No products yet",
+      "variants": "variant",
+      "stock": "Stock",
+      "status": { "all": "All", "live": "Live", "draft": "Draft", "pending": "Pending" }
+    },
+    "orders": {
+      "title": "Orders",
+      "empty": "No orders yet",
+      "accept": "Accept",
+      "reject": "Reject",
+      "status": { "new": "New", "preparing": "Preparing", "shipping": "Shipping", "delivered": "Delivered" }
+    },
+    "analytics": {
+      "title": "Analytics",
+      "revenue": "Revenue",
+      "topProducts": "Top products (try-ons)",
+      "period": { "today": "Today", "week": "Week", "month": "Month", "year": "Year" },
+      "metrics": { "orders": "Orders", "tryOns": "Try-ons", "conversion": "Conversion", "avgCheck": "Avg order" }
+    },
+    "profile": {
+      "currentMode": "Current mode",
+      "buyerMode": "Buyer",
+      "sellerMode": "Seller",
+      "menu": {
+        "storeInfo": "Shop info",
+        "payment": "Payment settings",
+        "delivery": "Delivery",
+        "notifications": "Notifications",
+        "settings": "Settings"
+      }
+    }
+  }
+}

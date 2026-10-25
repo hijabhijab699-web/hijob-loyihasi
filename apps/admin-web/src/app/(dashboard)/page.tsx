@@ -1,4 +1,4 @@
-import { Users, UserCheck, Package, ShoppingBag } from 'lucide-react';
+import { Users, UserCheck, Package, ShoppingBag, Crown, MessageCircle, CreditCard, TrendingUp } from 'lucide-react';
 import { adminDashboard } from '@/lib/api';
 
 export default async function AdminHome() {
@@ -24,6 +24,12 @@ export default async function AdminHome() {
           emphasis={d.sellers.pending > 0 ? 'warn' : 'ok'}
         />
         <Stat
+          label="TOP / Premium"
+          value={(d.sellers.top ?? 0) + (d.sellers.premium ?? 0)}
+          sub={`${d.sellers.premium ?? 0} premium · ${d.sellers.top ?? 0} top`}
+          icon={<Crown size={18} />}
+        />
+        <Stat
           label="Mahsulotlar"
           value={d.products.total}
           sub={`${d.products.published} nashr qilingan · ${d.products.pendingReview} tekshirish`}
@@ -33,8 +39,27 @@ export default async function AdminHome() {
         <Stat
           label="Buyurtmalar"
           value={d.orders.total}
-          sub="Jami"
+          sub={`So'ngi 24 soatda: ${d.orders.last24h ?? 0}`}
           icon={<ShoppingBag size={18} />}
+        />
+        <Stat
+          label="Chatlar"
+          value={d.chats?.total ?? 0}
+          sub="Mijoz ↔ sotuvchi"
+          icon={<MessageCircle size={18} />}
+        />
+        <Stat
+          label="Obunalar"
+          value={(d.subscriptions?.active ?? 0) + (d.subscriptions?.pending ?? 0)}
+          sub={`${d.subscriptions?.active ?? 0} faol · ${d.subscriptions?.pending ?? 0} kutmoqda`}
+          icon={<CreditCard size={18} />}
+          emphasis={(d.subscriptions?.pending ?? 0) > 0 ? 'warn' : 'ok'}
+        />
+        <Stat
+          label="Konversiya"
+          value={Math.round(((d.orders.total || 0) / Math.max(d.users.buyers || 1, 1)) * 100)}
+          sub="buyurtma / xaridor %"
+          icon={<TrendingUp size={18} />}
         />
       </div>
 
@@ -46,12 +71,17 @@ export default async function AdminHome() {
               {d.sellers.pending} ta sotuvchi tasdiqlashni kutmoqda — Sotuvchilar bo'limiga o'ting.
             </li>
           )}
+          {(d.subscriptions?.pending ?? 0) > 0 && (
+            <li>
+              {d.subscriptions!.pending} ta obuna to'lov tasdiqlanishini kutmoqda — Obunalar bo'limiga o'ting.
+            </li>
+          )}
           {d.products.pendingReview > 0 && (
             <li>
               {d.products.pendingReview} ta mahsulot moderatsiyada — Mahsulotlar bo'limida ko'rib chiqing.
             </li>
           )}
-          {d.sellers.pending === 0 && d.products.pendingReview === 0 && (
+          {d.sellers.pending === 0 && d.products.pendingReview === 0 && (d.subscriptions?.pending ?? 0) === 0 && (
             <li>Hozircha ko'rib chiqishni kutayotgan narsa yo'q — tozalik!</li>
           )}
         </ul>

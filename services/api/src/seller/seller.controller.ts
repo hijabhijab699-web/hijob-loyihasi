@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   UploadedFiles,
   UseGuards,
@@ -17,7 +18,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CurrentUser, CurrentUserInfo } from '../auth/current-user.decorator';
 import { SellerService } from './seller.service';
-import { CreateProductDto } from './dto';
+import { CreateProductDto, UpdateSellerProfileDto } from './dto';
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const MAX_FILES = 8;
@@ -33,6 +34,19 @@ export class SellerController {
   @Get('products')
   list(@CurrentUser() user: CurrentUserInfo) {
     return this.seller.listProducts(user.id);
+  }
+
+  @Get('profile')
+  getProfile(@CurrentUser() user: CurrentUserInfo) {
+    return this.seller.getProfile(user.id);
+  }
+
+  @Patch('profile')
+  updateProfile(
+    @CurrentUser() user: CurrentUserInfo,
+    @Body() dto: UpdateSellerProfileDto,
+  ) {
+    return this.seller.updateProfile(user.id, dto);
   }
 
   @Get('analytics')
@@ -51,6 +65,19 @@ export class SellerController {
   @Get('orders')
   orders(@CurrentUser() user: CurrentUserInfo) {
     return this.seller.listOrders(user.id);
+  }
+
+  @Patch('orders/:id/status')
+  setOrderStatus(
+    @CurrentUser() user: CurrentUserInfo,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: { action: 'accept' | 'reject' | 'ship' | 'deliver' },
+  ) {
+    const allowed = ['accept', 'reject', 'ship', 'deliver'];
+    if (!allowed.includes(body?.action)) {
+      throw new BadRequestException('INVALID_ACTION');
+    }
+    return this.seller.setOrderStatus(user.id, id, body.action);
   }
 
   @Post('products')

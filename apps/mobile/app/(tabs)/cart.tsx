@@ -8,6 +8,7 @@ import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
+import { formatUsdAsUzs, formatUzs, useUzsRate, usdToUzs } from '../../src/lib/currency';
 
 interface CartResponse {
   items: Array<{
@@ -30,6 +31,7 @@ interface CartResponse {
 export default function CartScreen() {
   const { t, i18n } = useTranslation();
   const { colors, theme } = useTheme();
+  const uzsRate = useUzsRate();
   const qc = useQueryClient();
   const router = useRouter();
   const [deliveryMethod, setDeliveryMethod] = useState<'courier' | 'pickup' | 'proba'>('courier');
@@ -225,7 +227,7 @@ export default function CartScreen() {
                     fontWeight: '700',
                   }}
                 >
-                  ${item.priceUsd}
+                  {formatUsdAsUzs(item.priceUsd, uzsRate)}
                 </Text>
 
                 {/* Quantity Stepper */}
@@ -581,7 +583,7 @@ export default function CartScreen() {
                   color="ink"
                   style={{ fontSize: 13, fontWeight: '500' }}
                 >
-                  ${subtotal.toFixed(2)}
+                  {formatUsdAsUzs(subtotal, uzsRate)}
                 </Text>
               </View>
               <View
@@ -631,7 +633,7 @@ export default function CartScreen() {
                     fontWeight: '700',
                   }}
                 >
-                  ${subtotal.toFixed(2)}
+                  {formatUsdAsUzs(subtotal, uzsRate)}
                 </Text>
               </View>
             </View>

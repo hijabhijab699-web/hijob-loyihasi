@@ -11,8 +11,9 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 import { safeBack } from '../../src/lib/safe-back';
+import { formatUsdAsUzs, useUzsRate } from '../../src/lib/currency';
 
-type CategoryId = 'scarves' | 'dresses' | 'bags' | 'accessories';
+type CategoryId = 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
 
 interface Product {
   id: string;
@@ -42,10 +43,16 @@ const COLORS: Array<{ key: string; hex: string }> = [
   { key: 'pink', hex: '#E8B0B0' },
   { key: 'gray', hex: '#B0AEA7' },
   { key: 'green', hex: '#7A8A5B' },
+  { key: 'lightgreen', hex: '#B5CDA3' },
+  { key: 'khaki', hex: '#8F7E4F' },
   { key: 'blue', hex: '#5F7A94' },
+  { key: 'purple', hex: '#8B5CF6' },
+  { key: 'orange', hex: '#F5894A' },
   { key: 'black', hex: '#1A1A1A' },
   { key: 'brown', hex: '#8B6E4E' },
   { key: 'burgundy', hex: '#722F37' },
+  { key: 'multicolor', hex: '#E8E3D4' },
+  { key: 'unusual', hex: '#D4B86A' },
 ];
 
 export default function CatalogScreen() {
@@ -215,7 +222,7 @@ export default function CatalogScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, gap: 10 }}
       >
-        {(['scarves', 'dresses', 'bags', 'accessories'] as CategoryId[]).map((c) => {
+        {(['scarves', 'dresses', 'shoes', 'bags', 'accessories'] as CategoryId[]).map((c) => {
           const active = c === category;
           return (
             <Pressable
@@ -440,6 +447,7 @@ function ProductCard({
   const { colors, theme } = useTheme();
   const [imgError, setImgError] = useState(!product.coverUrl);
   const bg = PLACEHOLDER_BG[index % PLACEHOLDER_BG.length];
+  const uzsRate = useUzsRate();
 
   return (
     <Pressable
@@ -532,7 +540,7 @@ function ProductCard({
           }}
         >
           <Text variant="titleSmall" color="oliveDeep" style={{ fontWeight: '700' }}>
-            ${product.basePriceUsd}
+            {formatUsdAsUzs(product.basePriceUsd, uzsRate)}
           </Text>
           <Pressable
             onPress={(e) => {
