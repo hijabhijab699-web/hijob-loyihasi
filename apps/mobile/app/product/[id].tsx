@@ -43,7 +43,7 @@ const IMAGE_BG = ['#E4CE9A', '#D9D0BE', '#C9A96E', '#A88848'];
 
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { colors, theme } = useTheme();
+  const { colors, theme, scheme } = useTheme();
   const router = useRouter();
   const qc = useQueryClient();
   const uzsRate = useUzsRate();
@@ -173,7 +173,7 @@ export default function ProductScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="chevron-back" size={18} color={colors.oliveDeep} />
+                <Ionicons name="chevron-back" size={18} color={colors.ink} />
               </Pressable>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable
@@ -198,7 +198,7 @@ export default function ProductScreen() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="share-outline" size={18} color={colors.oliveDeep} />
+                  <Ionicons name="share-outline" size={18} color={colors.ink} />
                 </Pressable>
                 <Pressable
                   onPress={() => setLiked((v) => !v)}
@@ -531,7 +531,7 @@ export default function ProductScreen() {
               gap: 8,
             }}
           >
-            <Ionicons name="body-outline" size={20} color={colors.oliveDeep} />
+            <Ionicons name="body-outline" size={20} color={colors.ink} />
             <Text
               variant="bodySmall"
               style={{ fontSize: 14, fontWeight: '600', color: colors.oliveDeep }}
@@ -571,11 +571,11 @@ export default function ProductScreen() {
 }
 
 function LoadingState() {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   return (
     <Screen>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={colors.oliveDeep} />
+        <ActivityIndicator color={scheme === 'dark' ? colors.gold : colors.oliveDeep} />
       </View>
     </Screen>
   );

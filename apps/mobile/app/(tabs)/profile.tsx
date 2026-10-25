@@ -325,7 +325,7 @@ export default function ProfileScreen() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="settings-outline" size={20} color={colors.oliveDeep} />
+            <Ionicons name="settings-outline" size={20} color={colors.ink} />
           </Pressable>
         </View>
 

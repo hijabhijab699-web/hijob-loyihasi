@@ -154,7 +154,7 @@ export default function CatalogScreen() {
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="chevron-back" size={20} color={colors.oliveDeep} />
+          <Ionicons name="chevron-back" size={20} color={colors.ink} />
         </Pressable>
         <Text
           variant="displayLarge"
@@ -178,7 +178,7 @@ export default function CatalogScreen() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="heart-outline" size={20} color={colors.oliveDeep} />
+            <Ionicons name="heart-outline" size={20} color={colors.ink} />
           </Pressable>
           <Pressable
             onPress={() => router.push('/(tabs)/cart')}
@@ -194,7 +194,7 @@ export default function CatalogScreen() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="bag-outline" size={20} color={colors.oliveDeep} />
+            <Ionicons name="bag-outline" size={20} color={colors.ink} />
             <View
               style={{
                 position: 'absolute',

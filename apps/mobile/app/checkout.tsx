@@ -67,7 +67,7 @@ const DELIVERY_FEES: Record<DeliveryType, number> = {
 };
 
 export default function CheckoutScreen() {
-  const { colors, theme } = useTheme();
+  const { colors, theme, scheme } = useTheme();
   const router = useRouter();
   const qc = useQueryClient();
   const { i18n } = useTranslation();
@@ -199,7 +199,7 @@ export default function CheckoutScreen() {
           <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
             {addressesQ.isLoading ? (
               <View style={{ padding: 16, alignItems: 'center' }}>
-                <ActivityIndicator color={colors.oliveDeep} />
+                <ActivityIndicator color={scheme === 'dark' ? colors.gold : colors.oliveDeep} />
               </View>
             ) : (addressesQ.data ?? []).length === 0 ? (
               <Pressable
@@ -209,7 +209,7 @@ export default function CheckoutScreen() {
                   borderColor: colors.rule, alignItems: 'center',
                 }}
               >
-                <Ionicons name="add-circle-outline" size={24} color={colors.oliveDeep} />
+                <Ionicons name="add-circle-outline" size={24} color={colors.ink} />
                 <Text variant="bodySmall" color="ink" style={{ fontSize: 14, fontWeight: '600', marginTop: 6 }}>
                   Yangi manzil qo'shish
                 </Text>
@@ -234,7 +234,7 @@ export default function CheckoutScreen() {
                       width: 36, height: 36, borderRadius: 10,
                       backgroundColor: 'rgba(54,57,36,0.06)', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <Ionicons name="home-outline" size={18} color={colors.oliveDeep} />
+                      <Ionicons name="home-outline" size={18} color={colors.ink} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text variant="bodySmall" color="ink" style={{ fontSize: 14, fontWeight: '600' }}>
@@ -245,7 +245,7 @@ export default function CheckoutScreen() {
                       </Text>
                     </View>
                     {addressId === addr.id && (
-                      <Ionicons name="checkmark-circle" size={22} color={colors.oliveDeep} />
+                      <Ionicons name="checkmark-circle" size={22} color={colors.ink} />
                     )}
                   </Pressable>
                 ))}
@@ -255,7 +255,7 @@ export default function CheckoutScreen() {
                     paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}
                 >
-                  <Ionicons name="add" size={16} color={colors.oliveDeep} />
+                  <Ionicons name="add" size={16} color={colors.ink} />
                   <Text variant="caption" color="oliveDeep" style={{ fontSize: 13, fontWeight: '600' }}>
                     Yangi manzil
                   </Text>
@@ -293,7 +293,7 @@ export default function CheckoutScreen() {
                       width: 36, height: 36, borderRadius: 10,
                       backgroundColor: 'rgba(54,57,36,0.06)', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <Ionicons name={m.icon} size={18} color={colors.oliveDeep} />
+                      <Ionicons name={m.icon} size={18} color={colors.ink} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text variant="bodySmall" color="ink" style={{ fontSize: 14, fontWeight: '500' }}>{m.label}</Text>
@@ -322,7 +322,7 @@ export default function CheckoutScreen() {
           <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
             <View style={{ backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.rule, padding: 16 }}>
               {cartQ.isLoading ? (
-                <ActivityIndicator color={colors.oliveDeep} />
+                <ActivityIndicator color={scheme === 'dark' ? colors.gold : colors.oliveDeep} />
               ) : items.length === 0 ? (
                 <Text variant="caption" color="muted" style={{ fontSize: 13 }}>{isRu ? 'Корзина пуста' : "Savat bo'sh"}</Text>
               ) : (
@@ -499,7 +499,7 @@ interface NewAddressModalProps {
 }
 
 function NewAddressModal({ onClose, onCreated }: NewAddressModalProps) {
-  const { colors, theme } = useTheme();
+  const { colors, theme, scheme } = useTheme();
   const [label, setLabel] = useState('Uy');
   const [city, setCity] = useState('Toshkent');
   const [district, setDistrict] = useState('');
@@ -589,7 +589,7 @@ function NewAddressModal({ onClose, onCreated }: NewAddressModalProps) {
 function AddrField({ label, value, onChange, placeholder }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string;
 }) {
-  const { colors, theme } = useTheme();
+  const { colors, theme, scheme } = useTheme();
   return (
     <View style={{ marginBottom: 12 }}>
       <Text variant="caption" color="muted" style={{ fontSize: 11, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
