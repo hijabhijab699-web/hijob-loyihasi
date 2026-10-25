@@ -332,7 +332,7 @@ export default function SellerAnalyticsScreen() {
                         {v.count}
                       </Text>
                     </View>
-                    <View style={{ height: 4, backgroundColor: '#EDE5D0', borderRadius: 2, overflow: 'hidden' }}>
+                    <View style={{ height: 4, backgroundColor: colors.surface2, borderRadius: 2, overflow: 'hidden' }}>
                       <View
                         style={{
                           width: `${(v.count / maxTopCount) * 100}%`,

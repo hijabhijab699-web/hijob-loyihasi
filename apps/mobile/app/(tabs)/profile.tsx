@@ -108,6 +108,13 @@ export default function ProfileScreen() {
       route: '/chats',
     },
     {
+      label: lang === 'ru' ? 'Внешний вид' : "Ko'rinish",
+      icon: 'moon-outline',
+      iconColor: '#8A8D5B',
+      iconBg: 'rgba(138,141,91,0.1)',
+      route: '/settings/theme',
+    },
+    {
       label: L.myAddresses,
       icon: 'location-outline',
       iconColor: '#C9A96E',

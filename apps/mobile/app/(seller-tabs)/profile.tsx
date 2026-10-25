@@ -63,6 +63,11 @@ export default function SellerProfileScreen() {
       route: '/chats',
     },
     {
+      label: isRu ? 'Внешний вид' : "Ko'rinish",
+      icon: 'moon-outline',
+      route: '/settings/theme',
+    },
+    {
       label: isRu ? 'Уведомления' : 'Bildirishnomalar',
       icon: 'notifications-outline',
       route: '/notifications',
@@ -201,7 +206,7 @@ export default function SellerProfileScreen() {
                     width: 44,
                     height: 44,
                     borderRadius: 22,
-                    backgroundColor: '#EDE5D0',
+                    backgroundColor: colors.surface2,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}

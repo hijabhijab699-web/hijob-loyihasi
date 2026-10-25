@@ -296,7 +296,7 @@ export default function SellerDashboard() {
                 gap: 8,
                 paddingVertical: 14,
                 paddingHorizontal: 8,
-                backgroundColor: '#EDE5D0',
+                backgroundColor: colors.surface2,
                 borderRadius: 12,
               }}
             >
@@ -316,7 +316,7 @@ export default function SellerDashboard() {
                 gap: 8,
                 paddingVertical: 14,
                 paddingHorizontal: 8,
-                backgroundColor: '#EDE5D0',
+                backgroundColor: colors.surface2,
                 borderRadius: 12,
               }}
             >
@@ -388,7 +388,7 @@ export default function SellerDashboard() {
                       width: 44,
                       height: 44,
                       borderRadius: 10,
-                      backgroundColor: '#EDE5D0',
+                      backgroundColor: colors.surface2,
                     }}
                   />
                   <View style={{ flex: 1 }}>
