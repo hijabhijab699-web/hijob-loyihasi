@@ -50,16 +50,6 @@ export default function SellerProfileScreen() {
       route: '/seller/subscription',
     },
     {
-      label: L("To'lov rekvizitlari", 'Платежные реквизиты', 'Payment details', 'بيانات الدفع'),
-      icon: 'card-outline',
-      action: () => comingSoon(L("To'lov rekvizitlari", 'Платежные реквизиты', 'Payment details', 'بيانات الدفع')),
-    },
-    {
-      label: L('Yetkazib berish va topshirish', 'Доставка и выдача', 'Delivery & pickup', 'التوصيل والاستلام'),
-      icon: 'car-outline',
-      action: () => comingSoon(L('Yetkazib berish', 'Доставка и выдача', 'Delivery', 'التوصيل')),
-    },
-    {
       label: L('Xabarlar', 'Сообщения', 'Messages', 'الرسائل'),
       icon: 'chatbubbles-outline',
       route: '/chats',
