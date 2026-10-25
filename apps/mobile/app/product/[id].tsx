@@ -127,13 +127,14 @@ export default function ProductScreen() {
             />
           }
         >
-          {/* Product Image Area */}
-          <View style={{ width: '100%', height: 400, position: 'relative' }}>
+          {/* Product Image Area — 3:4 aspect so the full product shot
+              (head to hem) is always visible without cropping. */}
+          <View style={{ width: '100%', aspectRatio: 3 / 4, position: 'relative', backgroundColor: colors.surface2 }}>
             {heroImageUrl ? (
               <Image
                 source={{ uri: heroImageUrl }}
                 style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             ) : (
               <View

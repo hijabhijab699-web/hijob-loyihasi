@@ -63,7 +63,11 @@ export default function ShopDetailScreen() {
   const [category, setCategory] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>('popularity');
-  const [productsOpen, setProductsOpen] = useState(false);
+  // Products list stays open — the toggle used to collapse it, but buyers
+  // land on this screen to see what's for sale, so hiding the catalog
+  // behind a chevron just forced an extra tap on every open.
+  const productsOpen = true;
+  const setProductsOpen = (_: boolean) => {};
 
   const storeQ = useQuery<StoreDetail>({
     queryKey: ['store', id],
@@ -255,16 +259,13 @@ export default function ShopDetailScreen() {
           )}
         </View>
 
-        {/* Products count card */}
-        <Pressable
-          onPress={() => setProductsOpen((v) => !v)}
-          style={{
-            marginTop: 20, marginHorizontal: 20,
-            padding: 18, borderRadius: 18,
-            backgroundColor: colors.oliveDeep,
-            flexDirection: 'row', alignItems: 'center', gap: 14,
-          }}
-        >
+        {/* Products count card (always-open — no toggle) */}
+        <View style={{
+          marginTop: 20, marginHorizontal: 20,
+          padding: 18, borderRadius: 18,
+          backgroundColor: colors.oliveDeep,
+          flexDirection: 'row', alignItems: 'center', gap: 14,
+        }}>
           <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="grid" size={22} color={colors.goldSoft} />
           </View>
@@ -273,11 +274,10 @@ export default function ShopDetailScreen() {
               {store.productsCount} {isRu ? 'товаров' : 'ta mahsulot'}
             </Text>
             <Text variant="caption" style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2 }}>
-              {productsOpen ? (isRu ? 'Скрыть' : "Yashirish") : (isRu ? 'Показать каталог' : "Katalogni ko'rish")}
+              {isRu ? 'Каталог магазина' : "Do'kon katalogi"}
             </Text>
           </View>
-          <Ionicons name={productsOpen ? 'chevron-up' : 'chevron-down'} size={20} color={colors.goldSoft} />
-        </Pressable>
+        </View>
 
         {/* Category breakdown */}
         {store.productsByCategory.length > 0 && (

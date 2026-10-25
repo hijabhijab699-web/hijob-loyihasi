@@ -56,31 +56,49 @@ export default function ProfileScreen() {
   const wishlistCount = countOf(wishlistData);
   const addressesCount = countOf(addressesData);
 
-  const L = lang === 'ru'
-    ? {
-        myOrders: 'Мои заказы',
-        wishlist: 'Избранное',
-        myAddresses: 'Мои адреса',
-        myMeasurements: 'Мои размеры',
-        faceTemplate: 'Шаблон лица',
-        ready: 'Готово',
-        notifications: 'Уведомления',
-        language: 'Язык',
-        languageValue: 'Русский',
-        help: 'Помощь',
-      }
-    : {
-        myOrders: 'Buyurtmalarim',
-        wishlist: 'Sevimlilar',
-        myAddresses: 'Manzillarim',
-        myMeasurements: "O'lchovlarim",
-        faceTemplate: 'Yuz shablonim',
-        ready: 'Tayyor',
-        notifications: 'Bildirishnomalar',
-        language: 'Til',
-        languageValue: "O'zbekcha",
-        help: 'Yordam',
-      };
+  const DICT: Record<'uz' | 'ru' | 'en' | 'ar', Record<string, string>> = {
+    uz: {
+      myOrders: 'Buyurtmalarim', wishlist: 'Sevimlilar', myAddresses: 'Manzillarim',
+      myMeasurements: "O'lchovlarim", faceTemplate: 'Yuz shablonim', ready: 'Tayyor',
+      notifications: 'Bildirishnomalar', language: 'Til', languageValue: "O'zbekcha", help: 'Yordam',
+      messages: 'Xabarlar', appearance: "Ko'rinish",
+      orders: 'Buyurtmalar', favorites: 'Sevimlilar', addresses: 'Manzillar',
+      profile: 'Profil', user: 'Foydalanuvchi', switchSeller: "Sotuvchi rejimiga o'tish",
+      sectionOrders: 'Buyurtmalar va tanlangan', sectionTryon: 'Primerka sozlamalari',
+      sectionApp: 'Ilova', logout: 'Chiqish',
+    },
+    ru: {
+      myOrders: 'Мои заказы', wishlist: 'Избранное', myAddresses: 'Мои адреса',
+      myMeasurements: 'Мои размеры', faceTemplate: 'Шаблон лица', ready: 'Готово',
+      notifications: 'Уведомления', language: 'Язык', languageValue: 'Русский', help: 'Помощь',
+      messages: 'Сообщения', appearance: 'Внешний вид',
+      orders: 'Заказы', favorites: 'Избранное', addresses: 'Адреса',
+      profile: 'Профиль', user: 'Пользователь', switchSeller: 'Перейти в режим продавца',
+      sectionOrders: 'Заказы и избранное', sectionTryon: 'Настройки примерки',
+      sectionApp: 'Приложение', logout: 'Выйти',
+    },
+    en: {
+      myOrders: 'My orders', wishlist: 'Favorites', myAddresses: 'My addresses',
+      myMeasurements: 'My measurements', faceTemplate: 'Face template', ready: 'Ready',
+      notifications: 'Notifications', language: 'Language', languageValue: 'English', help: 'Help',
+      messages: 'Messages', appearance: 'Appearance',
+      orders: 'Orders', favorites: 'Favorites', addresses: 'Addresses',
+      profile: 'Profile', user: 'User', switchSeller: 'Switch to seller mode',
+      sectionOrders: 'Orders & favorites', sectionTryon: 'Try-on settings',
+      sectionApp: 'App', logout: 'Log out',
+    },
+    ar: {
+      myOrders: 'طلباتي', wishlist: 'المفضلة', myAddresses: 'عناويني',
+      myMeasurements: 'مقاساتي', faceTemplate: 'قالب الوجه', ready: 'جاهز',
+      notifications: 'الإشعارات', language: 'اللغة', languageValue: 'العربية', help: 'المساعدة',
+      messages: 'الرسائل', appearance: 'المظهر',
+      orders: 'الطلبات', favorites: 'المفضلة', addresses: 'العناوين',
+      profile: 'الملف الشخصي', user: 'المستخدم', switchSeller: 'التحويل إلى وضع البائع',
+      sectionOrders: 'الطلبات والمفضلة', sectionTryon: 'إعدادات التجربة',
+      sectionApp: 'التطبيق', logout: 'تسجيل الخروج',
+    },
+  };
+  const L = DICT[lang] ?? DICT.uz;
 
   const SECTION_1: MenuItem[] = [
     {
@@ -101,14 +119,14 @@ export default function ProfileScreen() {
       route: '/wishlist',
     },
     {
-      label: lang === 'ru' ? 'Сообщения' : 'Xabarlar',
+      label: L.messages,
       icon: 'chatbubbles-outline',
       iconColor: '#8A8D5B',
       iconBg: 'rgba(138,141,91,0.1)',
       route: '/chats',
     },
     {
-      label: lang === 'ru' ? 'Внешний вид' : "Ko'rinish",
+      label: L.appearance,
       icon: 'moon-outline',
       iconColor: '#8A8D5B',
       iconBg: 'rgba(138,141,91,0.1)',
@@ -171,9 +189,9 @@ export default function ProfileScreen() {
   ];
 
   const STATS = [
-    { value: String(ordersCount), label: lang === 'ru' ? 'Заказы' : 'Buyurtmalar' },
-    { value: String(wishlistCount), label: lang === 'ru' ? 'Избранное' : 'Sevimlilar' },
-    { value: String(addressesCount), label: lang === 'ru' ? 'Адреса' : 'Manzillar' },
+    { value: String(ordersCount), label: L.orders },
+    { value: String(wishlistCount), label: L.favorites },
+    { value: String(addressesCount), label: L.addresses },
   ];
 
   const renderMenuSection = (items: MenuItem[]) => (
@@ -292,7 +310,7 @@ export default function ProfileScreen() {
             color="oliveDeep"
             style={{ fontSize: 26, fontWeight: '700' }}
           >
-            {lang === 'ru' ? 'Профиль' : 'Profil'}
+            {L.profile}
           </Text>
           <Pressable
             onPress={() => router.push('/settings')}
@@ -361,7 +379,7 @@ export default function ProfileScreen() {
               color="ink"
               style={{ fontSize: 16, fontWeight: '600', marginBottom: 2 }}
             >
-              {user?.fullName ?? (lang === 'ru' ? 'Пользователь' : 'Foydalanuvchi')}
+              {user?.fullName ?? L.user}
             </Text>
             <Text variant="bodySmall" color="muted" style={{ fontSize: 13 }}>
               @{user?.username ?? '—'}
@@ -391,7 +409,7 @@ export default function ProfileScreen() {
               variant="bodySmall"
               style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.goldSoft }}
             >
-              {lang === 'ru' ? 'Перейти в режим продавца' : "Sotuvchi rejimiga o'tish"}
+              {L.switchSeller}
             </Text>
             <Ionicons name="arrow-forward" size={18} color={colors.gold} />
           </Pressable>
@@ -457,7 +475,7 @@ export default function ProfileScreen() {
               paddingLeft: 4,
             }}
           >
-            {lang === 'ru' ? 'Заказы и избранное' : 'Buyurtmalar va tanlangan'}
+            {L.sectionOrders}
           </Text>
           {renderMenuSection(SECTION_1)}
         </View>
@@ -476,7 +494,7 @@ export default function ProfileScreen() {
               paddingLeft: 4,
             }}
           >
-            {lang === 'ru' ? 'Настройки примерки' : 'Primerka sozlamalari'}
+            {L.sectionTryon}
           </Text>
           {renderMenuSection(SECTION_2)}
         </View>
@@ -495,7 +513,7 @@ export default function ProfileScreen() {
               paddingLeft: 4,
             }}
           >
-            {lang === 'ru' ? 'Приложение' : 'Ilova'}
+            {L.sectionApp}
           </Text>
           {renderMenuSection(SECTION_3)}
         </View>
@@ -530,7 +548,7 @@ export default function ProfileScreen() {
               variant="body"
               style={{ fontSize: 14, fontWeight: '600', color: colors.danger }}
             >
-              {lang === 'ru' ? 'Выйти' : 'Chiqish'}
+              {L.logout}
             </Text>
           </Pressable>
         </View>
