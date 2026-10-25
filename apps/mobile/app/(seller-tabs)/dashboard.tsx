@@ -55,7 +55,7 @@ interface SellerProductPreview {
 const PLACEHOLDER_BG = ['#EDE5D0', '#D9D0BE'];
 
 export default function SellerDashboard() {
-  const { colors, theme } = useTheme();
+  const { colors, theme, scheme } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const { i18n, t } = useTranslation();
@@ -302,12 +302,14 @@ export default function SellerDashboard() {
                 paddingHorizontal: 8,
                 backgroundColor: colors.surface2,
                 borderRadius: 12,
+                borderWidth: scheme === 'dark' ? 1 : 0,
+                borderColor: colors.rule,
               }}
             >
-              <Ionicons name="cube-outline" size={22} color={colors.oliveDeep} />
+              <Ionicons name="cube-outline" size={22} color={colors.ink} />
               <Text
                 variant="caption"
-                style={{ fontSize: 11, fontWeight: '500', color: colors.oliveDeep }}
+                style={{ fontSize: 11, fontWeight: '500', color: colors.ink }}
               >
                 {L('Buyurtmalar', 'Заказы', 'Orders', 'الطلبات')}
               </Text>
@@ -322,12 +324,14 @@ export default function SellerDashboard() {
                 paddingHorizontal: 8,
                 backgroundColor: colors.surface2,
                 borderRadius: 12,
+                borderWidth: scheme === 'dark' ? 1 : 0,
+                borderColor: colors.rule,
               }}
             >
-              <Ionicons name="bar-chart-outline" size={22} color={colors.oliveDeep} />
+              <Ionicons name="bar-chart-outline" size={22} color={colors.ink} />
               <Text
                 variant="caption"
-                style={{ fontSize: 11, fontWeight: '500', color: colors.oliveDeep }}
+                style={{ fontSize: 11, fontWeight: '500', color: colors.ink }}
               >
                 {L('Statistika', 'Статистика', 'Analytics', 'الإحصاءات')}
               </Text>
