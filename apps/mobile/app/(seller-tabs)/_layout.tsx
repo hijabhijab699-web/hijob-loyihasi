@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/theme/ThemeProvider';
 
 export default function SellerTabsLayout() {
-  const { colors, theme } = useTheme();
+  const { colors, theme, scheme } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 10);
@@ -14,8 +14,8 @@ export default function SellerTabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.oliveDeep,
-        tabBarInactiveTintColor: colors.muted,
+        tabBarActiveTintColor: scheme === 'dark' ? colors.goldSoft : colors.oliveDeep,
+        tabBarInactiveTintColor: scheme === 'dark' ? colors.ink2 : colors.muted,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.rule,
