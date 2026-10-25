@@ -31,6 +31,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 import { safeBack } from '../../src/lib/safe-back';
+import { useUzsRate, usdToUzs, formatUzs } from '../../src/lib/currency';
 
 type CategoryId = 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
 
@@ -109,16 +110,29 @@ export default function AddProductScreen() {
   const [categoryId, setCategoryId] = useState<CategoryId>('scarves');
   const [bodyFit, setBodyFit] = useState<'slim' | 'regular' | 'plus' | null>(null);
   const [basePriceUsd, setBasePriceUsd] = useState('');
+  // Seller can type the price in USD or UZS; backend stores USD, so when
+  // UZS is picked we divide by the live rate at submit time.
+  const [priceCurrency, setPriceCurrency] = useState<'usd' | 'uzs'>('uzs');
+  const [basePriceUzs, setBasePriceUzs] = useState('');
+  const uzsRate = useUzsRate();
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [variants, setVariants] = useState<Variant[]>([emptyVariant('scarves')]);
   const [showCategory, setShowCategory] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
 
+  // Resolves the current USD price regardless of which currency the
+  // seller is typing in. UZS entries are divided by the live rate.
+  const resolvedUsdPrice = useMemo(() => {
+    if (priceCurrency === 'usd') return Number(basePriceUsd);
+    const uzs = Number(basePriceUzs);
+    if (!Number.isFinite(uzs) || uzsRate <= 0) return NaN;
+    return uzs / uzsRate;
+  }, [priceCurrency, basePriceUsd, basePriceUzs, uzsRate]);
+
   const canSubmit = useMemo(() => {
     if (titleRu.trim().length < 3) return false;
     if (!coverUrl) return false;
-    const price = Number(basePriceUsd);
-    if (!Number.isFinite(price) || price < 1) return false;
+    if (!Number.isFinite(resolvedUsdPrice) || resolvedUsdPrice < 1) return false;
     if (variants.length === 0) return false;
     for (const v of variants) {
       if (!v.color.trim()) return false;
@@ -128,7 +142,7 @@ export default function AddProductScreen() {
       if (!Number.isInteger(stock) || stock < 0) return false;
     }
     return true;
-  }, [titleRu, coverUrl, basePriceUsd, variants]);
+  }, [titleRu, coverUrl, resolvedUsdPrice, variants]);
 
   const uploadImages = useCallback(
     async (uris: string[]): Promise<string[]> => {
@@ -217,7 +231,7 @@ export default function AddProductScreen() {
         descriptionRu: descriptionRu.trim() || undefined,
         categoryId,
         bodyFit: bodyFit ?? undefined,
-        basePriceUsd: Number(basePriceUsd),
+        basePriceUsd: Math.round(resolvedUsdPrice * 100) / 100,
         coverUrl: coverUrl!,
         variants: variants.map((v, i) => ({
           color: v.color.trim(),
@@ -353,14 +367,73 @@ export default function AddProductScreen() {
           })}
         </View>
 
-        {/* Price */}
-        <Field
-          label="Narx (USD)"
-          value={basePriceUsd}
-          onChangeText={(t) => setBasePriceUsd(t.replace(/[^0-9.]/g, ''))}
-          placeholder="22"
-          keyboardType="decimal-pad"
-        />
+        {/* Price with currency toggle */}
+        <Text variant="label" color="muted" style={styles.sectionLabel}>
+          Narx
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+          <Pressable
+            onPress={() => setPriceCurrency('uzs')}
+            style={{
+              flex: 1, paddingVertical: 10, borderRadius: 10,
+              backgroundColor: priceCurrency === 'uzs' ? colors.oliveDeep : colors.surface2,
+              borderWidth: 1,
+              borderColor: priceCurrency === 'uzs' ? colors.oliveDeep : colors.rule,
+              alignItems: 'center',
+            }}
+          >
+            <Text variant="caption" style={{
+              color: priceCurrency === 'uzs' ? colors.goldSoft : colors.ink,
+              fontWeight: '600', fontSize: 12,
+            }}>So'm (UZS)</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setPriceCurrency('usd')}
+            style={{
+              flex: 1, paddingVertical: 10, borderRadius: 10,
+              backgroundColor: priceCurrency === 'usd' ? colors.oliveDeep : colors.surface2,
+              borderWidth: 1,
+              borderColor: priceCurrency === 'usd' ? colors.oliveDeep : colors.rule,
+              alignItems: 'center',
+            }}
+          >
+            <Text variant="caption" style={{
+              color: priceCurrency === 'usd' ? colors.goldSoft : colors.ink,
+              fontWeight: '600', fontSize: 12,
+            }}>Dollar (USD)</Text>
+          </Pressable>
+        </View>
+        {priceCurrency === 'uzs' ? (
+          <>
+            <Field
+              label="Narx (so'm)"
+              value={basePriceUzs}
+              onChangeText={(t) => setBasePriceUzs(t.replace(/[^0-9]/g, ''))}
+              placeholder="250000"
+              keyboardType="number-pad"
+            />
+            {basePriceUzs && uzsRate > 0 && (
+              <Text variant="caption" color="muted" style={{ marginTop: -4, marginBottom: 8, fontSize: 11 }}>
+                ≈ ${(Number(basePriceUzs) / uzsRate).toFixed(2)} (kurs: {uzsRate.toLocaleString('ru-RU')} so'm/USD)
+              </Text>
+            )}
+          </>
+        ) : (
+          <>
+            <Field
+              label="Narx (USD)"
+              value={basePriceUsd}
+              onChangeText={(t) => setBasePriceUsd(t.replace(/[^0-9.]/g, ''))}
+              placeholder="22"
+              keyboardType="decimal-pad"
+            />
+            {basePriceUsd && uzsRate > 0 && (
+              <Text variant="caption" color="muted" style={{ marginTop: -4, marginBottom: 8, fontSize: 11 }}>
+                ≈ {formatUzs(usdToUzs(Number(basePriceUsd), uzsRate))}
+              </Text>
+            )}
+          </>
+        )}
 
         {/* Variants */}
         <View style={styles.variantsHeader}>
