@@ -379,6 +379,7 @@ export class SellerService {
         gallery: [],
         attributes: (dto.attributes ?? {}) as object,
         filters: this.buildFiltersFromVariants(dto.variants),
+        bodyFit: dto.bodyFit ?? null,
         status: ProductStatus.draft,
         popularityScore: 0,
         variants: {

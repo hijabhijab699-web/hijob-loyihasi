@@ -66,12 +66,18 @@ export default function CatalogScreen() {
   const [category, setCategory] = useState<CategoryId>(params.category ?? 'scarves');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [bodyFit, setBodyFit] = useState<'slim' | 'regular' | 'plus' | null>(null);
 
   const { data, isError, refetch } = useQuery({
-    queryKey: ['products', category, selectedColor],
+    queryKey: ['products', category, selectedColor, bodyFit],
     queryFn: async () =>
       (await api.get('/catalog/products', {
-        params: { category, ...(selectedColor && { color: selectedColor }), pageSize: 20 },
+        params: {
+          category,
+          ...(selectedColor && { color: selectedColor }),
+          ...(bodyFit && { bodyFit }),
+          pageSize: 20,
+        },
       })).data,
   });
 
@@ -380,6 +386,57 @@ export default function CatalogScreen() {
                 </Pressable>
               );
             })}
+          </View>
+
+          {/* Body fit filter — ozg'iz / o'rtacha / to'la odamga */}
+          <View style={{ marginTop: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text variant="titleSmall" color="ink">
+                {lang === 'ru' ? 'Для какого телосложения' : "Qanday jussa uchun"}
+              </Text>
+              {bodyFit && (
+                <Pressable onPress={() => setBodyFit(null)}>
+                  <Text variant="caption" color="oliveDeep" style={{ fontWeight: '500' }}>
+                    {t('common.reset')}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+              {([
+                { key: 'slim' as const, uz: "Ozg'iz / nozik", ru: 'Худощавое' },
+                { key: 'regular' as const, uz: "O'rtacha", ru: 'Среднее' },
+                { key: 'plus' as const, uz: "To'la / semiz", ru: 'Полное' },
+              ]).map((b) => {
+                const active = bodyFit === b.key;
+                return (
+                  <Pressable
+                    key={b.key}
+                    onPress={() => setBodyFit(active ? null : b.key)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: active ? colors.oliveDeep : colors.rule,
+                      backgroundColor: active ? colors.oliveDeep : colors.surface,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text
+                      variant="caption"
+                      style={{
+                        color: active ? colors.goldSoft : colors.ink,
+                        fontSize: 12,
+                        fontWeight: '600',
+                      }}
+                    >
+                      {lang === 'ru' ? b.ru : b.uz}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         </View>
       )}

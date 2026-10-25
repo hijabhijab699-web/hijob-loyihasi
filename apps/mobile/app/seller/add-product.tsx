@@ -107,6 +107,7 @@ export default function AddProductScreen() {
   const [titleUz, setTitleUz] = useState('');
   const [descriptionRu, setDescriptionRu] = useState('');
   const [categoryId, setCategoryId] = useState<CategoryId>('scarves');
+  const [bodyFit, setBodyFit] = useState<'slim' | 'regular' | 'plus' | null>(null);
   const [basePriceUsd, setBasePriceUsd] = useState('');
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [variants, setVariants] = useState<Variant[]>([emptyVariant('scarves')]);
@@ -215,6 +216,7 @@ export default function AddProductScreen() {
         titleUz: titleUz.trim() || undefined,
         descriptionRu: descriptionRu.trim() || undefined,
         categoryId,
+        bodyFit: bodyFit ?? undefined,
         basePriceUsd: Number(basePriceUsd),
         coverUrl: coverUrl!,
         variants: variants.map((v, i) => ({
@@ -309,6 +311,47 @@ export default function AddProductScreen() {
           </Text>
           <Ionicons name="chevron-down" size={18} color={colors.muted} />
         </Pressable>
+
+        {/* Body fit — ozg'iz / o'rtacha / to'la (ixtiyoriy) */}
+        <Text variant="label" color="muted" style={styles.sectionLabel}>
+          Jussa (ixtiyoriy)
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+          {([
+            { key: null, label: 'Hamma uchun' },
+            { key: 'slim' as const, label: "Ozg'iz" },
+            { key: 'regular' as const, label: "O'rtacha" },
+            { key: 'plus' as const, label: "To'la" },
+          ]).map((b, i) => {
+            const active = bodyFit === b.key;
+            return (
+              <Pressable
+                key={i}
+                onPress={() => setBodyFit(b.key)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: active ? colors.oliveDeep : colors.rule,
+                  backgroundColor: active ? colors.oliveDeep : colors.surface2,
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  variant="caption"
+                  style={{
+                    color: active ? colors.goldSoft : colors.ink,
+                    fontSize: 11,
+                    fontWeight: '600',
+                  }}
+                >
+                  {b.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
         {/* Price */}
         <Field

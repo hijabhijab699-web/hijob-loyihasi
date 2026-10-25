@@ -58,6 +58,12 @@ enum CategoryId {
   accessories
 }
 
+enum BodyFit {
+  slim
+  regular
+  plus
+}
+
 enum DeliveryType {
   delivery
   pickup
@@ -441,6 +447,9 @@ model Product {
   styledImageUrl String?       @map("styled_image_url")
   status         ProductStatus @default(draft)
   popularityScore Float        @default(0) @map("popularity_score")
+  // TZ: body-fit segmentation — slim/regular/plus so a buyer can filter
+  // "mahsulotlar ozg'iz / o'rtacha / semiz odamga". Null means universal.
+  bodyFit        BodyFit?      @map("body_fit")
   createdAt      DateTime      @default(now()) @map("created_at")
   publishedAt    DateTime?     @map("published_at")
 

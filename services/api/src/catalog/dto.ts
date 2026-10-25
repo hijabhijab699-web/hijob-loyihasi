@@ -31,6 +31,10 @@ export class CatalogFiltersDto {
   maxPrice?: number;
 
   @IsOptional()
+  @IsIn(['slim', 'regular', 'plus'])
+  bodyFit?: 'slim' | 'regular' | 'plus';
+
+  @IsOptional()
   @IsIn(['popularity', 'priceLow', 'priceHigh', 'new'])
   sort?: 'popularity' | 'priceLow' | 'priceHigh' | 'new';
 

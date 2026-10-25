@@ -73,6 +73,10 @@ export class CreateProductDto {
   coverUrl!: string;
 
   @IsOptional()
+  @IsIn(['slim', 'regular', 'plus'])
+  bodyFit?: 'slim' | 'regular' | 'plus';
+
+  @IsOptional()
   @IsObject()
   attributes?: Record<string, unknown>;
 

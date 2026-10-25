@@ -64,6 +64,7 @@ export class CatalogService {
       status: ProductStatus.published,
       ...(filters.category && { categoryId: filters.category as CategoryId }),
       ...(filters.sellerId && { sellerId: filters.sellerId }),
+      ...(filters.bodyFit && { bodyFit: filters.bodyFit }),
       ...(q && q.length >= 2 && {
         OR: [
           { titleRu: { contains: q, mode: 'insensitive' } },
@@ -389,6 +390,7 @@ export class CatalogService {
       id: string;
       sellerId: string;
       categoryId: string;
+      bodyFit?: string | null;
       titleRu: string;
       titleUz: string | null;
       titleEn: string | null;
@@ -434,6 +436,7 @@ export class CatalogService {
     attributes: p.attributes,
     createdAt: p.createdAt.toISOString(),
     popularityScore: p.popularityScore,
+    bodyFit: p.bodyFit ?? null,
     // 3×3 (body-type × height) grid of rendered mannequin+scarf images.
     // Keyed like "slim-short", "medium-mid", … "full-tall". Mobile picks the
     // one matching the buyer's bodyType + height band. Null for legacy
