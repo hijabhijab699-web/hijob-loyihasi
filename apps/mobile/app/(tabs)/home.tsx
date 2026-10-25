@@ -36,10 +36,10 @@ const STORE_COLORS = ['#C9A96E', '#8A8D5B', '#B85450', '#5F7A94', '#D9A24B'];
 // platform. Slug → scarf type mapping mirrors apps/website/src/lib/categories.ts.
 const CATEGORY_DATA = [
   { id: 'scarves', image: require('../../assets/category-ipak.webp') },
-  { id: 'dresses', image: require('../../assets/category-shoyi.webp') },
+  { id: 'dresses', image: require('../../assets/category-dresses.webp') },
   { id: 'shoes', image: require('../../assets/category-pashmina.webp') },
   { id: 'bags', image: require('../../assets/category-shifon.webp') },
-  { id: 'accessories', image: require('../../assets/category-shifon.webp') },
+  { id: 'accessories', image: require('../../assets/category-accessories.webp') },
 ] as const;
 
 const PLACEHOLDER_BG = ['#B5B891', '#E4CE9A', '#D4C3A0', '#C4C88C', '#D9D0BE', '#E8DFCC'];
