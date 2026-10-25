@@ -41,17 +41,34 @@ export default function TabsLayout() {
         },
         tabBarBackground: () =>
           Platform.OS === 'ios' ? (
-            <BlurView
-              tint={blurTint}
-              intensity={70}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-              }}
-            />
+            <>
+              <BlurView
+                tint={blurTint}
+                intensity={scheme === 'dark' ? 40 : 70}
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+              />
+              {/* Solid tint over the blur so dark mode gets a crisp bar
+                  colour instead of the washed-out gray that iOS gives a
+                  dark BlurView over a dark background. */}
+              <View
+                style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                  backgroundColor:
+                    scheme === 'dark'
+                      ? 'rgba(21, 21, 15, 0.82)'
+                      : 'rgba(252, 248, 240, 0.4)',
+                }}
+              />
+              {/* Hairline on top edge */}
+              <View
+                style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, height: 1,
+                  backgroundColor: scheme === 'dark'
+                    ? 'rgba(240, 235, 218, 0.08)'
+                    : 'rgba(42, 40, 32, 0.08)',
+                }}
+              />
+            </>
           ) : null,
         tabBarStyle: {
           backgroundColor: barBg,
