@@ -120,6 +120,7 @@ export class SubscriptionsService {
     const row = await this.prisma.sellerSubscription.findUnique({ where: { id: subscriptionId } });
     if (!row) throw new NotFoundException('SUBSCRIPTION_NOT_FOUND');
     const spec = PLAN_SPECS[row.plan];
+    if (!spec) throw new BadRequestException('INVALID_PLAN');
     const start = new Date();
     const end = new Date(start.getTime());
     end.setMonth(end.getMonth() + spec.months);
