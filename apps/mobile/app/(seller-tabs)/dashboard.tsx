@@ -92,34 +92,45 @@ export default function SellerDashboard() {
   const s = stats ?? EMPTY_STATS;
   const revenue = s.revenue >= 1000 ? `$${(s.revenue / 1000).toFixed(1)}k` : `$${s.revenue}`;
 
-  const STAT_CARDS = [
+  const STAT_CARDS: Array<{
+    label: string;
+    value: string;
+    icon: React.ComponentProps<typeof Ionicons>['name'];
+    iconColor: string;
+    iconBg: string;
+    route?: string;
+  }> = [
     {
       label: L('Mahsulotlar', 'Товары', 'Products', 'المنتجات'),
       value: String(s.totalProducts),
-      icon: 'grid-outline' as const,
+      icon: 'grid-outline',
       iconColor: colors.oliveDeep,
       iconBg: 'rgba(54,57,36,0.08)',
+      route: '/(seller-tabs)/products',
     },
     {
       label: L('Buyurtmalar', 'Заказы', 'Orders', 'الطلبات'),
       value: String(s.activeOrders),
-      icon: 'cube-outline' as const,
+      icon: 'cube-outline',
       iconColor: '#A88848',
       iconBg: 'rgba(201,169,110,0.15)',
+      route: '/(seller-tabs)/orders',
     },
     {
       label: L('Daromad', 'Доход', 'Revenue', 'الإيرادات'),
       value: revenue,
-      icon: 'trending-up-outline' as const,
+      icon: 'trending-up-outline',
       iconColor: '#7A8A5B',
       iconBg: 'rgba(122,138,91,0.12)',
+      route: '/(seller-tabs)/analytics',
     },
     {
       label: L('Primerka', 'Примерки', 'Try-ons', 'التجارب'),
       value: String(s.tryOnCount),
-      icon: 'body-outline' as const,
+      icon: 'body-outline',
       iconColor: colors.oliveDeep,
       iconBg: 'rgba(54,57,36,0.08)',
+      route: '/(seller-tabs)/analytics',
     },
   ];
 
@@ -192,16 +203,18 @@ export default function SellerDashboard() {
           }}
         >
           {STAT_CARDS.map((card) => (
-            <View
+            <Pressable
               key={card.label}
-              style={{
+              onPress={() => card.route && router.push(card.route as any)}
+              style={({ pressed }) => ({
                 width: '47%',
                 backgroundColor: colors.surface,
                 borderRadius: 16,
                 padding: 16,
                 borderWidth: 1,
                 borderColor: colors.rule,
-              }}
+                opacity: pressed ? 0.75 : 1,
+              })}
             >
               <View
                 style={{
@@ -248,7 +261,7 @@ export default function SellerDashboard() {
                   <Ionicons name={card.icon} size={18} color={card.iconColor} />
                 </View>
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
 

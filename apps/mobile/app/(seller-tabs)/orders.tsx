@@ -164,7 +164,7 @@ export default function SellerOrdersScreen() {
                   fontFamily: theme.fontFamilies.display,
                   fontSize: 18,
                   fontWeight: '700',
-                  color: active ? colors.goldSoft : colors.oliveDeep,
+                  color: active ? colors.goldSoft : colors.ink,
                 }}
               >
                 {counts[tab.key]}
