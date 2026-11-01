@@ -251,24 +251,30 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Beige silk ribbon — stronger backdrop so the fabric reads
-          through the status bar, header icons and welcome text. A warm
-          cream wash sits under the image; a soft brown shadow around
-          the ribbon's rendered edges gives us the multiply effect that
-          mix-blend-mode would produce on the web. */}
+      {/* Beige silk ribbon — wraps across the entire header row so the
+          fabric is visibly behind the status bar AND the notification
+          bell on the right. We use 'contain' with an aspect-preserving
+          height so the ribbon's full right-tail stays in frame instead
+          of getting cropped by cover. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.75,
+          height: SCREEN_W * 0.5,
           zIndex: 0,
           backgroundColor: '#efe6cf',
+          overflow: 'hidden',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '100%', height: '100%', opacity: 1 }}
+          style={{
+            width: '110%',
+            height: '100%',
+            marginLeft: '-5%',
+            opacity: 1,
+          }}
           resizeMode="cover"
         />
       </View>
