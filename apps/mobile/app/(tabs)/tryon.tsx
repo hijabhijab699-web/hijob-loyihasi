@@ -850,16 +850,16 @@ function SideAction({
     <Pressable
       onPress={onPress}
       style={{
-        width: 76,
-        paddingVertical: 14,
-        borderRadius: 38,
+        width: 62,
+        paddingVertical: 10,
+        borderRadius: 32,
         backgroundColor: GLASS,
         alignItems: 'center',
-        gap: 6,
+        gap: 4,
       }}
     >
-      <Ionicons name={icon} size={24} color="#FFF" />
-      <Text style={{ color: '#FFF', fontSize: 10.5, textAlign: 'center', lineHeight: 13 }}>
+      <Ionicons name={icon} size={20} color="#FFF" />
+      <Text style={{ color: '#FFF', fontSize: 8.5, textAlign: 'center', lineHeight: 10 }}>
         {label}
       </Text>
     </Pressable>
