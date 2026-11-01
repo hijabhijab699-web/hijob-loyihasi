@@ -242,17 +242,18 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Beige silk ribbon anchored to the very top of the screen.
-          Cream base layer boosts contrast so the ribbon reads against
-          both the light and dark Screen gradients. */}
+      {/* Beige silk ribbon anchored to the very top of the screen —
+          taller band so the header icons + welcome text sit visibly on
+          the silk fabric, matching the mockup where the ribbon drapes
+          through the status + nav row. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.45,
+          height: SCREEN_W * 0.55,
           zIndex: 0,
-          backgroundColor: 'rgba(239, 230, 207, 0.5)',
+          backgroundColor: 'rgba(239, 230, 207, 0.65)',
         }}
       >
         <Image
