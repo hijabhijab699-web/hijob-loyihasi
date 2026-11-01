@@ -372,7 +372,7 @@ export default function TryOnScreen() {
         pointerEvents="none"
         style={{
           position: 'absolute',
-          bottom: 0, left: 0, right: 0,
+          bottom: 100, left: 0, right: 0,
           height: SCREEN_W * 0.35,
           zIndex: 0,
           opacity: 0.6,
