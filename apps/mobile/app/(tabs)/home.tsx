@@ -24,7 +24,7 @@ const SIDE = 20;
 // pulled from the mockup the client approved. They sit absolutely over the
 // scrolling home feed and never intercept touches.
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
-const DECOR_SILK_TOP = require('../../assets/decor/silk-ribbon.png');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-ribbon.webp');
 const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 const DECOR_HERO_HOME = require('../../assets/decor/hero-home.webp');
 
@@ -251,10 +251,10 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Tan silk ribbon anchored to the top. Scaled wide enough that
-          the ribbon fills horizontally with no transparent edges, and
-          the bottom edge fades out to white via a gradient so the silk
-          melts into the page body (no hard cut line). */}
+      {/* Cream silk ribbon header — landscape fabric panel flowing from
+          upper-right across the top. Bottom edge fades out to white via
+          a gradient so the silk melts into the page body with no hard
+          cut line. */}
       <View
         pointerEvents="none"
         style={{
@@ -269,16 +269,16 @@ export default function HomeScreen() {
           source={DECOR_SILK_TOP}
           style={{
             position: 'absolute',
-            top: -SCREEN_W * 0.05,
-            left: -SCREEN_W * 0.55,
-            width: SCREEN_W * 2.1,
-            height: SCREEN_W * 2.1 * (1821 / 864),
+            top: 0,
+            left: 0,
+            width: '100%',
+            aspectRatio: 1847 / 851,
           }}
-          resizeMode="contain"
+          resizeMode="cover"
         />
         <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(255,255,255,0.75)', '#ffffff']}
-          locations={[0, 0.55, 0.88, 1]}
+          colors={['transparent', 'transparent', 'rgba(255,255,255,0.78)', '#ffffff']}
+          locations={[0, 0.5, 0.85, 1]}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
       </View>

@@ -16,7 +16,7 @@ import { useTryonCollection, TRYON_ALLOWED_CATEGORIES } from '../../src/store/tr
 import { sceneById } from '../../src/lib/scenes';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const DECOR_SILK_TOP = require('../../assets/decor/silk-ribbon.png');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-ribbon.webp');
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 
@@ -351,7 +351,7 @@ export default function TryOnScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      {/* Tan silk ribbon header — shared across all tabs. */}
+      {/* Cream silk ribbon header — shared across all tabs. */}
       <View
         pointerEvents="none"
         style={{
@@ -366,16 +366,15 @@ export default function TryOnScreen() {
           source={DECOR_SILK_TOP}
           style={{
             position: 'absolute',
-            top: -SCREEN_W * 0.05,
-            left: -SCREEN_W * 0.55,
-            width: SCREEN_W * 2.1,
-            height: SCREEN_W * 2.1 * (1821 / 864),
+            top: 0, left: 0,
+            width: '100%',
+            aspectRatio: 1847 / 851,
           }}
-          resizeMode="contain"
+          resizeMode="cover"
         />
         <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(255,255,255,0.75)', '#ffffff']}
-          locations={[0, 0.55, 0.88, 1]}
+          colors={['transparent', 'transparent', 'rgba(255,255,255,0.78)', '#ffffff']}
+          locations={[0, 0.5, 0.85, 1]}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
       </View>
