@@ -251,22 +251,24 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Beige silk ribbon — matches the HTML mockup: natural image
-          height, opacity 0.92, no cream base layer (we approximate
-          mix-blend-mode: multiply by letting the ribbon render on top
-          of the cream Screen gradient). */}
+      {/* Beige silk ribbon — anchored behind the whole header + welcome
+          area so the fabric reads clearly through the status bar, icons
+          and the "Salom, Muslima" line. Cream base layer brings the
+          ribbon's cream-on-cream shape forward (RN has no
+          mix-blend-mode: multiply to do this natively). */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.5,
+          height: SCREEN_W * 0.75,
           zIndex: 0,
+          backgroundColor: 'rgba(239, 230, 207, 0.55)',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '100%', height: '100%', opacity: 0.92 }}
+          style={{ width: '100%', height: '100%', opacity: 1 }}
           resizeMode="cover"
         />
       </View>
