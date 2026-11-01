@@ -338,7 +338,7 @@ export default function ProfileScreen() {
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.55,
+          height: SCREEN_W * 0.5,
           zIndex: 0,
           overflow: 'hidden',
         }}
@@ -347,12 +347,17 @@ export default function ProfileScreen() {
           source={DECOR_SILK_TOP}
           style={{
             position: 'absolute',
-            top: 0,
-            left: -SCREEN_W * 0.7,
-            width: SCREEN_W * 2.4,
-            height: SCREEN_W * 2.4 * (1821 / 864),
+            top: -SCREEN_W * 0.05,
+            left: -SCREEN_W * 0.55,
+            width: SCREEN_W * 2.1,
+            height: SCREEN_W * 2.1 * (1821 / 864),
           }}
           resizeMode="contain"
+        />
+        <LinearGradient
+          colors={['transparent', 'transparent', 'rgba(255,255,255,0.75)', '#ffffff']}
+          locations={[0, 0.55, 0.88, 1]}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
       </View>
 
