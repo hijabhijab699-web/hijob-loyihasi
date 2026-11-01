@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, Dimensions, Image, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -41,6 +42,7 @@ export default function CartScreen() {
   const uzsRate = useUzsRate();
   const qc = useQueryClient();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [deliveryMethod, setDeliveryMethod] = useState<'courier' | 'pickup' | 'proba'>('courier');
   const [promoCode, setPromoCode] = useState('');
 
@@ -108,57 +110,77 @@ export default function CartScreen() {
     'linear-gradient(135deg, #FDFAF3 0%, #E4CE9A 50%, #C9A96E 100%)',
   ];
 
-  return (
-    <Screen>
-      {/* Cream silk ribbon header — shared across all tabs. */}
-      <View
-        pointerEvents="none"
+  const silkRibbon = (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        height: SCREEN_W * 0.42 + insets.top,
+        zIndex: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <Image
+        source={DECOR_SILK_TOP}
         style={{
           position: 'absolute',
-          top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.56,
-          zIndex: 0,
-          overflow: 'hidden',
+          top: 0,
+          left: -SCREEN_W * 0.05,
+          width: SCREEN_W * 1.1,
+          aspectRatio: 1847 / 851,
         }}
-      >
-        <Image
-          source={DECOR_SILK_TOP}
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={['transparent', 'transparent', 'rgba(255,255,255,0.75)', '#ffffff']}
+        locations={[0, 0.3, 0.6, 1]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+    </View>
+  );
+
+  const bottomWave = (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        bottom: 100, left: 0, right: 0,
+        height: SCREEN_W * 0.4,
+        zIndex: 0,
+        opacity: 0.75,
+      }}
+    >
+      <Image
+        source={DECOR_WAVE_BOTTOM}
+        style={{ width: '100%', height: '100%' }}
+        resizeMode="cover"
+      />
+    </View>
+  );
+
+  return (
+    <Screen topDecoration={silkRibbon} bottomDecoration={bottomWave}>
+
+      {/* ── Welcome header: kicker + serif title with swoosh, jasmine
+          branch tucked into the top-right corner to match the catalog
+          and home tabs. ── */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 4, position: 'relative' }}>
+        <View
+          pointerEvents="none"
           style={{
             position: 'absolute',
-            top: 0,
-            left: -SCREEN_W * 0.05,
-            width: SCREEN_W * 1.1,
-            aspectRatio: 1847 / 851,
+            top: -8, right: -36,
+            width: 160, height: 110,
+            transform: [{ rotate: '-8deg' }],
           }}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(255,255,255,0.4)', '#ffffff']}
-          locations={[0, 0.65, 0.88, 1]}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-      </View>
-
-      {/* Scarf-like green silk wave above the tab bar. */}
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          bottom: 100, left: 0, right: 0,
-          height: SCREEN_W * 0.4,
-          zIndex: 0,
-          opacity: 0.75,
-        }}
-      >
-        <Image
-          source={DECOR_WAVE_BOTTOM}
-          style={{ width: '100%', height: '100%' }}
-          resizeMode="cover"
-        />
-      </View>
-
-      {/* ── Welcome header: kicker + serif title with swoosh ── */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
+        >
+          <Image
+            source={DECOR_JASMINE}
+            style={{ width: '100%', height: '100%', opacity: 0.95 }}
+            resizeMode="contain"
+          />
+        </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text
             variant="bodySmall"
@@ -232,7 +254,15 @@ export default function CartScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120, gap: 0 }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingBottom: 120,
+          gap: 0,
+          // Let the empty state stretch to fill the full viewport so the
+          // bag icon lands in the vertical middle of the screen instead
+          // of hugging the top under the header.
+          flexGrow: items.length === 0 ? 1 : undefined,
+        }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -243,9 +273,9 @@ export default function CartScreen() {
           />
         }
       >
-        {/* Empty state */}
+        {/* Empty state — centered vertically between header and tab bar. */}
         {items.length === 0 && (
-          <View style={{ alignItems: 'center', paddingVertical: 60, gap: 8 }}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Ionicons name="bag-outline" size={48} color={colors.muted} />
             <Text variant="titleMedium" color="muted">{t('cart.empty')}</Text>
           </View>

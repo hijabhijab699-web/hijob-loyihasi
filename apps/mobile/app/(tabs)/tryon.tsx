@@ -351,13 +351,15 @@ export default function TryOnScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      {/* Cream silk ribbon header — shared across all tabs. */}
+      {/* Cream silk ribbon header — shared across all tabs. Shorter
+          compact band to match the mockup; this screen renders without
+          <Screen>, so top:0 is already the actual top of the device. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.56,
+          height: SCREEN_W * 0.42,
           zIndex: 0,
           overflow: 'hidden',
         }}
@@ -374,8 +376,8 @@ export default function TryOnScreen() {
           resizeMode="cover"
         />
         <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(255,255,255,0.4)', '#ffffff']}
-          locations={[0, 0.65, 0.88, 1]}
+          colors={['transparent', 'transparent', 'rgba(255,255,255,0.75)', '#ffffff']}
+          locations={[0, 0.3, 0.6, 1]}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
       </View>

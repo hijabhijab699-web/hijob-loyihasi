@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Pressable, RefreshControl, ScrollView, View, Image, Animated, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -163,6 +164,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const tryonCount = useTryonCollection((s) => s.items.length);
+  const insets = useSafeAreaInsets();
   const lang = i18n.language as 'ru' | 'uz';
   const uzsRate = useUzsRate();
 
@@ -249,59 +251,57 @@ export default function HomeScreen() {
     );
   }
 
-  return (
-    <Screen gradient>
-      {/* Cream silk ribbon header — landscape fabric panel positioned
-          so the ribbon's cream band occupies the top of the screen.
-          Gradient fades the bottom edge into white smoothly; the panel
-          slightly extends past the viewport so the silk reaches edge
-          to edge without a cut line. */}
-      <View
-        pointerEvents="none"
+  const silkRibbon = (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        height: SCREEN_W * 0.42 + insets.top,
+        zIndex: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <Image
+        source={DECOR_SILK_TOP}
         style={{
           position: 'absolute',
-          top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.56,
-          zIndex: 0,
-          overflow: 'hidden',
+          top: 0,
+          left: -SCREEN_W * 0.05,
+          width: SCREEN_W * 1.1,
+          aspectRatio: 1847 / 851,
         }}
-      >
-        <Image
-          source={DECOR_SILK_TOP}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: -SCREEN_W * 0.05,
-            width: SCREEN_W * 1.1,
-            aspectRatio: 1847 / 851,
-          }}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(255,255,255,0.4)', '#ffffff']}
-          locations={[0, 0.65, 0.88, 1]}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-      </View>
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={['transparent', 'transparent', 'rgba(255,255,255,0.75)', '#ffffff']}
+        locations={[0, 0.3, 0.6, 1]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+    </View>
+  );
 
-      {/* Scarf-like green silk wave above the tab bar — fabric motif
-          applied screen-wide so every tab shares the brand surface. */}
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          bottom: 100, left: 0, right: 0,
-          height: SCREEN_W * 0.4,
-          zIndex: 0,
-          opacity: 0.75,
-        }}
-      >
-        <Image
-          source={DECOR_WAVE_BOTTOM}
-          style={{ width: '100%', height: '100%' }}
-          resizeMode="cover"
-        />
-      </View>
+  const bottomWave = (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        bottom: 100, left: 0, right: 0,
+        height: SCREEN_W * 0.4,
+        zIndex: 0,
+        opacity: 0.75,
+      }}
+    >
+      <Image
+        source={DECOR_WAVE_BOTTOM}
+        style={{ width: '100%', height: '100%' }}
+        resizeMode="cover"
+      />
+    </View>
+  );
+
+  return (
+    <Screen gradient topDecoration={silkRibbon} bottomDecoration={bottomWave}>
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -347,7 +347,6 @@ export default function HomeScreen() {
             >
               <Ionicons name="menu-outline" size={20} color={colors.ink} />
             </Pressable>
-            <Logo size={44} />
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

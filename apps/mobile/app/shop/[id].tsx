@@ -1,14 +1,20 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, Linking, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 import { safeBack } from '../../src/lib/safe-back';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-ribbon.webp');
+const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 
 interface StoreDetail {
   id: string;
@@ -55,6 +61,7 @@ const CATEGORY_LABELS: Record<string, { uz: string; ru: string }> = {
 export default function ShopDetailScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { i18n } = useTranslation();
   const isRu = (i18n.language?.slice(0, 2) ?? 'uz') === 'ru';

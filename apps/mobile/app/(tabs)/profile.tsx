@@ -1,4 +1,5 @@
 import { Image, Pressable, RefreshControl, ScrollView, View, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -37,6 +38,7 @@ export default function ProfileScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const lang = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru';
   const qc = useQueryClient();
 
@@ -330,54 +332,57 @@ export default function ProfileScreen() {
     </View>
   );
 
-  return (
-    <Screen>
-      {/* Cream silk ribbon header — shared across all tabs. */}
-      <View
-        pointerEvents="none"
+  const silkRibbon = (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        height: SCREEN_W * 0.42 + insets.top,
+        zIndex: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <Image
+        source={DECOR_SILK_TOP}
         style={{
           position: 'absolute',
-          top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.56,
-          zIndex: 0,
-          overflow: 'hidden',
+          top: 0,
+          left: -SCREEN_W * 0.05,
+          width: SCREEN_W * 1.1,
+          aspectRatio: 1847 / 851,
         }}
-      >
-        <Image
-          source={DECOR_SILK_TOP}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: -SCREEN_W * 0.05,
-            width: SCREEN_W * 1.1,
-            aspectRatio: 1847 / 851,
-          }}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(255,255,255,0.4)', '#ffffff']}
-          locations={[0, 0.65, 0.88, 1]}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-      </View>
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={['transparent', 'transparent', 'rgba(255,255,255,0.75)', '#ffffff']}
+        locations={[0, 0.3, 0.6, 1]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+    </View>
+  );
 
-      {/* Scarf-like green silk wave above the tab bar. */}
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          bottom: 100, left: 0, right: 0,
-          height: SCREEN_W * 0.4,
-          zIndex: 0,
-          opacity: 0.75,
-        }}
-      >
-        <Image
-          source={DECOR_WAVE_BOTTOM}
-          style={{ width: '100%', height: '100%' }}
-          resizeMode="cover"
-        />
-      </View>
+  const bottomWave = (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        bottom: 100, left: 0, right: 0,
+        height: SCREEN_W * 0.4,
+        zIndex: 0,
+        opacity: 0.75,
+      }}
+    >
+      <Image
+        source={DECOR_WAVE_BOTTOM}
+        style={{ width: '100%', height: '100%' }}
+        resizeMode="cover"
+      />
+    </View>
+  );
+
+  return (
+    <Screen topDecoration={silkRibbon} bottomDecoration={bottomWave}>
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -395,8 +400,25 @@ export default function ProfileScreen() {
           />
         }
       >
-        {/* ── Welcome / page title with serif + swoosh underline ── */}
-        <View style={{ paddingHorizontal: SIDE, marginTop: 4 }}>
+        {/* ── Welcome / page title with serif + swoosh underline, with
+            the jasmine branch tucked into the top-right to match the
+            catalog, home and cart tabs. ── */}
+        <View style={{ paddingHorizontal: SIDE, marginTop: 4, position: 'relative' }}>
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -8, right: -36,
+              width: 160, height: 110,
+              transform: [{ rotate: '-8deg' }],
+            }}
+          >
+            <Image
+              source={DECOR_JASMINE}
+              style={{ width: '100%', height: '100%', opacity: 0.95 }}
+              resizeMode="contain"
+            />
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text
               variant="bodySmall"

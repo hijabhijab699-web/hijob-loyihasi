@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Alert, Dimensions, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -70,6 +71,7 @@ export default function CatalogScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ category?: CategoryId }>();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const lang = (i18n.language?.slice(0, 2) ?? 'uz') as 'uz' | 'ru';
 
   const [category, setCategory] = useState<CategoryId>(params.category ?? 'scarves');
@@ -419,55 +421,57 @@ export default function CatalogScreen() {
     </>
   );
 
-  return (
-    <Screen>
-      {/* Cream silk ribbon header — shared across all tabs. */}
-      <View
-        pointerEvents="none"
+  const silkRibbon = (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        height: SCREEN_W * 0.42 + insets.top,
+        zIndex: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <Image
+        source={DECOR_SILK_TOP}
         style={{
           position: 'absolute',
-          top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.56,
-          zIndex: 0,
-          overflow: 'hidden',
+          top: 0,
+          left: -SCREEN_W * 0.05,
+          width: SCREEN_W * 1.1,
+          aspectRatio: 1847 / 851,
         }}
-      >
-        <Image
-          source={DECOR_SILK_TOP}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: -SCREEN_W * 0.05,
-            width: SCREEN_W * 1.1,
-            aspectRatio: 1847 / 851,
-          }}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(255,255,255,0.4)', '#ffffff']}
-          locations={[0, 0.65, 0.88, 1]}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-      </View>
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={['transparent', 'transparent', 'rgba(255,255,255,0.75)', '#ffffff']}
+        locations={[0, 0.3, 0.6, 1]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+    </View>
+  );
 
-      {/* Scarf-like green silk wave anchored above the tab bar — matches
-          the fabric motif the client wanted on every screen. */}
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          bottom: 100, left: 0, right: 0,
-          height: SCREEN_W * 0.4,
-          zIndex: 0,
-          opacity: 0.75,
-        }}
-      >
-        <Image
-          source={DECOR_WAVE_BOTTOM}
-          style={{ width: '100%', height: '100%' }}
-          resizeMode="cover"
-        />
-      </View>
+  const bottomWave = (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        bottom: 100, left: 0, right: 0,
+        height: SCREEN_W * 0.4,
+        zIndex: 0,
+        opacity: 0.75,
+      }}
+    >
+      <Image
+        source={DECOR_WAVE_BOTTOM}
+        style={{ width: '100%', height: '100%' }}
+        resizeMode="cover"
+      />
+    </View>
+  );
+
+  return (
+    <Screen topDecoration={silkRibbon} bottomDecoration={bottomWave}>
 
       <View style={{ flex: 1 }}>
         <FlashList
