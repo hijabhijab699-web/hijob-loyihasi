@@ -261,21 +261,22 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-      {/* Jasmine branch tucked into the upper-right corner, below the header
-          so it decorates the welcome area without covering the icons. */}
+      {/* Jasmine branch tucked into the upper-right corner, next to the
+          welcome text — bigger than before, matching the mockup where the
+          flowers hug the edge of the Привет block. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: 60, right: -40,
-          width: 200, height: 130,
-          transform: [{ rotate: '-6deg' }],
+          top: 90, right: -50,
+          width: 240, height: 150,
+          transform: [{ rotate: '-4deg' }],
           zIndex: 1,
         }}
       >
         <Image
           source={DECOR_JASMINE}
-          style={{ width: '100%', height: '100%', opacity: 0.95 }}
+          style={{ width: '100%', height: '100%', opacity: 1 }}
           resizeMode="contain"
         />
       </View>
@@ -431,36 +432,40 @@ export default function HomeScreen() {
 
         {/* ── Welcome ── premium serif greeting with the first-name/brand
             picked out in italic jade so it reads like editorial copy, not a
-            UI label. The small swoosh underline mirrors the website mockup. */}
-        <View style={{ paddingHorizontal: SIDE, marginTop: 20 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            UI label. Mockup sizes it big and bold — 42 px, matching the
+            type-first feel of the design. */}
+        <View style={{ paddingHorizontal: SIDE, marginTop: 18 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Text
               variant="bodySmall"
               style={{
                 letterSpacing: 3,
                 textTransform: 'uppercase',
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: '600',
                 color: colors.gold,
               }}
             >
               {lang === 'ru' ? 'Добро пожаловать' : 'Xush kelibsiz'}
             </Text>
-            <Text style={{ color: colors.gold, fontSize: 12 }}>✦</Text>
+            <Svg width={14} height={14} viewBox="0 0 10 10">
+              <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill={colors.gold} />
+            </Svg>
           </View>
           {(() => {
             const greet = lang === 'ru' ? 'Привет' : 'Salom';
             const name = user?.fullName?.split(' ')[0]
               ?? (lang === 'ru' ? 'Muslima' : 'Muslima');
             return (
-              <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <Text
                   style={{
                     fontFamily: theme.fontFamilies.display,
-                    fontSize: 32,
-                    lineHeight: 36,
+                    fontSize: 42,
+                    lineHeight: 46,
                     fontWeight: '500',
                     color: colors.oliveDeep,
+                    letterSpacing: -0.5,
                   }}
                 >
                   {greet},{' '}
@@ -469,26 +474,27 @@ export default function HomeScreen() {
                   <Text
                     style={{
                       fontFamily: theme.fontFamilies.display,
-                      fontSize: 32,
-                      lineHeight: 36,
+                      fontSize: 42,
+                      lineHeight: 46,
                       fontStyle: 'italic',
                       fontWeight: '600',
                       color: colors.olive,
+                      letterSpacing: -0.3,
                     }}
                   >
                     {name}
                   </Text>
                   <Svg
                     width="100%"
-                    height={10}
+                    height={12}
                     viewBox="0 0 120 10"
-                    style={{ position: 'absolute', left: 2, right: 8, bottom: -4 }}
+                    style={{ position: 'absolute', left: 2, right: 8, bottom: -2 }}
                     pointerEvents="none"
                   >
                     <Path
                       d="M2 7 Q 30 1 60 5 T 118 4"
                       stroke={colors.olive}
-                      strokeWidth={1.4}
+                      strokeWidth={1.6}
                       strokeLinecap="round"
                       fill="none"
                     />
@@ -555,20 +561,23 @@ export default function HomeScreen() {
           >
             {stores.map((store, idx) => {
               const ringColor = STORE_COLORS[idx % STORE_COLORS.length];
+              // Soft tinted fill behind the initials — mockup shows a cream
+              // tint that picks up the ring colour, not a pure white disc.
+              const tintBg = ringColor + '18'; // 12% opacity
               return (
                 <Pressable
                   key={store.id}
                   onPress={() =>
                     router.push({ pathname: '/shop/[id]', params: { id: store.id } })
                   }
-                  style={{ alignItems: 'center', gap: 6, width: 72 }}
+                  style={{ alignItems: 'center', gap: 8, width: 82 }}
                 >
-                  {/* Ring */}
+                  {/* Ring — bigger disc, bolder ring, warm cream tint */}
                   <View
                     style={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: 32,
+                      width: 76,
+                      height: 76,
+                      borderRadius: 38,
                       borderWidth: 2.5,
                       borderColor: ringColor,
                       padding: 3,
@@ -577,8 +586,8 @@ export default function HomeScreen() {
                     <View
                       style={{
                         flex: 1,
-                        borderRadius: 28,
-                        backgroundColor: colors.surface,
+                        borderRadius: 34,
+                        backgroundColor: store.logoUrl ? colors.surface : tintBg,
                         alignItems: 'center',
                         justifyContent: 'center',
                         overflow: 'hidden',
@@ -592,12 +601,12 @@ export default function HomeScreen() {
                         />
                       ) : (
                         <Text
-                          variant="titleSmall"
                           style={{
                             color: ringColor,
-                            fontWeight: '800',
-                            fontSize: 14,
-                            letterSpacing: 0.5,
+                            fontFamily: theme.fontFamilies.display,
+                            fontWeight: '700',
+                            fontSize: 20,
+                            letterSpacing: 1,
                           }}
                         >
                           {store.brandName.slice(0, 2).toUpperCase()}
@@ -606,10 +615,13 @@ export default function HomeScreen() {
                     </View>
                   </View>
                   <Text
-                    variant="caption"
-                    color="ink"
                     numberOfLines={1}
-                    style={{ fontSize: 10, fontWeight: '500', textAlign: 'center' }}
+                    style={{
+                      fontSize: 12,
+                      fontWeight: '500',
+                      textAlign: 'center',
+                      color: colors.ink,
+                    }}
                   >
                     {store.brandName.split(' ')[0]}
                   </Text>
@@ -617,16 +629,16 @@ export default function HomeScreen() {
               );
             })}
 
-            {/* Add store */}
+            {/* Add store — matches sized of other circles */}
             <Pressable
               onPress={() => router.push('/(tabs)/catalog')}
-              style={{ alignItems: 'center', gap: 6, width: 72 }}
+              style={{ alignItems: 'center', gap: 8, width: 82 }}
             >
               <View
                 style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
+                  width: 76,
+                  height: 76,
+                  borderRadius: 38,
                   borderWidth: 1.5,
                   borderColor: colors.rule,
                   borderStyle: 'dashed',
@@ -634,9 +646,9 @@ export default function HomeScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="add" size={22} color={colors.muted} />
+                <Ionicons name="add" size={26} color={colors.muted} />
               </View>
-              <Text variant="caption" color="muted" style={{ fontSize: 10 }}>
+              <Text style={{ fontSize: 12, color: colors.muted }}>
                 {lang === 'ru' ? 'Ещё' : "Qo'shish"}
               </Text>
             </Pressable>
@@ -644,15 +656,17 @@ export default function HomeScreen() {
         </View>
 
         {/* Jasmine inter-section decoration — right-side, between shops
-            and categories, mirrors the mockup. */}
+            and categories, mirrors the mockup where a prominent cluster
+            sits between the "Yangi do'konchilar" row and the Kategoriyalar
+            header. Bigger than the top jasmine for visual rhythm. */}
         <View
           pointerEvents="none"
           style={{
             position: 'absolute',
-            top: 540, right: -50,
-            width: 160, height: 110,
-            transform: [{ rotate: '18deg' }],
-            opacity: 0.9,
+            top: 720, right: -60,
+            width: 230, height: 150,
+            transform: [{ rotate: '14deg' }],
+            opacity: 1,
           }}
         >
           <Image
