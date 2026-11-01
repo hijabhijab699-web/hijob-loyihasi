@@ -108,9 +108,55 @@ export default function ShopDetailScreen() {
     return Array.from(seen.entries()).map(([color, hex]) => ({ color, hex }));
   }, [products]);
 
+  // Shared cream silk ribbon with jasmine branch tucked into the top
+  // right — matches the mockup's single combined header decoration. The
+  // ribbon reaches above the safe area so its curves meet the actual
+  // top of the device.
+  const silkRibbon = (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        height: SCREEN_W * 0.55 + insets.top,
+        zIndex: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <Image
+        source={DECOR_SILK_TOP}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: -SCREEN_W * 0.05,
+          width: SCREEN_W * 1.1,
+          aspectRatio: 1847 / 851,
+        }}
+        resizeMode="cover"
+      />
+      <Image
+        source={DECOR_JASMINE}
+        style={{
+          position: 'absolute',
+          top: insets.top + 60,
+          right: -30,
+          width: 180, height: 160,
+          opacity: 0.95,
+          transform: [{ rotate: '-6deg' }],
+        }}
+        resizeMode="contain"
+      />
+      <LinearGradient
+        colors={['transparent', 'transparent', 'rgba(255,255,255,0.75)', '#ffffff']}
+        locations={[0, 0.45, 0.75, 1]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+    </View>
+  );
+
   if (!store) {
     return (
-      <Screen>
+      <Screen topDecoration={silkRibbon}>
         <View style={{ padding: 40, alignItems: 'center' }}>
           <ActivityIndicator color={colors.oliveDeep} />
         </View>
@@ -119,45 +165,81 @@ export default function ShopDetailScreen() {
   }
 
   return (
-    <Screen>
+    <Screen topDecoration={silkRibbon}>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
-        {/* Header */}
+        {/* Header — back pill + "Магазин" label matches the mockup. */}
         <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Pressable
             onPress={() => safeBack()}
-            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.rule, alignItems: 'center', justifyContent: 'center' }}
+            style={{
+              width: 44, height: 44, borderRadius: 22,
+              backgroundColor: '#ffffff',
+              borderWidth: 1, borderColor: 'rgba(201,168,97,0.18)',
+              alignItems: 'center', justifyContent: 'center',
+              shadowColor: '#2a2a1f', shadowOpacity: 0.08,
+              shadowOffset: { width: 0, height: 2 }, shadowRadius: 6,
+            }}
           >
             <Ionicons name="arrow-back" size={18} color={colors.ink} />
           </Pressable>
-          <Text variant="body" color="muted" style={{ fontSize: 12 }}>
+          <Text variant="body" color="muted" style={{ fontSize: 14, color: '#857e6e' }}>
             {isRu ? 'Магазин' : "Do'kon"}
           </Text>
         </View>
 
-        {/* Profile card */}
-        <View style={{ paddingHorizontal: 20, alignItems: 'center', marginBottom: 20 }}>
+        {/* Profile card — big avatar with gold ring, serif name with
+            verified check, muted subtitle, and star rating centered. */}
+        <View style={{ paddingHorizontal: 20, alignItems: 'center', marginTop: 8, marginBottom: 20 }}>
           <View style={{
-            width: 96, height: 96, borderRadius: 48,
-            backgroundColor: colors.oliveDeep,
+            width: 136, height: 136, borderRadius: 68,
             alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden',
-            borderWidth: store.isPremium ? 3 : store.isTop ? 2 : 0,
-            borderColor: store.isPremium ? colors.gold : colors.oliveDeep,
+            padding: 4,
           }}>
-            {store.logoUrl ? (
-              <Image source={{ uri: store.logoUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-            ) : (
-              <Text variant="displayLarge" style={{ fontFamily: theme.fontFamilies.display, fontSize: 36, color: colors.goldSoft, fontWeight: '700' }}>
-                {store.brandName.slice(0, 1).toUpperCase()}
-              </Text>
-            )}
+            <View style={{
+              width: '100%', height: '100%', borderRadius: 68,
+              backgroundColor: colors.oliveDeep,
+              alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden',
+              borderWidth: 2.5,
+              borderColor: '#c9a861',
+              shadowColor: '#2a2a1f',
+              shadowOpacity: 0.25,
+              shadowOffset: { width: 0, height: 10 },
+              shadowRadius: 18,
+            }}>
+              {store.logoUrl ? (
+                <Image source={{ uri: store.logoUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              ) : (
+                <Text style={{
+                  fontFamily: theme.fontFamilies.display,
+                  fontSize: 56, lineHeight: 60,
+                  color: '#c9a861', fontWeight: '600',
+                  fontStyle: 'italic',
+                }}>
+                  {store.brandName.slice(0, 1).toUpperCase()}
+                </Text>
+              )}
+            </View>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Text variant="displayLarge" color="ink" style={{ fontSize: 22, fontWeight: '700', fontFamily: theme.fontFamilies.display }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Text style={{
+              fontFamily: theme.fontFamilies.display,
+              fontSize: 30, lineHeight: 34,
+              fontWeight: '600',
+              color: '#1f2a16',
+            }}>
               {store.brandName}
             </Text>
-            {store.verified && <Ionicons name="checkmark-circle" size={18} color={colors.gold} />}
+            {store.verified && (
+              <View style={{
+                width: 22, height: 22, borderRadius: 11,
+                backgroundColor: '#c9a861',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Ionicons name="checkmark" size={14} color="#ffffff" />
+              </View>
+            )}
             {store.isPremium && (
               <View style={{ backgroundColor: colors.gold, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
                 <Text variant="caption" style={{ fontSize: 10, color: colors.oliveDeep, fontWeight: '700' }}>PREMIUM</Text>
@@ -171,14 +253,14 @@ export default function ShopDetailScreen() {
           </View>
 
           {store.ownerName && (
-            <Text variant="caption" color="muted" style={{ marginTop: 4, fontSize: 12 }}>
+            <Text style={{ marginTop: 4, fontSize: 14, color: '#857e6e' }}>
               {store.ownerName}
             </Text>
           )}
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
-            <Ionicons name="star" size={14} color={colors.gold} />
-            <Text variant="caption" color="muted" style={{ fontSize: 13 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}>
+            <Ionicons name="star" size={16} color="#c9a861" />
+            <Text style={{ fontSize: 14, color: '#4a4a3b', fontWeight: '500' }}>
               {store.rating.toFixed(1)} · {store.reviewsCount} {isRu ? 'отзывов' : 'baho'}
             </Text>
           </View>
@@ -190,10 +272,10 @@ export default function ShopDetailScreen() {
           )}
         </View>
 
-        {/* Contact + Address */}
-        <View style={{ paddingHorizontal: 20, gap: 10 }}>
-          {/* TZ Phase 5.2: Chat (Yozish) + Qo'ng'iroq buttons */}
-          <View style={{ flexDirection: 'row', gap: 10 }}>
+        {/* Contact + Address — pill action buttons (filled vs outlined)
+            and a tap-to-open phone row with a chevron. */}
+        <View style={{ paddingHorizontal: 20, gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
             <Pressable
               onPress={async () => {
                 try {
@@ -203,37 +285,95 @@ export default function ShopDetailScreen() {
                   // Error handled silently; user can retry
                 }
               }}
-              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.oliveDeep, padding: 14, borderRadius: 14 }}
+              style={({ pressed }) => ({
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                backgroundColor: colors.oliveDeep,
+                paddingVertical: 18,
+                borderRadius: 999,
+                opacity: pressed ? 0.9 : 1,
+                shadowColor: '#1f2a16',
+                shadowOpacity: 0.25,
+                shadowOffset: { width: 0, height: 6 },
+                shadowRadius: 10,
+              })}
             >
-              <Ionicons name="chatbubble-ellipses" size={18} color={colors.goldSoft} />
-              <Text variant="body" style={{ color: colors.goldSoft, fontWeight: '700', fontSize: 14 }}>
+              <View style={{
+                width: 28, height: 28, borderRadius: 14,
+                backgroundColor: 'rgba(255,255,255,0.18)',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Ionicons name="chatbubble-ellipses" size={14} color="#ffffff" />
+              </View>
+              <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 15 }}>
                 {isRu ? 'Написать' : 'Yozish'}
               </Text>
             </Pressable>
             {store.phone && (
               <Pressable
                 onPress={() => Linking.openURL(`tel:${store.phone}`)}
-                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.surface, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.oliveDeep }}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  backgroundColor: '#ffffff',
+                  paddingVertical: 18,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: 'rgba(201,168,97,0.22)',
+                  opacity: pressed ? 0.9 : 1,
+                  shadowColor: '#2a2a1f',
+                  shadowOpacity: 0.08,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowRadius: 8,
+                })}
               >
-                <Ionicons name="call" size={18} color={colors.oliveDeep} />
-                <Text variant="body" style={{ color: colors.oliveDeep, fontWeight: '700', fontSize: 14 }}>
+                <View style={{
+                  width: 28, height: 28, borderRadius: 14,
+                  backgroundColor: 'rgba(90,140,116,0.14)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Ionicons name="call" size={14} color={colors.oliveDeep} />
+                </View>
+                <Text style={{ color: '#1f2a16', fontWeight: '600', fontSize: 15 }}>
                   {isRu ? 'Позвонить' : "Qo'ng'iroq"}
                 </Text>
               </Pressable>
             )}
           </View>
           {store.phone && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.rule }}>
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.oliveDeep, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="call" size={16} color={colors.goldSoft} />
+            <Pressable
+              onPress={() => Linking.openURL(`tel:${store.phone}`)}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 14,
+                backgroundColor: '#ffffff', padding: 16, borderRadius: 20,
+                borderWidth: 1, borderColor: 'rgba(201,168,97,0.18)',
+                shadowColor: '#2a2a1f', shadowOpacity: 0.06,
+                shadowOffset: { width: 0, height: 2 }, shadowRadius: 8,
+              }}
+            >
+              <View style={{
+                width: 44, height: 44, borderRadius: 22,
+                backgroundColor: '#f5efe3',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Ionicons name="call" size={18} color="#3a6451" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text variant="caption" color="muted" style={{ fontSize: 11 }}>
+                <Text style={{ fontSize: 12, color: '#857e6e' }}>
                   {isRu ? 'Телефон' : 'Telefon'}
                 </Text>
-                <Text variant="body" color="ink" style={{ fontWeight: '600', fontSize: 14 }}>{store.phone}</Text>
+                <Text style={{ fontWeight: '700', fontSize: 16, color: '#1f2a16', marginTop: 2 }}>
+                  {store.phone}
+                </Text>
               </View>
-            </View>
+              <Ionicons name="chevron-forward" size={18} color="#c9a861" />
+            </Pressable>
           )}
 
           {(store.city || store.district || store.addressLine) && (
@@ -266,43 +406,79 @@ export default function ShopDetailScreen() {
           )}
         </View>
 
-        {/* Products count card (always-open — no toggle) */}
+        {/* Products count card — olive-deep hero rail with a grid chip
+            on the left and a decorative jasmine + bag illustration tucked
+            into the right edge, matches the "8 товаров" card in the mockup. */}
         <View style={{
           marginTop: 20, marginHorizontal: 20,
-          padding: 18, borderRadius: 18,
+          paddingHorizontal: 18, paddingVertical: 20,
+          borderRadius: 22,
           backgroundColor: colors.oliveDeep,
           flexDirection: 'row', alignItems: 'center', gap: 14,
+          overflow: 'hidden',
+          shadowColor: '#1f2a16',
+          shadowOpacity: 0.25,
+          shadowOffset: { width: 0, height: 8 },
+          shadowRadius: 16,
         }}>
-          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="grid" size={22} color={colors.goldSoft} />
+          <View style={{
+            width: 48, height: 48, borderRadius: 14,
+            backgroundColor: 'rgba(255,255,255,0.14)',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="grid" size={22} color="#f1dfa4" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text variant="body" style={{ color: colors.goldSoft, fontWeight: '700', fontSize: 15 }}>
+            <Text style={{
+              color: '#f1dfa4', fontWeight: '700', fontSize: 18,
+              fontFamily: theme.fontFamilies.display,
+            }}>
               {store.productsCount} {isRu ? 'товаров' : 'ta mahsulot'}
             </Text>
-            <Text variant="caption" style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2 }}>
+            <Text style={{ color: 'rgba(241,223,164,0.65)', fontSize: 12, marginTop: 2 }}>
               {isRu ? 'Каталог магазина' : "Do'kon katalogi"}
             </Text>
           </View>
+          <Image
+            source={DECOR_JASMINE}
+            style={{
+              position: 'absolute',
+              right: -22, top: -4,
+              width: 120, height: 90,
+              opacity: 0.9,
+              transform: [{ rotate: '8deg' }],
+            }}
+            resizeMode="contain"
+            pointerEvents="none"
+          />
         </View>
 
-        {/* Category breakdown */}
+        {/* Category breakdown — larger pills with soft shadow, active
+            state in olive-deep with gold text, matches the "Все · 8" row. */}
         {store.productsByCategory.length > 0 && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, gap: 8 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 18, gap: 10 }}
           >
             <Pressable
               onPress={() => { setCategory(null); setProductsOpen(true); }}
               style={{
-                paddingHorizontal: 14, height: 34, borderRadius: 17,
-                backgroundColor: category === null ? colors.oliveDeep : colors.surface,
-                borderWidth: 1, borderColor: category === null ? colors.oliveDeep : colors.rule,
+                paddingHorizontal: 18, height: 40, borderRadius: 20,
+                backgroundColor: category === null ? colors.oliveDeep : '#ffffff',
+                borderWidth: 1,
+                borderColor: category === null ? colors.oliveDeep : 'rgba(201,168,97,0.18)',
                 alignItems: 'center', justifyContent: 'center',
+                shadowColor: '#2a2a1f',
+                shadowOpacity: category === null ? 0.18 : 0.06,
+                shadowOffset: { width: 0, height: 4 },
+                shadowRadius: 8,
               }}
             >
-              <Text variant="caption" style={{ color: category === null ? colors.goldSoft : colors.ink, fontWeight: '600', fontSize: 12 }}>
+              <Text style={{
+                color: category === null ? '#f1dfa4' : '#1f2a16',
+                fontWeight: '600', fontSize: 13,
+              }}>
                 {isRu ? 'Все' : 'Barchasi'} · {store.productsCount}
               </Text>
             </Pressable>
@@ -314,13 +490,21 @@ export default function ShopDetailScreen() {
                   key={b.categoryId}
                   onPress={() => { setCategory(b.categoryId); setProductsOpen(true); }}
                   style={{
-                    paddingHorizontal: 14, height: 34, borderRadius: 17,
-                    backgroundColor: active ? colors.oliveDeep : colors.surface,
-                    borderWidth: 1, borderColor: active ? colors.oliveDeep : colors.rule,
+                    paddingHorizontal: 18, height: 40, borderRadius: 20,
+                    backgroundColor: active ? colors.oliveDeep : '#ffffff',
+                    borderWidth: 1,
+                    borderColor: active ? colors.oliveDeep : 'rgba(201,168,97,0.18)',
                     alignItems: 'center', justifyContent: 'center',
+                    shadowColor: '#2a2a1f',
+                    shadowOpacity: active ? 0.18 : 0.06,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 8,
                   }}
                 >
-                  <Text variant="caption" style={{ color: active ? colors.goldSoft : colors.ink, fontWeight: '600', fontSize: 12 }}>
+                  <Text style={{
+                    color: active ? '#f1dfa4' : '#1f2a16',
+                    fontWeight: '600', fontSize: 13,
+                  }}>
                     {label} · {b.count}
                   </Text>
                 </Pressable>
@@ -332,27 +516,36 @@ export default function ShopDetailScreen() {
         {/* Products panel */}
         {productsOpen && (
           <View style={{ marginTop: 14, paddingHorizontal: 20 }}>
-            {/* Sort pills */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
+            {/* Sort pills — each with its own icon (crown / sparkle /
+                diamond) and a gold-filled active chip for popularity. */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 12 }}>
               {([
-                { key: 'popularity', uz: 'Ommaboplik', ru: 'Популярные' },
-                { key: 'new', uz: 'Yangi', ru: 'Новые' },
-                { key: 'priceLow', uz: 'Arzon', ru: 'Дешёвые' },
-                { key: 'priceHigh', uz: 'Qimmat', ru: 'Дорогие' },
-              ] as Array<{ key: SortKey; uz: string; ru: string }>).map((s) => {
+                { key: 'popularity', uz: 'Ommaboplik', ru: 'Популярные', icon: 'star' },
+                { key: 'new', uz: 'Yangi', ru: 'Новые', icon: 'sparkles' },
+                { key: 'priceLow', uz: 'Arzon', ru: 'Дешёвые', icon: 'pricetag' },
+                { key: 'priceHigh', uz: 'Qimmat', ru: 'Дорогие', icon: 'diamond' },
+              ] as Array<{ key: SortKey; uz: string; ru: string; icon: React.ComponentProps<typeof Ionicons>['name'] }>).map((s) => {
                 const active = sort === s.key;
                 return (
                   <Pressable
                     key={s.key}
                     onPress={() => setSort(s.key)}
                     style={{
-                      paddingHorizontal: 14, height: 32, borderRadius: 16,
-                      backgroundColor: active ? colors.gold : colors.surface,
-                      borderWidth: 1, borderColor: active ? colors.gold : colors.rule,
-                      alignItems: 'center', justifyContent: 'center',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 14, height: 36, borderRadius: 18,
+                      backgroundColor: active ? '#f1dfa4' : '#ffffff',
+                      borderWidth: 1,
+                      borderColor: active ? '#c9a861' : 'rgba(201,168,97,0.18)',
+                      shadowColor: '#2a2a1f',
+                      shadowOpacity: active ? 0.12 : 0.05,
+                      shadowOffset: { width: 0, height: 3 },
+                      shadowRadius: 6,
                     }}
                   >
-                    <Text variant="caption" style={{ color: active ? colors.oliveDeep : colors.ink, fontWeight: '700', fontSize: 11 }}>
+                    <Ionicons name={s.icon} size={13} color={active ? '#8f6a2d' : '#487a62'} />
+                    <Text style={{ color: active ? '#8f6a2d' : '#1f2a16', fontWeight: '600', fontSize: 12 }}>
                       {s[lang]}
                     </Text>
                   </Pressable>
@@ -360,19 +553,28 @@ export default function ShopDetailScreen() {
               })}
             </ScrollView>
 
-            {/* Color pills */}
+            {/* Color pills — "Все цвета" filled olive, each color pill
+                shows a swatch disc + label. */}
             {availableColors.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 14 }}>
                 <Pressable
                   onPress={() => setColor(null)}
                   style={{
-                    paddingHorizontal: 12, height: 30, borderRadius: 15,
-                    backgroundColor: color === null ? colors.oliveDeep : colors.surface,
-                    borderWidth: 1, borderColor: color === null ? colors.oliveDeep : colors.rule,
+                    paddingHorizontal: 14, height: 36, borderRadius: 18,
+                    backgroundColor: color === null ? colors.oliveDeep : '#ffffff',
+                    borderWidth: 1,
+                    borderColor: color === null ? colors.oliveDeep : 'rgba(201,168,97,0.18)',
                     alignItems: 'center', justifyContent: 'center',
+                    shadowColor: '#2a2a1f',
+                    shadowOpacity: color === null ? 0.15 : 0.05,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 6,
                   }}
                 >
-                  <Text variant="caption" style={{ color: color === null ? colors.goldSoft : colors.ink, fontSize: 11, fontWeight: '600' }}>
+                  <Text style={{
+                    color: color === null ? '#f1dfa4' : '#1f2a16',
+                    fontSize: 12, fontWeight: '600',
+                  }}>
                     {isRu ? 'Все цвета' : 'Barcha rang'}
                   </Text>
                 </Pressable>
@@ -383,14 +585,26 @@ export default function ShopDetailScreen() {
                       key={c.color}
                       onPress={() => setColor(c.color)}
                       style={{
-                        flexDirection: 'row', alignItems: 'center', gap: 6,
-                        paddingHorizontal: 10, height: 30, borderRadius: 15,
-                        backgroundColor: active ? colors.oliveDeep : colors.surface,
-                        borderWidth: 1, borderColor: active ? colors.oliveDeep : colors.rule,
+                        flexDirection: 'row', alignItems: 'center', gap: 8,
+                        paddingHorizontal: 12, height: 36, borderRadius: 18,
+                        backgroundColor: active ? colors.oliveDeep : '#ffffff',
+                        borderWidth: 1,
+                        borderColor: active ? colors.oliveDeep : 'rgba(201,168,97,0.18)',
+                        shadowColor: '#2a2a1f',
+                        shadowOpacity: active ? 0.15 : 0.05,
+                        shadowOffset: { width: 0, height: 3 },
+                        shadowRadius: 6,
                       }}
                     >
-                      <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: c.hex, borderWidth: 1, borderColor: colors.rule }} />
-                      <Text variant="caption" style={{ color: active ? colors.goldSoft : colors.ink, fontSize: 11, fontWeight: '600' }}>
+                      <View style={{
+                        width: 18, height: 18, borderRadius: 9,
+                        backgroundColor: c.hex,
+                        borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)',
+                      }} />
+                      <Text style={{
+                        color: active ? '#f1dfa4' : '#1f2a16',
+                        fontSize: 12, fontWeight: '600',
+                      }}>
                         {c.color}
                       </Text>
                     </Pressable>
@@ -412,20 +626,42 @@ export default function ShopDetailScreen() {
                 </Text>
               </View>
             ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
                 {products.map((p) => (
                   <Pressable
                     key={p.id}
                     onPress={() => router.push({ pathname: '/product/[id]', params: { id: p.id } })}
-                    style={{ width: '50%', padding: 4 }}
+                    style={{ width: '50%', padding: 6 }}
                   >
-                    <View style={{ backgroundColor: colors.surface, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.rule }}>
-                      <Image source={{ uri: p.coverUrl }} style={{ width: '100%', aspectRatio: 0.75 }} resizeMode="cover" />
-                      <View style={{ padding: 10 }}>
-                        <Text variant="caption" color="ink" numberOfLines={1} style={{ fontSize: 12, fontWeight: '600' }}>
+                    <View style={{
+                      backgroundColor: '#ffffff', borderRadius: 20, overflow: 'hidden',
+                      borderWidth: 1, borderColor: 'rgba(201,168,97,0.14)',
+                      shadowColor: '#2a2a1f', shadowOpacity: 0.08,
+                      shadowOffset: { width: 0, height: 4 }, shadowRadius: 10,
+                    }}>
+                      <View style={{ position: 'relative' }}>
+                        <Image source={{ uri: p.coverUrl }} style={{ width: '100%', aspectRatio: 0.78 }} resizeMode="cover" />
+                        <View style={{
+                          position: 'absolute', top: 10, right: 10,
+                          width: 32, height: 32, borderRadius: 16,
+                          backgroundColor: 'rgba(255,255,255,0.9)',
+                          alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <Ionicons name="heart-outline" size={16} color="#3a6451" />
+                        </View>
+                      </View>
+                      <View style={{ padding: 12 }}>
+                        <Text numberOfLines={1} style={{
+                          fontSize: 13, fontWeight: '600',
+                          color: '#1f2a16',
+                          fontFamily: theme.fontFamilies.display,
+                        }}>
                           {p.title[lang] || p.title.uz || p.title.ru}
                         </Text>
-                        <Text variant="caption" color="gold" style={{ fontWeight: '700', marginTop: 2, fontSize: 13 }}>
+                        <Text style={{
+                          color: '#3a6451', fontWeight: '700',
+                          marginTop: 4, fontSize: 14,
+                        }}>
                           ${p.basePriceUsd}
                         </Text>
                       </View>
