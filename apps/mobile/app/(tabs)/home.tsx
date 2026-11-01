@@ -481,10 +481,9 @@ export default function HomeScreen() {
                 <View style={{ position: 'relative' }}>
                   <Text
                     style={{
-                      fontFamily: theme.fontFamilies.display,
-                      fontSize: 32,
-                      lineHeight: 36,
-                      fontStyle: 'italic',
+                      fontFamily: 'PlayfairDisplay-Italic',
+                      fontSize: 34,
+                      lineHeight: 38,
                       fontWeight: '600',
                       color: '#487a62',
                     }}

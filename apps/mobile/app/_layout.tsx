@@ -37,6 +37,7 @@ export default function RootLayout() {
 
   const [fontsLoaded] = useFonts({
     'PlayfairDisplay': require('../assets/fonts/PlayfairDisplay.ttf'),
+    'PlayfairDisplay-Italic': require('../assets/fonts/PlayfairDisplay-Italic.ttf'),
     'Inter': require('../assets/fonts/Inter.ttf'),
   });
 

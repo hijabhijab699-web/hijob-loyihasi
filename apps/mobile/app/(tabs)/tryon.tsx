@@ -445,10 +445,9 @@ export default function TryOnScreen() {
           <View style={{ position: 'relative' }}>
             <Text
               style={{
-                fontFamily: 'PlayfairDisplay',
-                fontSize: 28,
-                lineHeight: 32,
-                fontStyle: 'italic',
+                fontFamily: 'PlayfairDisplay-Italic',
+                fontSize: 30,
+                lineHeight: 34,
                 fontWeight: '600',
                 color: '#487a62',
               }}
