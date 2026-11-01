@@ -24,6 +24,7 @@ const SIDE = 20;
 // scrolling home feed and never intercept touches.
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 const DECOR_HERO_HOME = require('../../assets/decor/hero-home.webp');
 
 interface HomeFeed {
@@ -290,6 +291,25 @@ export default function HomeScreen() {
           source={DECOR_JASMINE}
           style={{ width: '100%', height: '100%', opacity: 0.95 }}
           resizeMode="contain"
+        />
+      </View>
+
+      {/* Scarf-like green silk wave above the tab bar — fabric motif
+          applied screen-wide so every tab shares the brand surface. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          bottom: 0, left: 0, right: 0,
+          height: SCREEN_W * 0.4,
+          zIndex: 0,
+          opacity: 0.75,
+        }}
+      >
+        <Image
+          source={DECOR_WAVE_BOTTOM}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
         />
       </View>
 

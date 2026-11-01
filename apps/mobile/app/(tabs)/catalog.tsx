@@ -18,6 +18,7 @@ import { sceneById } from '../../src/lib/scenes';
 const { width: SCREEN_W } = Dimensions.get('window');
 const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
+const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 
 type CategoryId = 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
 
@@ -524,8 +525,27 @@ export default function CatalogScreen() {
       >
         <Image
           source={DECOR_JASMINE}
-          style={{ width: '100%', height: '100%', opacity: 0.95 }}
+          style={{ width: '100%', height: '100%', opacity: 1 }}
           resizeMode="contain"
+        />
+      </View>
+
+      {/* Scarf-like green silk wave anchored above the tab bar — matches
+          the fabric motif the client wanted on every screen. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          bottom: 0, left: 0, right: 0,
+          height: SCREEN_W * 0.4,
+          zIndex: 0,
+          opacity: 0.75,
+        }}
+      >
+        <Image
+          source={DECOR_WAVE_BOTTOM}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
         />
       </View>
 

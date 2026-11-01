@@ -17,6 +17,7 @@ const SIDE = 20;
 // ribbon + jasmine so the brand language stays coherent across screens.
 const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
+const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 const DECOR_PROFILE_BG = require('../../assets/decor/profile-bg.webp');
 
 interface MenuItem {
@@ -370,6 +371,24 @@ export default function ProfileScreen() {
           source={DECOR_JASMINE}
           style={{ width: '100%', height: '100%', opacity: 0.95 }}
           resizeMode="contain"
+        />
+      </View>
+
+      {/* Scarf-like green silk wave above the tab bar. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          bottom: 0, left: 0, right: 0,
+          height: SCREEN_W * 0.4,
+          zIndex: 0,
+          opacity: 0.75,
+        }}
+      >
+        <Image
+          source={DECOR_WAVE_BOTTOM}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
         />
       </View>
 
