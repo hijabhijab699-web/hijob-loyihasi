@@ -16,7 +16,7 @@ const SIDE = 20;
 
 // Shared decorative premium Hijab assets. Each tab reuses the same silk
 // ribbon + jasmine so the brand language stays coherent across screens.
-const DECOR_SILK_TOP = require('../../assets/decor/silk-topright.png');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-ribbon.png');
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 const DECOR_PROFILE_BG = require('../../assets/decor/profile-bg.webp');
@@ -332,34 +332,29 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      {/* Shared silk + jasmine decor — matches home/catalog. */}
+      {/* Tan silk ribbon header — shared across all tabs. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.78,
+          height: SCREEN_W * 0.7,
           zIndex: 0,
           overflow: 'hidden',
         }}
       >
-        <LinearGradient
-          colors={['#f5ead6', '#f8efdd', '#fbf5e8', '#ffffff']}
-          locations={[0, 0.55, 0.82, 1]}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
         <Image
           source={DECOR_SILK_TOP}
           style={{
             position: 'absolute',
             top: 0, left: 0, right: 0,
             width: '100%',
-            aspectRatio: 863 / 1822,
-            opacity: 0.9,
+            aspectRatio: 864 / 1821,
           }}
           resizeMode="contain"
         />
       </View>
+
       {/* Scarf-like green silk wave above the tab bar. */}
       <View
         pointerEvents="none"

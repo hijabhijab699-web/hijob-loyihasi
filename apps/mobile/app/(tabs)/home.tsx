@@ -24,8 +24,7 @@ const SIDE = 20;
 // pulled from the mockup the client approved. They sit absolutely over the
 // scrolling home feed and never intercept touches.
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
-const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
-const DECOR_SILK_TOPRIGHT = require('../../assets/decor/silk-topright.png');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-ribbon.png');
 const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 const DECOR_HERO_HOME = require('../../assets/decor/hero-home.webp');
 
@@ -252,36 +251,32 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Cream silk header band — cream backing fades to white at the
-          bottom so the fabric feels like a soft silk strip draped across
-          the header rather than a hard-cut block of colour. */}
+      {/* Tan silk ribbon anchored to the top — vibrant fabric motif the
+          client picked for every tab's header. Shown at the image's
+          natural aspect so the ribbon flows into the top-right exactly
+          as the artwork intends. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.78,
+          height: SCREEN_W * 0.7,
           zIndex: 0,
           overflow: 'hidden',
         }}
       >
-        <LinearGradient
-          colors={['#f5ead6', '#f8efdd', '#fbf5e8', '#ffffff']}
-          locations={[0, 0.55, 0.82, 1]}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
         <Image
           source={DECOR_SILK_TOP}
           style={{
             position: 'absolute',
             top: 0, left: 0, right: 0,
             width: '100%',
-            aspectRatio: 863 / 1822,
-            opacity: 0.9,
+            aspectRatio: 864 / 1821,
           }}
           resizeMode="contain"
         />
       </View>
+
       {/* Scarf-like green silk wave above the tab bar — fabric motif
           applied screen-wide so every tab shares the brand surface. */}
       <View
