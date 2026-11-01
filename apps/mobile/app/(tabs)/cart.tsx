@@ -116,7 +116,7 @@ export default function CartScreen() {
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.5,
+          height: SCREEN_W * 0.56,
           zIndex: 0,
           overflow: 'hidden',
         }}
@@ -125,15 +125,16 @@ export default function CartScreen() {
           source={DECOR_SILK_TOP}
           style={{
             position: 'absolute',
-            top: 0, left: 0,
-            width: '100%',
+            top: 0,
+            left: -SCREEN_W * 0.05,
+            width: SCREEN_W * 1.1,
             aspectRatio: 1847 / 851,
           }}
           resizeMode="cover"
         />
         <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(255,255,255,0.78)', '#ffffff']}
-          locations={[0, 0.5, 0.85, 1]}
+          colors={['transparent', 'transparent', 'rgba(255,255,255,0.4)', '#ffffff']}
+          locations={[0, 0.65, 0.88, 1]}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
       </View>
