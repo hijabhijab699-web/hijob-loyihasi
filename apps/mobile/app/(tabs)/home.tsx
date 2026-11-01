@@ -851,9 +851,11 @@ export default function HomeScreen() {
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  {/* Image — square aspect so a row of two cards reads
-                      balanced on both phone widths. */}
-                  <View style={{ aspectRatio: 1, backgroundColor: colors.surfaceGlass, position: 'relative' }}>
+                  {/* Image — taller portrait aspect so the full
+                      mannequin (head to feet) fits inside the card
+                      instead of getting cropped at the waist. Contain
+                      the image so the model is never clipped. */}
+                  <View style={{ aspectRatio: 3 / 4, backgroundColor: colors.surfaceGlass, position: 'relative' }}>
                     {scene && (
                       <Image
                         source={scene.source}
@@ -865,42 +867,15 @@ export default function HomeScreen() {
                       <Image
                         source={{ uri: p.coverUrl }}
                         style={{ width: '100%', height: '100%' }}
-                        resizeMode="cover"
+                        resizeMode="contain"
                       />
                     ) : (
                       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="ribbon-outline" size={36} color="rgba(0,0,0,0.1)" />
                       </View>
                     )}
-                    {/* Shop chip top-left */}
-                    {p.seller && (
-                      <View
-                        style={{
-                          position: 'absolute',
-                          top: 8, left: 8,
-                          flexDirection: 'row', alignItems: 'center', gap: 5,
-                          paddingLeft: 4, paddingRight: 10, paddingVertical: 3,
-                          backgroundColor: 'rgba(255,255,255,0.92)',
-                          borderRadius: 999,
-                        }}
-                      >
-                        <View
-                          style={{
-                            width: 14, height: 14, borderRadius: 7,
-                            backgroundColor: colors.gold,
-                            alignItems: 'center', justifyContent: 'center',
-                          }}
-                        >
-                          <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>
-                            {p.seller.brandName[0]}
-                          </Text>
-                        </View>
-                        <Text numberOfLines={1} style={{ fontSize: 9, fontWeight: '600', color: colors.oliveDeep }}>
-                          {p.seller.brandName}
-                        </Text>
-                      </View>
-                    )}
-                    {/* Wishlist heart top-right */}
+                    {/* Wishlist heart top-right (shop chip removed —
+                        designer wanted the mannequin to carry the card). */}
                     <Pressable
                       onPress={(e) => {
                         e.stopPropagation?.();
