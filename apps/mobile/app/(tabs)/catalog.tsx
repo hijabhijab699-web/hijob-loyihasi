@@ -290,60 +290,6 @@ export default function CatalogScreen() {
         })}
       </ScrollView>
 
-      {/* Filter + Sort */}
-      <View style={{ flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 8 }}>
-        <Pressable
-          onPress={() => setShowFilters((v) => !v)}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            paddingHorizontal: 14,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: showFilters ? colors.oliveDeep : colors.surface,
-            borderWidth: showFilters ? 0 : 1,
-            borderColor: colors.rule,
-          }}
-        >
-          <Ionicons
-            name="options-outline"
-            size={16}
-            color={showFilters ? colors.goldSoft : colors.ink}
-          />
-          <Text
-            variant="bodySmall"
-            style={{ color: showFilters ? colors.goldSoft : colors.ink, fontWeight: '500' }}
-          >
-            {t('catalog.filters')}
-          </Text>
-          <Ionicons
-            name={showFilters ? 'chevron-up' : 'chevron-down'}
-            size={14}
-            color={showFilters ? colors.goldSoft : colors.muted}
-          />
-        </Pressable>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            paddingHorizontal: 14,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.rule,
-            flex: 1,
-          }}
-        >
-          <Ionicons name="swap-vertical-outline" size={14} color={colors.muted} />
-          <Text variant="bodySmall" color="ink" style={{ flex: 1 }}>
-            {t('catalog.sort.popularity')}
-          </Text>
-          <Ionicons name="chevron-down" size={12} color={colors.muted} />
-        </View>
-      </View>
 
       {/* Filter Panel */}
       {showFilters && (
