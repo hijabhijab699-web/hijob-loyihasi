@@ -538,8 +538,7 @@ export default function TryOnScreen() {
           devices. */}
       <View
         style={{
-          flex: 1,
-          minHeight: 0,
+          height: SCREEN_W * 0.82,
           marginHorizontal: 14,
           marginBottom: 12,
           borderRadius: 24,
