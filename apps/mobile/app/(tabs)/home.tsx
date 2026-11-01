@@ -818,7 +818,11 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* ── Nearby products (replaces New Arrivals, TZ Phase 4) ── */}
+        {/* ── Favorites (TZ Phase 4) ── 2-column grid of nearby/arrival
+            products styled to match the mockup's "Избранные магазины"
+            fav-card look: shop chip on the image, heart top-right, serif
+            title, bold price and star rating. Data still comes from the
+            same nearbyQuery / newArrivals fallback as before. */}
         <View style={{ marginTop: 28 }}>
           <View
             style={{
@@ -828,9 +832,19 @@ export default function HomeScreen() {
               paddingHorizontal: SIDE,
             }}
           >
-            <Text variant="titleMedium" color="oliveDeep" style={{ fontSize: 18 }}>
-              {lang === 'ru' ? 'Магазины рядом' : "Yaqin atrofdagi do'konlar"}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ color: colors.gold, fontSize: 16 }}>✦</Text>
+              <Text
+                style={{
+                  fontFamily: theme.fontFamilies.display,
+                  fontSize: 20,
+                  fontWeight: '500',
+                  color: colors.oliveDeep,
+                }}
+              >
+                {lang === 'ru' ? 'Избранные магазины' : "Yaqin atrofdagi do'konlar"}
+              </Text>
+            </View>
             <Pressable
               onPress={() => router.push('/(tabs)/catalog')}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
@@ -842,13 +856,17 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: SIDE, paddingTop: 14, gap: 14 }}
+          <View
+            style={{
+              paddingHorizontal: 16,
+              paddingTop: 14,
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
           >
-            {arrivals.map((p, idx) => {
-              const bg = PLACEHOLDER_BG[idx % PLACEHOLDER_BG.length];
+            {arrivals.map((p) => {
+              const scene = sceneById((p.attributes as any)?.sceneId);
               return (
                 <Pressable
                   key={p.id}
@@ -856,40 +874,65 @@ export default function HomeScreen() {
                     router.push({ pathname: '/product/[id]', params: { id: p.id } })
                   }
                   style={({ pressed }) => ({
-                    width: 170,
+                    width: (SCREEN_W - 16 * 2 - 12) / 2,
                     backgroundColor: colors.surface,
-                    borderRadius: 20,
+                    borderRadius: 18,
                     overflow: 'hidden',
                     borderWidth: 1,
-                    borderColor: colors.rule,
+                    borderColor: 'rgba(201,168,97,0.15)',
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  {/* Image */}
-                  <View style={{ height: 210, backgroundColor: bg, position: 'relative' }}>
-                    {(() => {
-                      const scene = sceneById((p.attributes as any)?.sceneId);
-                      if (!scene) return null;
-                      return (
-                        <Image
-                          source={scene.source}
-                          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
-                          resizeMode="cover"
-                        />
-                      );
-                    })()}
+                  {/* Image — square aspect so a row of two cards reads
+                      balanced on both phone widths. */}
+                  <View style={{ aspectRatio: 1, backgroundColor: colors.surfaceGlass, position: 'relative' }}>
+                    {scene && (
+                      <Image
+                        source={scene.source}
+                        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                    )}
                     {p.coverUrl ? (
                       <Image
                         source={{ uri: p.coverUrl }}
                         style={{ width: '100%', height: '100%' }}
-                        resizeMode="contain"
+                        resizeMode="cover"
                       />
                     ) : (
                       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                        <Ionicons name="ribbon-outline" size={36} color="rgba(255,255,255,0.3)" />
+                        <Ionicons name="ribbon-outline" size={36} color="rgba(0,0,0,0.1)" />
                       </View>
                     )}
-                    {/* Wishlist */}
+                    {/* Shop chip top-left */}
+                    {p.seller && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          top: 8, left: 8,
+                          flexDirection: 'row', alignItems: 'center', gap: 5,
+                          paddingLeft: 4, paddingRight: 10, paddingVertical: 3,
+                          backgroundColor: 'rgba(255,255,255,0.92)',
+                          borderRadius: 999,
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 14, height: 14, borderRadius: 7,
+                            backgroundColor: colors.gold,
+                            alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >
+                          <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>
+                            {p.seller.brandName[0]}
+                          </Text>
+                        </View>
+                        <Text numberOfLines={1} style={{ fontSize: 9, fontWeight: '600', color: colors.oliveDeep }}>
+                          {p.seller.brandName}
+                        </Text>
+                      </View>
+                    )}
+                    {/* Wishlist heart top-right */}
                     <Pressable
                       onPress={(e) => {
                         e.stopPropagation?.();
@@ -898,125 +941,62 @@ export default function HomeScreen() {
                       hitSlop={8}
                       style={{
                         position: 'absolute',
-                        top: 10,
-                        right: 10,
-                        width: 32,
-                        height: 32,
-                        borderRadius: 16,
-                        backgroundColor: 'rgba(0,0,0,0.45)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        top: 8, right: 8,
+                        width: 28, height: 28, borderRadius: 14,
+                        backgroundColor: 'rgba(255,255,255,0.92)',
+                        alignItems: 'center', justifyContent: 'center',
                       }}
                     >
-                      <Ionicons name="heart-outline" size={16} color="#fff" />
+                      <Ionicons name="heart-outline" size={14} color="#3a6451" />
                     </Pressable>
-                    {/* Try-on badge */}
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: 10,
-                        left: 10,
-                        backgroundColor: colors.olive,
-                        paddingHorizontal: 10,
-                        paddingVertical: 4,
-                        borderRadius: 999,
-                      }}
-                    >
-                      <Text
-                        variant="caption"
-                        style={{ color: '#fff', fontSize: 9, fontWeight: '700', letterSpacing: 0.5 }}
-                      >
-                        TRY-ON
-                      </Text>
-                    </View>
                   </View>
 
                   {/* Info */}
-                  <View style={{ padding: 12, gap: 4 }}>
-                    {p.seller && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <View
-                          style={{
-                            width: 16,
-                            height: 16,
-                            borderRadius: 8,
-                            backgroundColor: colors.olive,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Text
-                            variant="caption"
-                            style={{ color: '#fff', fontSize: 7, fontWeight: '800' }}
-                          >
-                            {p.seller.brandName[0]}
-                          </Text>
-                        </View>
-                        <Text
-                          variant="caption"
-                          color="muted"
-                          numberOfLines={1}
-                          style={{ fontSize: 10 }}
-                        >
-                          {p.seller.brandName}
-                        </Text>
-                        <View
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 2,
-                            marginLeft: 'auto',
-                          }}
-                        >
-                          <Ionicons name="star" size={9} color={colors.gold} />
-                          <Text variant="caption" color="muted" style={{ fontSize: 9 }}>
-                            {p.seller.rating}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                    <Text variant="bodySmall" color="ink" numberOfLines={1}>
+                  <View style={{ padding: 10 }}>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontFamily: theme.fontFamilies.display,
+                        fontSize: 13,
+                        fontWeight: '500',
+                        color: colors.oliveDeep,
+                        marginBottom: 4,
+                      }}
+                    >
                       {lang === 'ru' ? p.title.ru : (p.title.uz ?? p.title.ru)}
                     </Text>
                     <View
                       style={{
                         flexDirection: 'row',
                         justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginTop: 2,
+                        alignItems: 'baseline',
                       }}
                     >
                       <Text
-                        variant="titleSmall"
-                        color="oliveDeep"
-                        style={{ fontWeight: '700', fontSize: 16 }}
+                        style={{
+                          fontFamily: theme.fontFamilies.display,
+                          fontWeight: '700',
+                          fontSize: 14,
+                          color: '#3a6451',
+                          letterSpacing: -0.3,
+                        }}
                       >
                         ${p.basePriceUsd}
                       </Text>
-                      <Pressable
-                        onPress={(e) => {
-                          e.stopPropagation?.();
-                          const vid = p.variants?.[0]?.id;
-                          if (vid) addCart.mutate(vid);
-                        }}
-                        hitSlop={6}
-                        style={{
-                          width: 30,
-                          height: 30,
-                          borderRadius: 15,
-                          backgroundColor: colors.olive,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Ionicons name="add" size={16} color="#fff" />
-                      </Pressable>
+                      {p.seller && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                          <Ionicons name="star" size={10} color={colors.gold} />
+                          <Text style={{ fontSize: 10, fontWeight: '600', color: '#8f6a2d' }}>
+                            {p.seller.rating?.toFixed?.(1) ?? '—'}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
         </View>
 
       </ScrollView>
