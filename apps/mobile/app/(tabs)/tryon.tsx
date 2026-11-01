@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Image, Pressable, ScrollView, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -13,6 +13,10 @@ import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 import { useTryonOnboarding, type BodyType } from '../../src/store/tryon-onboarding';
 import { useTryonCollection, TRYON_ALLOWED_CATEGORIES } from '../../src/store/tryon-collection';
 import { sceneById } from '../../src/lib/scenes';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 
 interface Variant {
   id: string;
@@ -345,6 +349,40 @@ export default function TryOnScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
+      {/* Shared decor — silk ribbon + jasmine stay behind the header so the
+          Primerka screen matches the rest of the tab bar. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: SCREEN_W * 0.3,
+          zIndex: 0,
+        }}
+      >
+        <Image
+          source={DECOR_SILK_TOP}
+          style={{ width: '100%', height: '100%', opacity: 0.9 }}
+          resizeMode="cover"
+        />
+      </View>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: insets.top + 60, right: -40,
+          width: 180, height: 120,
+          transform: [{ rotate: '-6deg' }],
+          zIndex: 1,
+        }}
+      >
+        <Image
+          source={DECOR_JASMINE}
+          style={{ width: '100%', height: '100%', opacity: 0.9 }}
+          resizeMode="contain"
+        />
+      </View>
+
       {/* Header */}
       <View
         style={{
@@ -353,7 +391,8 @@ export default function TryOnScreen() {
           paddingHorizontal: 16,
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: colors.surface,
+          backgroundColor: 'transparent',
+          zIndex: 2,
         }}
       >
         <Pressable
