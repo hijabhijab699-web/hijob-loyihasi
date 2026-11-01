@@ -551,17 +551,27 @@ export default function HomeScreen() {
               paddingHorizontal: SIDE,
             }}
           >
-            <Text variant="titleMedium" color="oliveDeep" style={{ fontSize: 18 }}>
+            <Text
+              numberOfLines={1}
+              style={{
+                fontFamily: theme.fontFamilies.display,
+                fontSize: 17,
+                fontWeight: '500',
+                color: colors.oliveDeep,
+                flexShrink: 1,
+              }}
+            >
               {t('home.stores')}
             </Text>
             <Pressable
               onPress={() => router.push('/stores')}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+              hitSlop={6}
             >
-              <Text variant="caption" color="gold" style={{ fontWeight: '600' }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.gold }}>
                 {t('home.allStores')}
               </Text>
-              <Ionicons name="arrow-forward" size={14} color={colors.gold} />
+              <Ionicons name="arrow-forward" size={12} color={colors.gold} />
             </Pressable>
           </View>
 
@@ -663,7 +673,14 @@ export default function HomeScreen() {
         {/* ── Categories ── */}
         <View style={{ marginTop: 24 }}>
           <View style={{ paddingHorizontal: SIDE, marginBottom: 14 }}>
-            <Text variant="titleMedium" color="oliveDeep" style={{ fontSize: 18 }}>
+            <Text
+              style={{
+                fontFamily: theme.fontFamilies.display,
+                fontSize: 17,
+                fontWeight: '500',
+                color: colors.oliveDeep,
+              }}
+            >
               {lang === 'ru' ? 'Категории' : 'Kategoriyalar'}
             </Text>
           </View>
@@ -764,14 +781,16 @@ export default function HomeScreen() {
               paddingHorizontal: SIDE,
             }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ color: colors.gold, fontSize: 16 }}>✦</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+              <Text style={{ color: colors.gold, fontSize: 13 }}>✦</Text>
               <Text
+                numberOfLines={1}
                 style={{
                   fontFamily: theme.fontFamilies.display,
-                  fontSize: 20,
+                  fontSize: 17,
                   fontWeight: '500',
                   color: colors.oliveDeep,
+                  flexShrink: 1,
                 }}
               >
                 {lang === 'ru' ? 'Избранные магазины' : "Yaqin atrofdagi do'konlar"}
@@ -779,12 +798,13 @@ export default function HomeScreen() {
             </View>
             <Pressable
               onPress={() => router.push('/(tabs)/catalog')}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+              hitSlop={6}
             >
-              <Text variant="caption" color="gold" style={{ fontWeight: '600' }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.gold }}>
                 {t('common.seeAll')}
               </Text>
-              <Ionicons name="arrow-forward" size={14} color={colors.gold} />
+              <Ionicons name="arrow-forward" size={12} color={colors.gold} />
             </Pressable>
           </View>
 
