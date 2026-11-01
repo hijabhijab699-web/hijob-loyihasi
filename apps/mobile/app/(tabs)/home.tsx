@@ -15,6 +15,7 @@ import { useTryonCollection } from '../../src/store/tryon-collection';
 import { sceneById } from '../../src/lib/scenes';
 import { api } from '../../src/api/client';
 import { errorMessage, errorTitle } from '../../src/lib/api-errors';
+import { formatUsdAsUzs, useUzsRate } from '../../src/lib/currency';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SIDE = 20;
@@ -154,6 +155,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const tryonCount = useTryonCollection((s) => s.items.length);
   const lang = i18n.language as 'ru' | 'uz';
+  const uzsRate = useUzsRate();
 
   const queryClient = useQueryClient();
 
@@ -927,18 +929,18 @@ export default function HomeScreen() {
                         style={{
                           fontFamily: theme.fontFamilies.display,
                           fontWeight: '700',
-                          fontSize: 14,
+                          fontSize: 13,
                           color: '#3a6451',
                           letterSpacing: -0.3,
                         }}
                       >
-                        ${p.basePriceUsd}
+                        {formatUsdAsUzs(p.basePriceUsd, uzsRate)}
                       </Text>
-                      {p.seller && (
+                      {p.seller && p.seller.rating > 0 && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                           <Ionicons name="star" size={10} color={colors.gold} />
                           <Text style={{ fontSize: 10, fontWeight: '600', color: '#8f6a2d' }}>
-                            {p.seller.rating?.toFixed?.(1) ?? '—'}
+                            {p.seller.rating.toFixed(1)}
                           </Text>
                         </View>
                       )}
