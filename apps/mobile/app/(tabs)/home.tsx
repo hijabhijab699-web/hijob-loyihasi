@@ -255,19 +255,22 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Beige silk ribbon anchored to the very top of the screen. */}
+      {/* Beige silk ribbon anchored to the very top of the screen.
+          Cream base layer boosts contrast so the ribbon reads against
+          both the light and dark Screen gradients. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.3,
+          height: SCREEN_W * 0.45,
           zIndex: 0,
+          backgroundColor: 'rgba(239, 230, 207, 0.5)',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '100%', height: '100%', opacity: 0.9 }}
+          style={{ width: '100%', height: '100%', opacity: 1 }}
           resizeMode="cover"
         />
       </View>

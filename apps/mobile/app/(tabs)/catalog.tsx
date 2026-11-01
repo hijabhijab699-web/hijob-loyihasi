@@ -491,19 +491,24 @@ export default function CatalogScreen() {
 
   return (
     <Screen>
-      {/* Shared decor — silk ribbon + jasmine echo the home/profile screens. */}
+      {/* Shared decor — silk ribbon + jasmine echo the home/profile screens.
+          React Native has no mix-blend-mode: multiply equivalent, so we
+          strengthen contrast with a slight gold tint and a cream base layer
+          behind the image, otherwise the beige ribbon disappears into the
+          cream page background. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.3,
+          height: SCREEN_W * 0.45,
           zIndex: 0,
+          backgroundColor: 'rgba(239, 230, 207, 0.5)',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '100%', height: '100%', opacity: 0.9 }}
+          style={{ width: '100%', height: '100%', opacity: 1 }}
           resizeMode="cover"
         />
       </View>

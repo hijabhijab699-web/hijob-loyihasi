@@ -338,19 +338,21 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      {/* Shared decor: beige silk ribbon + jasmine mirror the home screen. */}
+      {/* Shared decor: beige silk ribbon + jasmine mirror the home screen.
+          Cream base layer boosts contrast. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.3,
+          height: SCREEN_W * 0.45,
           zIndex: 0,
+          backgroundColor: 'rgba(239, 230, 207, 0.5)',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '100%', height: '100%', opacity: 0.9 }}
+          style={{ width: '100%', height: '100%', opacity: 1 }}
           resizeMode="cover"
         />
       </View>
