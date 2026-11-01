@@ -1,14 +1,19 @@
 import { useState } from 'react';
-import { Alert, Image, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import { Alert, Dimensions, Image, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
 import { formatUsdAsUzs, formatUzs, useUzsRate, usdToUzs } from '../../src/lib/currency';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 
 interface CartResponse {
   items: Array<{
@@ -103,31 +108,106 @@ export default function CartScreen() {
 
   return (
     <Screen>
-      {/* Header */}
+      {/* Shared decor — silk ribbon + jasmine echo the home screen. */}
       <View
+        pointerEvents="none"
         style={{
-          paddingTop: 8,
-          paddingHorizontal: 20,
-          paddingBottom: 12,
-          flexDirection: 'row',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: SCREEN_W * 0.3,
+          zIndex: 0,
         }}
       >
-        <View>
+        <Image
+          source={DECOR_SILK_TOP}
+          style={{ width: '100%', height: '100%', opacity: 0.9 }}
+          resizeMode="cover"
+        />
+      </View>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 10, right: -40,
+          width: 200, height: 130,
+          transform: [{ rotate: '-6deg' }],
+          zIndex: 1,
+        }}
+      >
+        <Image
+          source={DECOR_JASMINE}
+          style={{ width: '100%', height: '100%', opacity: 0.95 }}
+          resizeMode="contain"
+        />
+      </View>
+
+      {/* ── Welcome header: kicker + serif title with swoosh ── */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text
-            variant="displayLarge"
-            color="oliveDeep"
-            style={{ fontSize: 26, fontWeight: '700' }}
+            variant="bodySmall"
+            style={{
+              letterSpacing: 3,
+              textTransform: 'uppercase',
+              fontSize: 10,
+              fontWeight: '600',
+              color: colors.gold,
+            }}
           >
-            {isRu ? 'Корзина' : 'Savat'}
+            {isRu ? 'Моя корзина' : 'Mening savatim'}
           </Text>
-          <Text variant="bodySmall" color="muted" style={{ fontSize: 13, marginTop: 2 }}>
-            {itemCount} {isRu ? 'товара' : 'ta mahsulot'}
-          </Text>
+          <Text style={{ color: colors.gold, fontSize: 12 }}>✦</Text>
+        </View>
+        <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
+          <View style={{ position: 'relative' }}>
+            <Text
+              style={{
+                fontFamily: theme.fontFamilies.display,
+                fontSize: 32,
+                lineHeight: 36,
+                fontWeight: '500',
+                color: colors.oliveDeep,
+              }}
+            >
+              {isRu ? 'Корзина' : 'Savat'}
+            </Text>
+            <Svg
+              width="100%"
+              height={10}
+              viewBox="0 0 120 10"
+              style={{ position: 'absolute', left: 2, right: 8, bottom: -4 }}
+              pointerEvents="none"
+            >
+              <Path
+                d="M2 7 Q 30 1 60 5 T 118 4"
+                stroke={colors.olive}
+                strokeWidth={1.4}
+                strokeLinecap="round"
+                fill="none"
+              />
+            </Svg>
+          </View>
+          {items.length > 0 && (
+            <View
+              style={{
+                marginBottom: 6,
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                backgroundColor: 'rgba(90,140,116,0.14)',
+                borderRadius: 999,
+              }}
+            >
+              <Text
+                variant="caption"
+                style={{ fontSize: 11, fontWeight: '600', color: '#3a6451' }}
+              >
+                {itemCount} {isRu ? (itemCount === 1 ? 'товар' : 'товара') : 'ta mahsulot'}
+              </Text>
+            </View>
+          )}
         </View>
         {items.length > 0 && (
-          <Pressable onPress={clearCart} style={{ paddingBottom: 4 }}>
+          <Pressable onPress={clearCart} style={{ position: 'absolute', right: 20, top: 10 }}>
             <Text variant="bodySmall" style={{ color: colors.danger, fontSize: 12 }}>
               {isRu ? 'Очистить' : 'Tozalash'}
             </Text>

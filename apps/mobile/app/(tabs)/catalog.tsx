@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
-import { Alert, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, Dimensions, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
+import Svg, { Path } from 'react-native-svg';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -13,6 +14,10 @@ import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 import { safeBack } from '../../src/lib/safe-back';
 import { formatUsdAsUzs, useUzsRate } from '../../src/lib/currency';
 import { sceneById } from '../../src/lib/scenes';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 
 type CategoryId = 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
 
@@ -214,18 +219,57 @@ export default function CatalogScreen() {
         </View>
       </View>
 
-      {/* Title */}
+      {/* Title — welcome kicker + serif category name with jade swoosh. */}
       <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
-        <Text variant="displayLarge" color="oliveDeep">
-          {t(`home.categories.${category}` as never, {
-            defaultValue: category,
-          })}
-        </Text>
-        <Text variant="bodySmall" color="muted" style={{ marginTop: 2 }}>
-          {t(`catalog.${category}.subtitle` as never, {
-            defaultValue: t('catalog.scarves.subtitle'),
-          })}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text
+            variant="bodySmall"
+            style={{
+              letterSpacing: 3,
+              textTransform: 'uppercase',
+              fontSize: 10,
+              fontWeight: '600',
+              color: colors.gold,
+            }}
+          >
+            {t(`catalog.${category}.subtitle` as never, {
+              defaultValue: t('catalog.scarves.subtitle'),
+            })}
+          </Text>
+          <Text style={{ color: colors.gold, fontSize: 12 }}>✦</Text>
+        </View>
+        <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end' }}>
+          <View style={{ position: 'relative' }}>
+            <Text
+              style={{
+                fontFamily: theme.fontFamilies.display,
+                fontSize: 32,
+                lineHeight: 36,
+                fontWeight: '500',
+                color: colors.oliveDeep,
+              }}
+            >
+              {t(`home.categories.${category}` as never, {
+                defaultValue: category,
+              })}
+            </Text>
+            <Svg
+              width="100%"
+              height={10}
+              viewBox="0 0 120 10"
+              style={{ position: 'absolute', left: 2, right: 8, bottom: -4 }}
+              pointerEvents="none"
+            >
+              <Path
+                d="M2 7 Q 30 1 60 5 T 118 4"
+                stroke={colors.olive}
+                strokeWidth={1.4}
+                strokeLinecap="round"
+                fill="none"
+              />
+            </Svg>
+          </View>
+        </View>
       </View>
 
       {/* Category Tabs */}
@@ -447,6 +491,39 @@ export default function CatalogScreen() {
 
   return (
     <Screen>
+      {/* Shared decor — silk ribbon + jasmine echo the home/profile screens. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: SCREEN_W * 0.3,
+          zIndex: 0,
+        }}
+      >
+        <Image
+          source={DECOR_SILK_TOP}
+          style={{ width: '100%', height: '100%', opacity: 0.9 }}
+          resizeMode="cover"
+        />
+      </View>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 60, right: -40,
+          width: 200, height: 130,
+          transform: [{ rotate: '-6deg' }],
+          zIndex: 1,
+        }}
+      >
+        <Image
+          source={DECOR_JASMINE}
+          style={{ width: '100%', height: '100%', opacity: 0.95 }}
+          resizeMode="contain"
+        />
+      </View>
+
       <View style={{ flex: 1 }}>
         <FlashList
           data={products}
