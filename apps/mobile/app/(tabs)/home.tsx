@@ -261,17 +261,19 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-      {/* Jasmine branch tucked into the upper-right corner, next to the
-          welcome text — bigger than before, matching the mockup where the
-          flowers hug the edge of the Привет block. */}
+      {/* Jasmine branch — hero overlay. The mockup has the flowers
+          sweeping from the welcome area down over the top-right of the
+          hero banner (crossing the model's shoulder). Positioned low
+          enough and with a high z-index so it visibly overlaps the
+          hero image, not just floats next to the text. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: 90, right: -50,
-          width: 240, height: 150,
-          transform: [{ rotate: '-4deg' }],
-          zIndex: 1,
+          top: 170, right: -60,
+          width: 280, height: 180,
+          transform: [{ rotate: '-6deg' }],
+          zIndex: 5,
         }}
       >
         <Image
@@ -453,9 +455,11 @@ export default function HomeScreen() {
             </Svg>
           </View>
           {(() => {
+            // Brand voice: the greeting always says "Muslima" regardless
+            // of the signed-in user's own name — this is a stylistic
+            // choice from the design, not a dynamic field.
             const greet = lang === 'ru' ? 'Привет' : 'Salom';
-            const name = user?.fullName?.split(' ')[0]
-              ?? (lang === 'ru' ? 'Muslima' : 'Muslima');
+            const name = 'Muslima';
             return (
               <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <Text
