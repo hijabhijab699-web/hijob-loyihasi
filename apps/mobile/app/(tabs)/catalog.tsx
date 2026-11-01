@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import Svg, { Path } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -420,30 +421,32 @@ export default function CatalogScreen() {
 
   return (
     <Screen>
-      {/* Cream silk header band — solid warm cream backing anchors the
-          header, with the silk ribbon PNG layered over it so the folds
-          read against the cream. Matches the catalog mockup where the
-          whole top strip is a lush fabric surface. */}
+      {/* Cream silk header band — cream backing fades to white at the
+          bottom so the fabric feels like a soft silk strip draped across
+          the header rather than a hard-cut block of colour. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.72,
+          height: SCREEN_W * 0.78,
           zIndex: 0,
-          backgroundColor: '#f5ead6',
           overflow: 'hidden',
         }}
       >
+        <LinearGradient
+          colors={['#f5ead6', '#f8efdd', '#fbf5e8', '#ffffff']}
+          locations={[0, 0.55, 0.82, 1]}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
         <Image
           source={DECOR_SILK_TOP}
           style={{
             position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
+            top: 0, left: 0, right: 0,
             width: '100%',
             aspectRatio: 863 / 1822,
+            opacity: 0.9,
           }}
           resizeMode="contain"
         />

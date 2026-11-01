@@ -357,12 +357,16 @@ export default function TryOnScreen() {
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.72,
+          height: SCREEN_W * 0.78,
           zIndex: 0,
-          backgroundColor: '#f5ead6',
           overflow: 'hidden',
         }}
       >
+        <LinearGradient
+          colors={['#f5ead6', '#f8efdd', '#fbf5e8', '#ffffff']}
+          locations={[0, 0.55, 0.82, 1]}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
         <Image
           source={DECOR_SILK_TOP}
           style={{
@@ -370,6 +374,7 @@ export default function TryOnScreen() {
             top: 0, left: 0, right: 0,
             width: '100%',
             aspectRatio: 863 / 1822,
+            opacity: 0.9,
           }}
           resizeMode="contain"
         />

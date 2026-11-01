@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -337,12 +338,16 @@ export default function ProfileScreen() {
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.72,
+          height: SCREEN_W * 0.78,
           zIndex: 0,
-          backgroundColor: '#f5ead6',
           overflow: 'hidden',
         }}
       >
+        <LinearGradient
+          colors={['#f5ead6', '#f8efdd', '#fbf5e8', '#ffffff']}
+          locations={[0, 0.55, 0.82, 1]}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
         <Image
           source={DECOR_SILK_TOP}
           style={{
@@ -350,6 +355,7 @@ export default function ProfileScreen() {
             top: 0, left: 0, right: 0,
             width: '100%',
             aspectRatio: 863 / 1822,
+            opacity: 0.9,
           }}
           resizeMode="contain"
         />
