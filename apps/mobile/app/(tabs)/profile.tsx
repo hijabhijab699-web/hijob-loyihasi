@@ -339,7 +339,6 @@ export default function ProfileScreen() {
           top: 0, left: 0, right: 0,
           height: SCREEN_W * 0.5,
           zIndex: 0,
-          backgroundColor: '#efe6cf',
           overflow: 'hidden',
         }}
       >

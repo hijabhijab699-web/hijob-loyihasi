@@ -251,11 +251,9 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Beige silk ribbon — wraps across the entire header row so the
-          fabric is visibly behind the status bar AND the notification
-          bell on the right. We use 'contain' with an aspect-preserving
-          height so the ribbon's full right-tail stays in frame instead
-          of getting cropped by cover. */}
+      {/* Beige silk ribbon — floats across the top of the WHITE page
+          so only the ribbon's own fabric lines read; no cream base
+          layer under it, otherwise the header no longer looks white. */}
       <View
         pointerEvents="none"
         style={{
@@ -263,7 +261,6 @@ export default function HomeScreen() {
           top: 0, left: 0, right: 0,
           height: SCREEN_W * 0.5,
           zIndex: 0,
-          backgroundColor: '#efe6cf',
           overflow: 'hidden',
         }}
       >
