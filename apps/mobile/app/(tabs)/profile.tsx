@@ -1,16 +1,27 @@
-import { Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, View, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { useAuth } from '../../src/store/auth';
 import { api } from '../../src/api/client';
 
+const { width: SCREEN_W } = Dimensions.get('window');
+const SIDE = 20;
+
+// Shared decorative premium Hijab assets. Each tab reuses the same silk
+// ribbon + jasmine so the brand language stays coherent across screens.
+const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
+const DECOR_PROFILE_BG = require('../../assets/decor/profile-bg.webp');
+
 interface MenuItem {
   label: string;
+  sub?: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
   iconColor: string;
   iconBg: string;
@@ -58,54 +69,90 @@ export default function ProfileScreen() {
 
   const DICT: Record<'uz' | 'ru' | 'en' | 'ar', Record<string, string>> = {
     uz: {
-      myOrders: 'Buyurtmalarim', wishlist: 'Sevimlilar', myAddresses: 'Manzillarim',
-      myMeasurements: "O'lchovlarim", faceTemplate: 'Yuz shablonim', ready: 'Tayyor',
-      notifications: 'Bildirishnomalar', language: 'Til', languageValue: "O'zbekcha", help: 'Yordam',
-      messages: 'Xabarlar', appearance: "Ko'rinish",
-      orders: 'Buyurtmalar', favorites: 'Sevimlilar', addresses: 'Manzillar',
-      profile: 'Profil', user: 'Foydalanuvchi', switchSeller: "Sotuvchi rejimiga o'tish",
+      kicker: 'MENING PROFILIM', title: 'Profil',
+      tier: 'Doimiy mijoz',
+      myOrders: 'Buyurtmalarim', myOrdersSub: 'Kuzatuv, tarix va buyurtmalarni takrorlash',
+      wishlist: 'Sevimlilar', wishlistSub: "Saqlangan mahsulotlar va to'plamlar",
+      myAddresses: 'Manzillarim', myAddressesSub: 'Yetkazib berish va olish manzillari',
+      myMeasurements: "O'lchovlarim", myMeasurementsSub: "Primerka uchun o'lchov va parametrlar",
+      faceTemplate: 'Yuz shabloni', faceTemplateSub: 'Virtual primerka uchun yuz tasviri',
+      ready: 'Tayyor',
+      notifications: 'Bildirishnomalar', notificationsSub: 'Buyurtma va chegirmalar haqida',
+      language: 'Til', languageValue: "O'zbekcha", languageSub: 'Ilova tilini tanlash',
+      help: 'Yordam', helpSub: 'Savollar, qo\'llanma va aloqa',
+      messages: 'Xabarlar', messagesSub: "Sotuvchilar bilan suhbat",
+      appearance: "Ko'rinish", appearanceSub: "Tun / kun rejimi",
+      user: 'Foydalanuvchi', switchSeller: "Sotuvchi rejimiga o'tish",
       sectionOrders: 'Buyurtmalar va tanlangan', sectionTryon: 'Primerka sozlamalari',
       sectionApp: 'Ilova', logout: 'Chiqish',
     },
     ru: {
-      myOrders: 'Мои заказы', wishlist: 'Избранное', myAddresses: 'Мои адреса',
-      myMeasurements: 'Мои размеры', faceTemplate: 'Шаблон лица', ready: 'Готово',
-      notifications: 'Уведомления', language: 'Язык', languageValue: 'Русский', help: 'Помощь',
-      messages: 'Сообщения', appearance: 'Внешний вид',
-      orders: 'Заказы', favorites: 'Избранное', addresses: 'Адреса',
-      profile: 'Профиль', user: 'Пользователь', switchSeller: 'Перейти в режим продавца',
+      kicker: 'МОЙ ПРОФИЛЬ', title: 'Профиль',
+      tier: 'Постоянный клиент',
+      myOrders: 'Мои заказы', myOrdersSub: 'Отслеживание, история и повтор заказов',
+      wishlist: 'Избранное', wishlistSub: 'Сохранённые товары и коллекции',
+      myAddresses: 'Адреса', myAddressesSub: 'Адреса доставки и получения',
+      myMeasurements: 'Мои размеры', myMeasurementsSub: 'Параметры для примерки',
+      faceTemplate: 'Шаблон лица', faceTemplateSub: 'Используется для виртуальной примерки',
+      ready: 'Готово',
+      notifications: 'Уведомления', notificationsSub: 'О заказах и акциях',
+      language: 'Язык', languageValue: 'Русский', languageSub: 'Язык интерфейса',
+      help: 'Поддержка', helpSub: 'Помощь, вопросы и обратная связь',
+      messages: 'Сообщения', messagesSub: 'Переписка с продавцами',
+      appearance: 'Внешний вид', appearanceSub: 'Светлая / тёмная тема',
+      user: 'Пользователь', switchSeller: 'Перейти в режим продавца',
       sectionOrders: 'Заказы и избранное', sectionTryon: 'Настройки примерки',
       sectionApp: 'Приложение', logout: 'Выйти',
     },
     en: {
-      myOrders: 'My orders', wishlist: 'Favorites', myAddresses: 'My addresses',
-      myMeasurements: 'My measurements', faceTemplate: 'Face template', ready: 'Ready',
-      notifications: 'Notifications', language: 'Language', languageValue: 'English', help: 'Help',
-      messages: 'Messages', appearance: 'Appearance',
-      orders: 'Orders', favorites: 'Favorites', addresses: 'Addresses',
-      profile: 'Profile', user: 'User', switchSeller: 'Switch to seller mode',
+      kicker: 'MY PROFILE', title: 'Profile',
+      tier: 'Regular customer',
+      myOrders: 'My orders', myOrdersSub: 'Tracking, history and reorders',
+      wishlist: 'Favorites', wishlistSub: 'Saved items and collections',
+      myAddresses: 'Addresses', myAddressesSub: 'Delivery and pickup addresses',
+      myMeasurements: 'My measurements', myMeasurementsSub: 'Fitting parameters',
+      faceTemplate: 'Face template', faceTemplateSub: 'Used for virtual try-on',
+      ready: 'Ready',
+      notifications: 'Notifications', notificationsSub: 'Orders and promotions',
+      language: 'Language', languageValue: 'English', languageSub: 'Interface language',
+      help: 'Support', helpSub: 'Help, questions and feedback',
+      messages: 'Messages', messagesSub: 'Chat with sellers',
+      appearance: 'Appearance', appearanceSub: 'Light / dark theme',
+      user: 'User', switchSeller: 'Switch to seller mode',
       sectionOrders: 'Orders & favorites', sectionTryon: 'Try-on settings',
       sectionApp: 'App', logout: 'Log out',
     },
     ar: {
-      myOrders: 'طلباتي', wishlist: 'المفضلة', myAddresses: 'عناويني',
-      myMeasurements: 'مقاساتي', faceTemplate: 'قالب الوجه', ready: 'جاهز',
-      notifications: 'الإشعارات', language: 'اللغة', languageValue: 'العربية', help: 'المساعدة',
-      messages: 'الرسائل', appearance: 'المظهر',
-      orders: 'الطلبات', favorites: 'المفضلة', addresses: 'العناوين',
-      profile: 'الملف الشخصي', user: 'المستخدم', switchSeller: 'التحويل إلى وضع البائع',
+      kicker: 'ملفي الشخصي', title: 'الملف الشخصي',
+      tier: 'عميل دائم',
+      myOrders: 'طلباتي', myOrdersSub: 'التتبع والسجل وإعادة الطلب',
+      wishlist: 'المفضلة', wishlistSub: 'الحفظ والمجموعات',
+      myAddresses: 'العناوين', myAddressesSub: 'عناوين التوصيل والاستلام',
+      myMeasurements: 'مقاساتي', myMeasurementsSub: 'معاملات التجربة',
+      faceTemplate: 'قالب الوجه', faceTemplateSub: 'يستخدم للتجربة الافتراضية',
+      ready: 'جاهز',
+      notifications: 'الإشعارات', notificationsSub: 'الطلبات والعروض',
+      language: 'اللغة', languageValue: 'العربية', languageSub: 'لغة الواجهة',
+      help: 'المساعدة', helpSub: 'المساعدة والأسئلة والتعليقات',
+      messages: 'الرسائل', messagesSub: 'الدردشة مع البائعين',
+      appearance: 'المظهر', appearanceSub: 'سمة فاتحة / داكنة',
+      user: 'المستخدم', switchSeller: 'التحويل إلى وضع البائع',
       sectionOrders: 'الطلبات والمفضلة', sectionTryon: 'إعدادات التجربة',
       sectionApp: 'التطبيق', logout: 'تسجيل الخروج',
     },
   };
-  const L = DICT[lang] ?? DICT.uz;
+  const L = ((DICT as any)[lang] ?? DICT.uz) as { [K in keyof (typeof DICT)['uz']]-?: string };
 
+  // Jade-first palette matches the mockup's sage menu rounds. Dedicated
+  // accent colors keep the icon tiles visually distinct without clashing
+  // with the welcome gold or forest headings.
   const SECTION_1: MenuItem[] = [
     {
       label: L.myOrders,
-      icon: 'receipt-outline',
-      iconColor: '#8A8D5B',
-      iconBg: 'rgba(138,141,91,0.1)',
+      sub: L.myOrdersSub,
+      icon: 'bag-handle-outline',
+      iconColor: '#3a6451',
+      iconBg: 'rgba(90,140,116,0.14)',
       route: '/orders',
       ...(ordersCount > 0
         ? { badge: { text: String(ordersCount), bg: colors.danger, color: '#fff' } }
@@ -113,30 +160,34 @@ export default function ProfileScreen() {
     },
     {
       label: L.wishlist,
+      sub: L.wishlistSub,
       icon: 'heart-outline',
-      iconColor: '#B85450',
-      iconBg: 'rgba(184,84,80,0.1)',
+      iconColor: '#8f6a2d',
+      iconBg: 'rgba(201,168,97,0.18)',
       route: '/wishlist',
     },
     {
       label: L.messages,
+      sub: L.messagesSub,
       icon: 'chatbubbles-outline',
-      iconColor: '#8A8D5B',
-      iconBg: 'rgba(138,141,91,0.1)',
+      iconColor: '#3a6451',
+      iconBg: 'rgba(90,140,116,0.14)',
       route: '/chats',
     },
     {
       label: L.appearance,
+      sub: L.appearanceSub,
       icon: 'moon-outline',
-      iconColor: '#8A8D5B',
-      iconBg: 'rgba(138,141,91,0.1)',
+      iconColor: '#3a6451',
+      iconBg: 'rgba(90,140,116,0.14)',
       route: '/settings/theme',
     },
     {
       label: L.myAddresses,
+      sub: L.myAddressesSub,
       icon: 'location-outline',
-      iconColor: '#C9A96E',
-      iconBg: 'rgba(201,169,110,0.1)',
+      iconColor: '#3a6451',
+      iconBg: 'rgba(90,140,116,0.14)',
       route: '/settings/addresses',
     },
   ];
@@ -146,19 +197,21 @@ export default function ProfileScreen() {
   const SECTION_2: MenuItem[] = [
     {
       label: L.myMeasurements,
+      sub: L.myMeasurementsSub,
       icon: 'body-outline',
-      iconColor: '#8A8D5B',
-      iconBg: 'rgba(138,141,91,0.1)',
+      iconColor: '#3a6451',
+      iconBg: 'rgba(90,140,116,0.14)',
       route: '/(onboarding)/body',
     },
     {
       label: L.faceTemplate,
+      sub: L.faceTemplateSub,
       icon: 'scan-outline',
       iconColor: '#5F7A94',
-      iconBg: 'rgba(95,122,148,0.1)',
+      iconBg: 'rgba(95,122,148,0.14)',
       route: '/(onboarding)/face',
       ...(faceReady
-        ? { badge: { text: L.ready, bg: 'rgba(122,138,91,0.12)', color: '#7A8A5B' } }
+        ? { badge: { text: L.ready, bg: 'rgba(122,138,91,0.14)', color: '#3a6451' } }
         : {}),
     },
   ];
@@ -166,79 +219,86 @@ export default function ProfileScreen() {
   const SECTION_3: MenuItem[] = [
     {
       label: L.notifications,
+      sub: L.notificationsSub,
       icon: 'notifications-outline',
-      iconColor: '#C9A96E',
-      iconBg: 'rgba(201,169,110,0.1)',
+      iconColor: '#8f6a2d',
+      iconBg: 'rgba(201,168,97,0.18)',
       route: '/notifications',
     },
     {
       label: L.language,
+      sub: L.languageSub,
       icon: 'globe-outline',
-      iconColor: '#8A8D5B',
-      iconBg: 'rgba(138,141,91,0.1)',
+      iconColor: '#3a6451',
+      iconBg: 'rgba(90,140,116,0.14)',
       route: '/settings/language',
       secondary: L.languageValue,
     },
     {
       label: L.help,
-      icon: 'help-circle-outline',
-      iconColor: '#857E6E',
-      iconBg: 'rgba(133,126,110,0.1)',
+      sub: L.helpSub,
+      icon: 'headset-outline',
+      iconColor: '#3a6451',
+      iconBg: 'rgba(90,140,116,0.14)',
       route: '/settings/help',
     },
   ];
 
-  const STATS = [
-    { value: String(ordersCount), label: L.orders },
-    { value: String(wishlistCount), label: L.favorites },
-    { value: String(addressesCount), label: L.addresses },
-  ];
+  const name = user?.fullName?.split(' ')[0] ?? L.user;
 
   const renderMenuSection = (items: MenuItem[]) => (
-    <View
-      style={{
-        backgroundColor: colors.surface,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: colors.rule,
-        overflow: 'hidden',
-      }}
-    >
-      {items.map((item, idx) => (
+    <View style={{ gap: 10 }}>
+      {items.map((item) => (
         <Pressable
           key={item.label}
           onPress={() => item.route && router.push(item.route as any)}
-          android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
+          android_ripple={{ color: 'rgba(0,0,0,0.04)' }}
           style={({ pressed }) => ({
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 12,
+            gap: 14,
             padding: 14,
-            paddingHorizontal: 16,
-            backgroundColor: pressed ? 'rgba(0,0,0,0.04)' : 'transparent',
-            borderBottomWidth: idx < items.length - 1 ? 1 : 0,
-            borderBottomColor: colors.rule,
+            borderRadius: 18,
+            backgroundColor: pressed ? 'rgba(0,0,0,0.03)' : colors.surface,
+            borderWidth: 1,
+            borderColor: 'rgba(201,168,97,0.18)',
           })}
         >
           <View
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
+              width: 44,
+              height: 44,
+              borderRadius: 14,
               backgroundColor: item.iconBg,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ionicons name={item.icon} size={18} color={item.iconColor} />
+            <Ionicons name={item.icon} size={20} color={item.iconColor} />
           </View>
-          <Text
-            variant="bodySmall"
-            color="ink"
-            style={{ flex: 1, fontSize: 14, fontWeight: '500' }}
-          >
-            {item.label}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontFamily: theme.fontFamilies.display,
+                fontSize: 16,
+                fontWeight: '500',
+                color: colors.oliveDeep,
+                marginBottom: 2,
+              }}
+            >
+              {item.label}
+            </Text>
+            {item.sub && (
+              <Text
+                variant="caption"
+                color="muted"
+                numberOfLines={1}
+                style={{ fontSize: 11 }}
+              >
+                {item.sub}
+              </Text>
+            )}
+          </View>
           {item.badge && (
             <View
               style={{
@@ -270,7 +330,7 @@ export default function ProfileScreen() {
               {item.secondary}
             </Text>
           )}
-          <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+          <Ionicons name="chevron-forward" size={18} color="#487a62" />
         </Pressable>
       ))}
     </View>
@@ -278,6 +338,39 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
+      {/* Shared decor: beige silk ribbon + jasmine mirror the home screen. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: SCREEN_W * 0.3,
+          zIndex: 0,
+        }}
+      >
+        <Image
+          source={DECOR_SILK_TOP}
+          style={{ width: '100%', height: '100%', opacity: 0.9 }}
+          resizeMode="cover"
+        />
+      </View>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 10, right: -40,
+          width: 200, height: 130,
+          transform: [{ rotate: '-6deg' }],
+          zIndex: 1,
+        }}
+      >
+        <Image
+          source={DECOR_JASMINE}
+          style={{ width: '100%', height: '100%', opacity: 0.95 }}
+          resizeMode="contain"
+        />
+      </View>
+
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
@@ -294,106 +387,182 @@ export default function ProfileScreen() {
           />
         }
       >
-        {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 20,
-            paddingTop: 12,
-            paddingBottom: 8,
-          }}
-        >
-          <Text
-            variant="displayLarge"
-            color="oliveDeep"
-            style={{ fontSize: 26, fontWeight: '700' }}
-          >
-            {L.profile}
-          </Text>
-          <Pressable
-            onPress={() => router.push('/settings')}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: colors.surfaceGlass,
-              borderWidth: 1,
-              borderColor: colors.rule,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Ionicons name="settings-outline" size={20} color={colors.ink} />
-          </Pressable>
+        {/* ── Welcome / page title with serif + swoosh underline ── */}
+        <View style={{ paddingHorizontal: SIDE, marginTop: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text
+              variant="bodySmall"
+              style={{
+                letterSpacing: 3,
+                textTransform: 'uppercase',
+                fontSize: 10,
+                fontWeight: '600',
+                color: colors.gold,
+              }}
+            >
+              {L.kicker}
+            </Text>
+            <Text style={{ color: colors.gold, fontSize: 12 }}>✦</Text>
+          </View>
+          <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <View style={{ position: 'relative' }}>
+              <Text
+                style={{
+                  fontFamily: theme.fontFamilies.display,
+                  fontSize: 32,
+                  lineHeight: 36,
+                  fontWeight: '500',
+                  color: colors.oliveDeep,
+                }}
+              >
+                {L.title}
+              </Text>
+              <Svg
+                width="100%"
+                height={10}
+                viewBox="0 0 120 10"
+                style={{ position: 'absolute', left: 2, right: 8, bottom: -4 }}
+                pointerEvents="none"
+              >
+                <Path
+                  d="M2 7 Q 30 1 60 5 T 118 4"
+                  stroke={colors.olive}
+                  strokeWidth={1.4}
+                  strokeLinecap="round"
+                  fill="none"
+                />
+              </Svg>
+            </View>
+          </View>
         </View>
 
-        {/* User Card */}
+        {/* ── Hero user card ── big italic name, gold loyalty chip, backed
+            with the decorative silk-arch background. Taps still open the
+            profile-details screen, same as before. */}
         <Pressable
           onPress={() => router.push('/settings/profile-details')}
           style={{
-            marginHorizontal: 20,
-            marginTop: 12,
-            marginBottom: 16,
-            backgroundColor: colors.surface,
-            borderRadius: 20,
+            marginHorizontal: SIDE,
+            marginTop: 16,
+            marginBottom: 18,
+            borderRadius: 22,
             borderWidth: 1,
-            borderColor: colors.rule,
-            padding: 20,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
+            borderColor: 'rgba(201,168,97,0.3)',
+            overflow: 'hidden',
+            backgroundColor: colors.surface,
           }}
         >
+          {/* Decorative background image on the right. */}
+          <View style={{ position: 'absolute', inset: 0 as any, top: 0, left: 0, right: 0, bottom: 0 }}>
+            <Image
+              source={DECOR_PROFILE_BG}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          </View>
+          {/* Cream wash so the avatar/text stay readable on the left. */}
           <View
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              backgroundColor: colors.oliveDeep,
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
+              position: 'absolute',
+              top: 0, left: 0, bottom: 0,
+              width: '70%',
+              backgroundColor: 'rgba(252,250,243,0.78)',
             }}
-          >
-            {user?.avatarUrl ? (
-              <Image source={{ uri: user.avatarUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-            ) : (
+          />
+
+          <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View
+              style={{
+                width: 88,
+                height: 88,
+                borderRadius: 44,
+                backgroundColor: colors.surface,
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                borderWidth: 2,
+                borderColor: '#fff',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
+              }}
+            >
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              ) : (
+                <Text
+                  style={{
+                    fontFamily: theme.fontFamilies.display,
+                    fontSize: 34,
+                    fontWeight: '700',
+                    color: colors.oliveDeep,
+                  }}
+                >
+                  {name.slice(0, 1).toUpperCase()}
+                </Text>
+              )}
+            </View>
+            <View style={{ flex: 1 }}>
               <Text
-                variant="displayLarge"
+                numberOfLines={1}
                 style={{
                   fontFamily: theme.fontFamilies.display,
-                  fontSize: 24,
-                  fontWeight: '700',
-                  color: colors.goldSoft,
+                  fontStyle: 'italic',
+                  fontSize: 28,
+                  fontWeight: '600',
+                  lineHeight: 32,
+                  color: '#487a62',
                 }}
               >
-                {user?.fullName?.slice(0, 1).toUpperCase() ?? 'U'}
+                {name}
               </Text>
-            )}
+              <View
+                style={{
+                  marginTop: 8,
+                  alignSelf: 'flex-start',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  paddingLeft: 6, paddingRight: 12, paddingVertical: 5,
+                  backgroundColor: '#fff',
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: 'rgba(201,168,97,0.3)',
+                }}
+              >
+                <View
+                  style={{
+                    width: 20, height: 20, borderRadius: 10,
+                    backgroundColor: colors.gold,
+                    alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <Svg width={11} height={11} viewBox="0 0 24 24">
+                    <Path
+                      d="M6 3 L18 3 L22 9 L12 22 L2 9 Z"
+                      fill="#fff"
+                    />
+                  </Svg>
+                </View>
+                <Text
+                  variant="caption"
+                  style={{ fontSize: 11, fontWeight: '600', color: colors.oliveDeep }}
+                >
+                  {L.tier}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#487a62" />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text
-              variant="body"
-              color="ink"
-              style={{ fontSize: 16, fontWeight: '600', marginBottom: 2 }}
-            >
-              {user?.fullName ?? L.user}
-            </Text>
-            <Text variant="bodySmall" color="muted" style={{ fontSize: 13 }}>
-              @{user?.username ?? '—'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
         </Pressable>
 
-        {/* Seller Switch */}
+        {/* ── Seller switch (unchanged behaviour) ── */}
         {user?.role === 'seller' && (
           <Pressable
             onPress={() => router.replace('/(seller-tabs)/dashboard')}
             style={{
-              marginHorizontal: 20,
+              marginHorizontal: SIDE,
               marginBottom: 16,
               backgroundColor: colors.oliveDeep,
               borderRadius: 16,
@@ -415,64 +584,18 @@ export default function ProfileScreen() {
           </Pressable>
         )}
 
-        {/* Stats Row */}
-        <View
-          style={{
-            flexDirection: 'row',
-            gap: 10,
-            paddingHorizontal: 20,
-            marginBottom: 16,
-          }}
-        >
-          {STATS.map((stat) => (
-            <View
-              key={stat.label}
-              style={{
-                flex: 1,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.rule,
-                borderRadius: 14,
-                paddingVertical: 14,
-                paddingHorizontal: 10,
-                alignItems: 'center',
-              }}
-            >
-              <Text
-                variant="displayLarge"
-                color="oliveDeep"
-                style={{
-                  fontFamily: theme.fontFamilies.display,
-                  fontSize: 20,
-                  fontWeight: '700',
-                  marginBottom: 2,
-                }}
-              >
-                {stat.value}
-              </Text>
-              <Text
-                variant="caption"
-                color="muted"
-                style={{ fontSize: 10, fontWeight: '500' }}
-              >
-                {stat.label}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Section 1: Buyurtmalar va tanlangan */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+        {/* ── Section 1 ── */}
+        <View style={{ paddingHorizontal: SIDE, marginBottom: 18 }}>
           <Text
             variant="caption"
-            color="muted"
             style={{
-              fontSize: 11,
-              fontWeight: '600',
-              letterSpacing: 1,
+              fontSize: 10,
+              fontWeight: '700',
+              letterSpacing: 2,
               textTransform: 'uppercase',
-              marginBottom: 8,
+              marginBottom: 10,
               paddingLeft: 4,
+              color: colors.gold,
             }}
           >
             {L.sectionOrders}
@@ -480,18 +603,18 @@ export default function ProfileScreen() {
           {renderMenuSection(SECTION_1)}
         </View>
 
-        {/* Section 2: Primerka sozlamalari */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+        {/* ── Section 2 ── */}
+        <View style={{ paddingHorizontal: SIDE, marginBottom: 18 }}>
           <Text
             variant="caption"
-            color="muted"
             style={{
-              fontSize: 11,
-              fontWeight: '600',
-              letterSpacing: 1,
+              fontSize: 10,
+              fontWeight: '700',
+              letterSpacing: 2,
               textTransform: 'uppercase',
-              marginBottom: 8,
+              marginBottom: 10,
               paddingLeft: 4,
+              color: colors.gold,
             }}
           >
             {L.sectionTryon}
@@ -499,18 +622,18 @@ export default function ProfileScreen() {
           {renderMenuSection(SECTION_2)}
         </View>
 
-        {/* Section 3: Ilova */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+        {/* ── Section 3 ── */}
+        <View style={{ paddingHorizontal: SIDE, marginBottom: 18 }}>
           <Text
             variant="caption"
-            color="muted"
             style={{
-              fontSize: 11,
-              fontWeight: '600',
-              letterSpacing: 1,
+              fontSize: 10,
+              fontWeight: '700',
+              letterSpacing: 2,
               textTransform: 'uppercase',
-              marginBottom: 8,
+              marginBottom: 10,
               paddingLeft: 4,
+              color: colors.gold,
             }}
           >
             {L.sectionApp}
@@ -518,25 +641,22 @@ export default function ProfileScreen() {
           {renderMenuSection(SECTION_3)}
         </View>
 
-        {/* Logout */}
-        <View style={{ paddingHorizontal: 20 }}>
+        {/* ── Logout ── await the async token clear BEFORE navigating so
+            the splash sees `isAuthed=false` and routes to /welcome.
+            Without the await, router.replace fired while the store was
+            still authed and bounced back to home. */}
+        <View style={{ paddingHorizontal: SIDE }}>
           <Pressable
             onPress={async () => {
-              // Await the async token clear BEFORE navigating so the
-              // splash sees `isAuthed=false` and routes to /welcome.
-              // Without the await, router.replace('/') fired while the
-              // store was still authed and bounced back to home — the
-              // user had to tap "Chiqish" a second time to actually
-              // log out.
               await logout();
               router.replace('/(auth)/welcome');
             }}
             style={{
-              height: 48,
+              height: 50,
               borderRadius: 999,
               backgroundColor: colors.surface,
               borderWidth: 1,
-              borderColor: colors.rule,
+              borderColor: 'rgba(201,168,97,0.3)',
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
