@@ -684,16 +684,17 @@ export default function HomeScreen() {
                   style={({ pressed }) => ({
                     width: cellW,
                     opacity: pressed ? 0.85 : 1,
-                    gap: 8,
+                    gap: 10,
                   })}
                 >
-                  {/* Square image card — the caption now lives OUTSIDE, as a
-                      serif label with a gold diamond, matching the mockup. */}
+                  {/* Rounded squircle card holding the category photo. The
+                      caption sits BELOW the card as a serif label with a
+                      vector diamond gem — matches the final mockup. */}
                   <View
                     style={{
                       width: '100%',
                       aspectRatio: 1,
-                      borderRadius: theme.radii.xl,
+                      borderRadius: 20,
                       overflow: 'hidden',
                       backgroundColor: colors.surface,
                       ...theme.shadows.sm,
@@ -709,25 +710,30 @@ export default function HomeScreen() {
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: 5,
+                      gap: 6,
                       paddingHorizontal: 2,
                     }}
                   >
+                    {/* Gold disc holding a real SVG diamond. The unicode ◆
+                        glyph rendered as a hooded silhouette on iOS at
+                        this font size, so we draw the gem ourselves. */}
                     <View
                       style={{
-                        width: 14, height: 14, borderRadius: 7,
+                        width: 16, height: 16, borderRadius: 8,
                         backgroundColor: colors.gold,
                         alignItems: 'center', justifyContent: 'center',
                       }}
                     >
-                      <Text style={{ fontSize: 7, color: '#fff', fontWeight: '700' }}>◆</Text>
+                      <Svg width={8} height={8} viewBox="0 0 10 10">
+                        <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="#ffffff" />
+                      </Svg>
                     </View>
                     <Text
                       numberOfLines={1}
                       style={{
                         flex: 1,
                         fontFamily: theme.fontFamilies.display,
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: '500',
                         color: colors.oliveDeep,
                       }}
