@@ -261,19 +261,18 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-      {/* Jasmine branch — hero overlay. The mockup has the flowers
-          sweeping from the welcome area down over the top-right of the
-          hero banner (crossing the model's shoulder). Positioned low
-          enough and with a high z-index so it visibly overlaps the
-          hero image, not just floats next to the text. */}
+      {/* Jasmine branch — welcome accent. Sits next to the "Salom,
+          Muslima" line, draping from above the hero into the right side
+          of the welcome area (never over the hero). Matches the mockup
+          where the flowers hug the right edge of the greeting. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: 170, right: -60,
-          width: 280, height: 180,
-          transform: [{ rotate: '-6deg' }],
-          zIndex: 5,
+          top: 100, right: -45,
+          width: 260, height: 160,
+          transform: [{ rotate: '-4deg' }],
+          zIndex: 2,
         }}
       >
         <Image
