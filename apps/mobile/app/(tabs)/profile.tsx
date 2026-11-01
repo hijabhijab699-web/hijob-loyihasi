@@ -15,7 +15,7 @@ const SIDE = 20;
 
 // Shared decorative premium Hijab assets. Each tab reuses the same silk
 // ribbon + jasmine so the brand language stays coherent across screens.
-const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-topright.png');
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 const DECOR_PROFILE_BG = require('../../assets/decor/profile-bg.webp');

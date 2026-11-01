@@ -12,7 +12,7 @@ import { api } from '../../src/api/client';
 import { formatUsdAsUzs, formatUzs, useUzsRate, usdToUzs } from '../../src/lib/currency';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-topright.png');
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 

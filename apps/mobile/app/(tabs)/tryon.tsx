@@ -16,7 +16,7 @@ import { useTryonCollection, TRYON_ALLOWED_CATEGORIES } from '../../src/store/tr
 import { sceneById } from '../../src/lib/scenes';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-topright.png');
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 

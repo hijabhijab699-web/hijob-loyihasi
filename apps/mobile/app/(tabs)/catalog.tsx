@@ -16,7 +16,7 @@ import { formatUsdAsUzs, useUzsRate } from '../../src/lib/currency';
 import { sceneById } from '../../src/lib/scenes';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-topright.png');
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 
@@ -426,15 +426,14 @@ export default function CatalogScreen() {
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.5,
+          top: -30, left: -40, right: -40,
+          height: SCREEN_W * 0.7,
           zIndex: 0,
-          overflow: 'hidden',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '110%', height: '100%', marginLeft: '-5%', opacity: 1 }}
+          style={{ width: '100%', height: '100%' }}
           resizeMode="cover"
         />
       </View>

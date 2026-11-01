@@ -252,15 +252,16 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Beige silk ribbon — floats across the top of the WHITE page
-          so only the ribbon's own fabric lines read; no cream base
-          layer under it, otherwise the header no longer looks white. */}
+      {/* Cream silk ribbon spread across the top. The source PNG is a tall
+          portrait with the silk concentrated near the top-right; we show
+          the TOP slice of it (height anchored to the top of the image)
+          so the fabric reads above the welcome and icons. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.5,
+          height: SCREEN_W * 0.55,
           zIndex: 0,
           overflow: 'hidden',
         }}
@@ -268,30 +269,13 @@ export default function HomeScreen() {
         <Image
           source={DECOR_SILK_TOP}
           style={{
-            width: '110%',
-            height: '100%',
-            marginLeft: '-5%',
-            opacity: 1,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            width: '100%',
+            aspectRatio: 863 / 1822,
           }}
-          resizeMode="cover"
-        />
-      </View>
-      {/* Silk ribbon anchored over the top-right icon cluster — flows out
-          from behind the utility icons so the brand ribbon motif reads at
-          the corner, matching the mockup the client sent. */}
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: -20, right: -50,
-          width: SCREEN_W * 0.75,
-          height: SCREEN_W * 0.55,
-          zIndex: 1,
-        }}
-      >
-        <Image
-          source={DECOR_SILK_TOPRIGHT}
-          style={{ width: '100%', height: '100%' }}
           resizeMode="contain"
         />
       </View>
