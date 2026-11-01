@@ -262,17 +262,18 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-      {/* Jasmine branch — small welcome accent beside the "Muslima"
-          italic. Trimmed down so it doesn't drip into the hero banner,
-          sitting right next to the greeting at the right edge. */}
+      {/* Jasmine branch — drapes above the "Muslima" line into the
+          top-right of the hero banner, right next to the HIJAB STYLE
+          medallion. Mockup shows the flowers crossing the top edge of
+          the hero, not sitting on the greeting itself. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: 120, right: -30,
-          width: 170, height: 110,
-          transform: [{ rotate: '-4deg' }],
-          zIndex: 2,
+          top: 220, right: -40,
+          width: 200, height: 130,
+          transform: [{ rotate: '-6deg' }],
+          zIndex: 5,
         }}
       >
         <Image
