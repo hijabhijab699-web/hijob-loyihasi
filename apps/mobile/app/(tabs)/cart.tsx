@@ -116,7 +116,7 @@ export default function CartScreen() {
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.7,
+          height: SCREEN_W * 0.55,
           zIndex: 0,
           overflow: 'hidden',
         }}
@@ -125,9 +125,10 @@ export default function CartScreen() {
           source={DECOR_SILK_TOP}
           style={{
             position: 'absolute',
-            top: 0, left: 0, right: 0,
-            width: '100%',
-            aspectRatio: 864 / 1821,
+            top: 0,
+            left: -SCREEN_W * 0.7,
+            width: SCREEN_W * 2.4,
+            height: SCREEN_W * 2.4 * (1821 / 864),
           }}
           resizeMode="contain"
         />

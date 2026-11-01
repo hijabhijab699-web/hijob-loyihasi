@@ -251,16 +251,17 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Tan silk ribbon anchored to the top — vibrant fabric motif the
-          client picked for every tab's header. Shown at the image's
-          natural aspect so the ribbon flows into the top-right exactly
-          as the artwork intends. */}
+      {/* Tan silk ribbon anchored to the top — the source PNG has its
+          ribbon in the top ~15 % and transparent below, so we blow the
+          image up to 2.4× screen width and anchor its TOP to the top of
+          the viewport. That way the silk portion fills the header band
+          while the transparent remainder just fades off below. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.7,
+          height: SCREEN_W * 0.55,
           zIndex: 0,
           overflow: 'hidden',
         }}
@@ -269,9 +270,10 @@ export default function HomeScreen() {
           source={DECOR_SILK_TOP}
           style={{
             position: 'absolute',
-            top: 0, left: 0, right: 0,
-            width: '100%',
-            aspectRatio: 864 / 1821,
+            top: 0,
+            left: -SCREEN_W * 0.7,
+            width: SCREEN_W * 2.4,
+            height: SCREEN_W * 2.4 * (1821 / 864),
           }}
           resizeMode="contain"
         />
