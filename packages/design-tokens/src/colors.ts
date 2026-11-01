@@ -4,13 +4,17 @@
  */
 
 export const light = {
-  // Ground
-  bg: '#F1EBDB',
-  bgAlt: '#EFE9DE',
-  surface: '#FAF6EA',
-  surfaceAlt: '#FDFAF3',
-  surface2: '#EDE5D0',
-  surfaceGlass: 'rgba(253, 250, 243, 0.72)',
+  // Ground — client switched the whole app to a flat white sheet. All
+  // cards, tabbar, inputs and chips that pull `surface` from the theme
+  // now render on #FFFFFF. The old cream (#FAF6EA, #FDFAF3) is kept only
+  // in `surface2` so cream pills (active tab highlight, warning tiles)
+  // still have a tinted accent.
+  bg: '#FFFFFF',
+  bgAlt: '#FFFFFF',
+  surface: '#FFFFFF',
+  surfaceAlt: '#FFFFFF',
+  surface2: '#EFE6CF',
+  surfaceGlass: 'rgba(255, 255, 255, 0.72)',
 
   // Text
   ink: '#2A2820',

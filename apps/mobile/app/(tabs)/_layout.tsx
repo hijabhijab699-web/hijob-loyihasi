@@ -15,7 +15,7 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 10);
 
-  const barBg = scheme === 'dark' ? 'rgba(26, 23, 20, 0.98)' : 'rgba(252, 250, 243, 0.98)';
+  const barBg = scheme === 'dark' ? 'rgba(26, 23, 20, 0.98)' : '#ffffff';
   const activeTileBg = scheme === 'dark' ? 'rgba(201,168,97,0.18)' : '#efe6cf';
   const inkColor = scheme === 'dark' ? '#f0ebda' : '#2a2a1f';
   const activeInk = scheme === 'dark' ? colors.gold : '#3a4e2a';

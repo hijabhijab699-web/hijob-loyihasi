@@ -252,7 +252,7 @@ export default function ProfileScreen() {
             gap: 14,
             padding: 14,
             borderRadius: 18,
-            backgroundColor: pressed ? 'rgba(0,0,0,0.03)' : colors.surface,
+            backgroundColor: pressed ? 'rgba(0,0,0,0.03)' : '#ffffff',
             borderWidth: 1,
             borderColor: 'rgba(201,168,97,0.18)',
           })}
@@ -461,7 +461,7 @@ export default function ProfileScreen() {
             borderWidth: 1,
             borderColor: 'rgba(201,168,97,0.3)',
             overflow: 'hidden',
-            backgroundColor: colors.surface,
+            backgroundColor: '#ffffff',
           }}
         >
           {/* Decorative background image on the right. */}
@@ -478,7 +478,7 @@ export default function ProfileScreen() {
               position: 'absolute',
               top: 0, left: 0, bottom: 0,
               width: '70%',
-              backgroundColor: 'rgba(252,250,243,0.78)',
+              backgroundColor: 'rgba(255,255,255,0.78)',
             }}
           />
 
@@ -488,7 +488,7 @@ export default function ProfileScreen() {
                 width: 88,
                 height: 88,
                 borderRadius: 44,
-                backgroundColor: colors.surface,
+                backgroundColor: '#ffffff',
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
@@ -666,7 +666,7 @@ export default function ProfileScreen() {
             style={{
               height: 50,
               borderRadius: 999,
-              backgroundColor: colors.surface,
+              backgroundColor: '#ffffff',
               borderWidth: 1,
               borderColor: 'rgba(201,168,97,0.3)',
               flexDirection: 'row',
