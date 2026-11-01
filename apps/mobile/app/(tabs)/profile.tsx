@@ -176,14 +176,6 @@ export default function ProfileScreen() {
       route: '/chats',
     },
     {
-      label: L.appearance,
-      sub: L.appearanceSub,
-      icon: 'moon-outline',
-      iconColor: '#3a6451',
-      iconBg: 'rgba(90,140,116,0.14)',
-      route: '/settings/theme',
-    },
-    {
       label: L.myAddresses,
       sub: L.myAddressesSub,
       icon: 'location-outline',

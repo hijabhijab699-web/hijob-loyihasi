@@ -663,27 +663,6 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        {/* Jasmine inter-section decoration — right-side, between shops
-            and categories, mirrors the mockup where a prominent cluster
-            sits between the "Yangi do'konchilar" row and the Kategoriyalar
-            header. Bigger than the top jasmine for visual rhythm. */}
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 720, right: -60,
-            width: 230, height: 150,
-            transform: [{ rotate: '14deg' }],
-            opacity: 1,
-          }}
-        >
-          <Image
-            source={DECOR_JASMINE}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="contain"
-          />
-        </View>
-
         {/* ── Categories ── */}
         <View style={{ marginTop: 24 }}>
           <View style={{ paddingHorizontal: SIDE, marginBottom: 14 }}>
@@ -772,25 +751,6 @@ export default function HomeScreen() {
               );
             })}
           </ScrollView>
-        </View>
-
-        {/* Jasmine between categories and favorites — right-side,
-            matches mockup. */}
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 920, right: -40,
-            width: 170, height: 110,
-            transform: [{ rotate: '-10deg' }],
-            opacity: 0.85,
-          }}
-        >
-          <Image
-            source={DECOR_JASMINE}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="contain"
-          />
         </View>
 
         {/* ── Favorites (TZ Phase 4) ── 2-column grid of nearby/arrival

@@ -32,8 +32,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       .catch(() => {});
   }, []);
 
-  const scheme: 'light' | 'dark' =
-    preference === 'system' ? systemScheme : preference;
+  // Force light mode across the entire app — the premium Hijab aesthetic
+  // only works against the cream page the mockup uses; dark mode flips
+  // every surface to black and breaks the silk/jasmine decorations. The
+  // preference state is kept so the Appearance screen can still exist as
+  // a no-op for now, but the effective scheme is always light.
+  const scheme: 'light' | 'dark' = 'light';
+  void systemScheme;
+  void preference;
 
   const setPreference = async (pref: ThemePref) => {
     setPreferenceState(pref);
@@ -42,7 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ThemeContextValue>(
     () => ({
-      colors: scheme === 'dark' ? theme.colors.dark : theme.colors.light,
+      colors: theme.colors.light,
       theme,
       scheme,
       preference,
