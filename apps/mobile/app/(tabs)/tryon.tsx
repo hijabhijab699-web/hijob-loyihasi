@@ -663,17 +663,17 @@ export default function TryOnScreen() {
                   position: 'absolute',
                   left: 14,
                   bottom: 40,
-                  maxWidth: '62%',
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 14,
+                  maxWidth: '58%',
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 12,
                   backgroundColor: GLASS,
                 }}
               >
-                <Text numberOfLines={1} style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>
+                <Text numberOfLines={1} style={{ color: '#FFF', fontSize: 11, fontWeight: '700' }}>
                   {selected.title?.uz ?? selected.title?.ru}
                 </Text>
-                <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 10, marginTop: 2 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 8.5, marginTop: 1 }}>
                   {bodyLabel} · {heightCm ?? '—'} sm uchun kiydirildi
                 </Text>
               </Pressable>
