@@ -251,11 +251,11 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Beige silk ribbon — anchored behind the whole header + welcome
-          area so the fabric reads clearly through the status bar, icons
-          and the "Salom, Muslima" line. Cream base layer brings the
-          ribbon's cream-on-cream shape forward (RN has no
-          mix-blend-mode: multiply to do this natively). */}
+      {/* Beige silk ribbon — stronger backdrop so the fabric reads
+          through the status bar, header icons and welcome text. A warm
+          cream wash sits under the image; a soft brown shadow around
+          the ribbon's rendered edges gives us the multiply effect that
+          mix-blend-mode would produce on the web. */}
       <View
         pointerEvents="none"
         style={{
@@ -263,7 +263,7 @@ export default function HomeScreen() {
           top: 0, left: 0, right: 0,
           height: SCREEN_W * 0.75,
           zIndex: 0,
-          backgroundColor: 'rgba(239, 230, 207, 0.55)',
+          backgroundColor: '#efe6cf',
         }}
       >
         <Image
