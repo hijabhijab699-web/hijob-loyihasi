@@ -275,9 +275,10 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-      {/* Jasmine branch — moved up near the header row so it drapes
-          through the status bar and over the top-right icon buttons
-          instead of pinning onto the hero banner. */}
+      {/* Jasmine branch — stays FIXED at the top-right regardless of
+          scroll. zIndex / elevation raised above the ScrollView content
+          (which was covering it) so the branch reads on top when the
+          user scrolls through categories / fav grid. */}
       <View
         pointerEvents="none"
         style={{
@@ -285,7 +286,8 @@ export default function HomeScreen() {
           top: 50, right: -40,
           width: 190, height: 125,
           transform: [{ rotate: '-6deg' }],
-          zIndex: 1,
+          zIndex: 10,
+          elevation: 10,
         }}
       >
         <Image
@@ -315,7 +317,7 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40, zIndex: 2 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
