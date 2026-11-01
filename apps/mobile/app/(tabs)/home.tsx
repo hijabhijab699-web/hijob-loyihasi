@@ -261,16 +261,15 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-      {/* Jasmine branch — welcome accent. Sits next to the "Salom,
-          Muslima" line, draping from above the hero into the right side
-          of the welcome area (never over the hero). Matches the mockup
-          where the flowers hug the right edge of the greeting. */}
+      {/* Jasmine branch — small welcome accent beside the "Muslima"
+          italic. Trimmed down so it doesn't drip into the hero banner,
+          sitting right next to the greeting at the right edge. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: 100, right: -45,
-          width: 260, height: 160,
+          top: 120, right: -30,
+          width: 170, height: 110,
           transform: [{ rotate: '-4deg' }],
           zIndex: 2,
         }}
