@@ -42,16 +42,25 @@ interface HomeFeed {
   }>;
 }
 
-const STORE_COLORS = ['#C9A96E', '#8A8D5B', '#B85450', '#5F7A94', '#D9A24B'];
+// Mockup shop-circle palette: gold / forest / jade / warm — each avatar
+// gets a matched tinted fill + bordered ring.
+const STORE_PALETTE = [
+  { ring: '#c9a861', fill: '#f1dfa4', ink: '#8f6a2d' }, // gold
+  { ring: '#4e663a', fill: '#cfe0b0', ink: '#2a3a1f' }, // forest
+  { ring: '#5a8c74', fill: '#c7e2d1', ink: '#3a6451' }, // jade
+  { ring: '#B85450', fill: '#f0cfcf', ink: '#7a2e2a' }, // coral
+  { ring: '#D9A24B', fill: '#f5dcae', ink: '#8f6a2d' }, // amber
+];
+const STORE_COLORS = STORE_PALETTE.map((p) => p.ring);
 
 // Same category hero images the website uses on its homepage, bundled with
 // the app so there's no network dependency and the layout matches cross-
 // platform. Slug → scarf type mapping mirrors apps/website/src/lib/categories.ts.
 const CATEGORY_DATA = [
-  { id: 'scarves', image: require('../../assets/category-shifon.webp') },
-  { id: 'dresses', image: require('../../assets/category-dresses.webp') },
-  { id: 'bags', image: require('../../assets/category-bags.webp') },
-  { id: 'accessories', image: require('../../assets/category-accessories.webp') },
+  { id: 'scarves', image: require('../../assets/decor/cat-platki.webp') },
+  { id: 'dresses', image: require('../../assets/decor/cat-platya.webp') },
+  { id: 'bags', image: require('../../assets/decor/cat-sumki.webp') },
+  { id: 'accessories', image: require('../../assets/decor/cat-aksess.webp') },
 ] as const;
 
 const PLACEHOLDER_BG = ['#B5B891', '#E4CE9A', '#D4C3A0', '#C4C88C', '#D9D0BE', '#E8DFCC'];
@@ -242,43 +251,40 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Beige silk ribbon anchored to the very top of the screen —
-          taller band so the header icons + welcome text sit visibly on
-          the silk fabric, matching the mockup where the ribbon drapes
-          through the status + nav row. */}
+      {/* Beige silk ribbon — matches the HTML mockup: natural image
+          height, opacity 0.92, no cream base layer (we approximate
+          mix-blend-mode: multiply by letting the ribbon render on top
+          of the cream Screen gradient). */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.55,
+          height: SCREEN_W * 0.5,
           zIndex: 0,
-          backgroundColor: 'rgba(239, 230, 207, 0.65)',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '100%', height: '100%', opacity: 1 }}
+          style={{ width: '100%', height: '100%', opacity: 0.92 }}
           resizeMode="cover"
         />
       </View>
-      {/* Jasmine branch — drapes above the "Muslima" line into the
-          top-right of the hero banner, right next to the HIJAB STYLE
-          medallion. Mockup shows the flowers crossing the top edge of
-          the hero, not sitting on the greeting itself. */}
+      {/* Jasmine branch — exact mockup placement: top 110, right -40,
+          width 190, rotated -6deg, with a soft drop shadow. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: 220, right: -40,
-          width: 200, height: 130,
+          top: 110, right: -40,
+          width: 190, height: 125,
           transform: [{ rotate: '-6deg' }],
-          zIndex: 5,
+          zIndex: 1,
         }}
       >
         <Image
           source={DECOR_JASMINE}
-          style={{ width: '100%', height: '100%', opacity: 1 }}
+          style={{ width: '100%', height: '100%', opacity: 0.95 }}
           resizeMode="contain"
         />
       </View>
@@ -432,44 +438,40 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── Welcome ── premium serif greeting with the first-name/brand
-            picked out in italic jade so it reads like editorial copy, not a
-            UI label. Mockup sizes it big and bold — 42 px, matching the
-            type-first feel of the design. */}
-        <View style={{ paddingHorizontal: SIDE, marginTop: 18 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        {/* ── Welcome ── exact match to the HTML mockup: 32 px Playfair
+            headline, italic jade "Muslima" with the SVG swoosh, gold
+            kicker + diamond. */}
+        <View style={{ paddingHorizontal: SIDE + 4, paddingTop: 16, paddingBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text
-              variant="bodySmall"
               style={{
                 letterSpacing: 3,
                 textTransform: 'uppercase',
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: '600',
-                color: colors.gold,
+                color: '#8f6a2d',
               }}
             >
               {lang === 'ru' ? 'Добро пожаловать' : 'Xush kelibsiz'}
             </Text>
-            <Svg width={14} height={14} viewBox="0 0 10 10">
-              <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill={colors.gold} />
+            <Svg width={12} height={12} viewBox="0 0 10 10">
+              <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="#c9a861" />
             </Svg>
           </View>
           {(() => {
-            // Brand voice: the greeting always says "Muslima" regardless
-            // of the signed-in user's own name — this is a stylistic
-            // choice from the design, not a dynamic field.
+            // Brand voice: the greeting always says "Muslima" — the
+            // design pins this name regardless of the signed-in user.
             const greet = lang === 'ru' ? 'Привет' : 'Salom';
             const name = 'Muslima';
             return (
-              <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <Text
                   style={{
                     fontFamily: theme.fontFamilies.display,
-                    fontSize: 42,
-                    lineHeight: 46,
+                    fontSize: 32,
+                    lineHeight: 36,
                     fontWeight: '500',
-                    color: colors.oliveDeep,
-                    letterSpacing: -0.5,
+                    color: '#1f2a16',
                   }}
                 >
                   {greet},{' '}
@@ -478,27 +480,26 @@ export default function HomeScreen() {
                   <Text
                     style={{
                       fontFamily: theme.fontFamilies.display,
-                      fontSize: 42,
-                      lineHeight: 46,
+                      fontSize: 32,
+                      lineHeight: 36,
                       fontStyle: 'italic',
                       fontWeight: '600',
-                      color: colors.olive,
-                      letterSpacing: -0.3,
+                      color: '#487a62',
                     }}
                   >
                     {name}
                   </Text>
                   <Svg
                     width="100%"
-                    height={12}
+                    height={10}
                     viewBox="0 0 120 10"
-                    style={{ position: 'absolute', left: 2, right: 8, bottom: -2 }}
+                    style={{ position: 'absolute', left: 2, right: 8, bottom: -4 }}
                     pointerEvents="none"
                   >
                     <Path
                       d="M2 7 Q 30 1 60 5 T 118 4"
-                      stroke={colors.olive}
-                      strokeWidth={1.6}
+                      stroke="#5a8c74"
+                      strokeWidth={1.4}
                       strokeLinecap="round"
                       fill="none"
                     />
@@ -564,67 +565,61 @@ export default function HomeScreen() {
             contentContainerStyle={{ paddingHorizontal: SIDE, paddingTop: 14, paddingBottom: 4, gap: 14 }}
           >
             {stores.map((store, idx) => {
-              const ringColor = STORE_COLORS[idx % STORE_COLORS.length];
-              // Soft tinted fill behind the initials — mockup shows a cream
-              // tint that picks up the ring colour, not a pure white disc.
-              const tintBg = ringColor + '18'; // 12% opacity
+              const p = STORE_PALETTE[idx % STORE_PALETTE.length] ?? STORE_PALETTE[0]!;
               return (
                 <Pressable
                   key={store.id}
                   onPress={() =>
                     router.push({ pathname: '/shop/[id]', params: { id: store.id } })
                   }
-                  style={{ alignItems: 'center', gap: 8, width: 82 }}
+                  style={{ alignItems: 'center', gap: 6, width: 76 }}
                 >
-                  {/* Ring — bigger disc, bolder ring, warm cream tint */}
+                  {/* Mockup avatar: full-size tinted disc with a hairline
+                      colored border — exactly the shop.a1/a2/a3 look. */}
                   <View
                     style={{
                       width: 76,
                       height: 76,
                       borderRadius: 38,
-                      borderWidth: 2.5,
-                      borderColor: ringColor,
-                      padding: 3,
+                      backgroundColor: p.fill,
+                      borderWidth: 1.5,
+                      borderColor: p.ring,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      shadowColor: p.ink,
+                      shadowOpacity: 0.18,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowRadius: 8,
                     }}
                   >
-                    <View
-                      style={{
-                        flex: 1,
-                        borderRadius: 34,
-                        backgroundColor: store.logoUrl ? colors.surface : tintBg,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {store.logoUrl ? (
-                        <Image
-                          source={{ uri: store.logoUrl }}
-                          style={{ width: '100%', height: '100%' }}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <Text
-                          style={{
-                            color: ringColor,
-                            fontFamily: theme.fontFamilies.display,
-                            fontWeight: '700',
-                            fontSize: 20,
-                            letterSpacing: 1,
-                          }}
-                        >
-                          {store.brandName.slice(0, 2).toUpperCase()}
-                        </Text>
-                      )}
-                    </View>
+                    {store.logoUrl ? (
+                      <Image
+                        source={{ uri: store.logoUrl }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text
+                        style={{
+                          color: p.ink,
+                          fontFamily: theme.fontFamilies.display,
+                          fontWeight: '600',
+                          fontSize: 22,
+                          letterSpacing: 1,
+                        }}
+                      >
+                        {store.brandName.slice(0, 2).toUpperCase()}
+                      </Text>
+                    )}
                   </View>
                   <Text
                     numberOfLines={1}
                     style={{
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: '500',
                       textAlign: 'center',
-                      color: colors.ink,
+                      color: '#4a4a3b',
                     }}
                   >
                     {store.brandName.split(' ')[0]}
@@ -633,10 +628,10 @@ export default function HomeScreen() {
               );
             })}
 
-            {/* Add store — matches sized of other circles */}
+            {/* Add-shop — dashed jade ring, same disc size. */}
             <Pressable
               onPress={() => router.push('/(tabs)/catalog')}
-              style={{ alignItems: 'center', gap: 8, width: 82 }}
+              style={{ alignItems: 'center', gap: 6, width: 76 }}
             >
               <View
                 style={{
@@ -644,15 +639,15 @@ export default function HomeScreen() {
                   height: 76,
                   borderRadius: 38,
                   borderWidth: 1.5,
-                  borderColor: colors.rule,
+                  borderColor: 'rgba(90,140,116,0.5)',
                   borderStyle: 'dashed',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="add" size={26} color={colors.muted} />
+                <Ionicons name="add" size={28} color="#487a62" />
               </View>
-              <Text style={{ fontSize: 12, color: colors.muted }}>
+              <Text style={{ fontSize: 11, color: '#857e6e' }}>
                 {lang === 'ru' ? 'Ещё' : "Qo'shish"}
               </Text>
             </Pressable>
