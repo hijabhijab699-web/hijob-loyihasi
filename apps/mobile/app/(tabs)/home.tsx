@@ -25,6 +25,7 @@ const SIDE = 20;
 // scrolling home feed and never intercept touches.
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_SILK_TOPRIGHT = require('../../assets/decor/silk-topright.png');
 const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 const DECOR_HERO_HOME = require('../../assets/decor/hero-home.webp');
 
@@ -273,6 +274,25 @@ export default function HomeScreen() {
             opacity: 1,
           }}
           resizeMode="cover"
+        />
+      </View>
+      {/* Silk ribbon anchored over the top-right icon cluster — flows out
+          from behind the utility icons so the brand ribbon motif reads at
+          the corner, matching the mockup the client sent. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: -20, right: -50,
+          width: SCREEN_W * 0.75,
+          height: SCREEN_W * 0.55,
+          zIndex: 1,
+        }}
+      >
+        <Image
+          source={DECOR_SILK_TOPRIGHT}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="contain"
         />
       </View>
       {/* Scarf-like green silk wave above the tab bar — fabric motif
