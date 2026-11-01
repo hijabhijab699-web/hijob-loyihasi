@@ -674,7 +674,10 @@ export default function HomeScreen() {
             contentContainerStyle={{ paddingHorizontal: SIDE, gap: 12 }}
           >
             {CATEGORY_DATA.map((cat) => {
-              const cellW = (SCREEN_W - SIDE * 2 - 36) / 4;
+              // 3.3 cards visible per screen: enough room for full Uzbek
+              // category labels ("Aksessuarlar") without truncation while
+              // the 4th hints that the row scrolls — matches the mockup.
+              const cellW = (SCREEN_W - SIDE - 10) / 3.3;
               return (
                 <Pressable
                   key={cat.id}
