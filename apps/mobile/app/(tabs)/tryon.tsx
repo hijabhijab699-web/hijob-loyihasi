@@ -469,11 +469,74 @@ export default function TryOnScreen() {
         </View>
       </View>
 
+      {/* Colour chips moved up here so the picker sits right under the
+          welcome, matching the catalog treatment. flexShrink + a fixed
+          height keep the row at label height instead of ballooning. */}
+      <View style={{ height: 52, paddingBottom: 10, flexShrink: 0 }}>
+        {colorChips.length >= 2 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 8, alignItems: 'center' }}
+          >
+            <Chip label="Hammasi" active={!colorFilter} onPress={() => setColorFilter(null)} />
+            {colorChips.map((c) => (
+              <Chip
+                key={c.name}
+                label={c.name}
+                dot={c.hex}
+                active={colorFilter === c.name}
+                onPress={() => setColorFilter(colorFilter === c.name ? null : c.name)}
+              />
+            ))}
+            <Pressable
+              onPress={() => router.push('/(tryon-onboarding)/height')}
+              hitSlop={8}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surface2,
+              }}
+            >
+              <Ionicons name="options-outline" size={18} color={colors.ink} />
+            </Pressable>
+          </ScrollView>
+        ) : (
+          <View
+            style={{
+              paddingHorizontal: 16,
+              flex: 1,
+              flexDirection: 'row',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+            }}
+          >
+            <Pressable
+              onPress={() => router.push('/(tryon-onboarding)/height')}
+              hitSlop={8}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surface2,
+              }}
+            >
+              <Ionicons name="options-outline" size={18} color={colors.ink} />
+            </Pressable>
+          </View>
+        )}
+      </View>
+
       {/* Hero card — flex:1 with minHeight:0 so it SHRINKS when the
-          chips + thumbnails strip needs its space (the strip has
-          flexShrink:0 below so it stays whole and the hero gives up
-          height first). Otherwise the strip got pushed below the tab
-          bar on shorter devices. */}
+          thumbnails strip needs its space (the strip has flexShrink:0
+          below so it stays whole and the hero gives up height first).
+          Otherwise the strip got pushed below the tab bar on shorter
+          devices. */}
       <View
         style={{
           flex: 1,
@@ -655,7 +718,7 @@ export default function TryOnScreen() {
           flexShrink: 0,
           marginTop: 0,
           paddingTop: 16,
-          paddingBottom: 14,
+          paddingBottom: 110,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
           backgroundColor: colors.surface,
@@ -666,68 +729,6 @@ export default function TryOnScreen() {
           elevation: 8,
         }}
       >
-        {/* Colour chips — only shown when the store actually has more than
-            one colour published, otherwise the row is just a Hammasi chip
-            that cannot filter anything and a filter button that reads as
-            inert. Clamping colorFilter to a still-present colour means a
-            stale filter from an earlier reload can't ghost the strip. */}
-        {colorChips.length >= 2 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 8, alignItems: 'center' }}
-          >
-            <Chip label="Hammasi" active={!colorFilter} onPress={() => setColorFilter(null)} />
-            {colorChips.map((c) => (
-              <Chip
-                key={c.name}
-                label={c.name}
-                dot={c.hex}
-                active={colorFilter === c.name}
-                onPress={() => setColorFilter(colorFilter === c.name ? null : c.name)}
-              />
-            ))}
-            <Pressable
-              onPress={() => router.push('/(tryon-onboarding)/height')}
-              hitSlop={8}
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.surface2,
-              }}
-            >
-              <Ionicons name="options-outline" size={18} color={colors.ink} />
-            </Pressable>
-          </ScrollView>
-        ) : (
-          <View
-            style={{
-              paddingHorizontal: 16,
-              flexDirection: 'row',
-              justifyContent: 'flex-end',
-              alignItems: 'center',
-            }}
-          >
-            <Pressable
-              onPress={() => router.push('/(tryon-onboarding)/height')}
-              hitSlop={8}
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.surface2,
-              }}
-            >
-              <Ionicons name="options-outline" size={18} color={colors.ink} />
-            </Pressable>
-          </View>
-        )}
-
         {/* Product strip */}
         <ScrollView
           horizontal
