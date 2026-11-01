@@ -849,6 +849,12 @@ const BODY_TYPE_DESC = {
   full: 'FULL — wider hips, fuller waist, plus-size figure',
 };
 
+const HEIGHT_DESC = {
+  short: 'SHORT — approximately 150-160 cm, petite figure',
+  mid: 'MID — approximately 161-170 cm, average height',
+  tall: 'TALL — approximately 171-185 cm, slender tall figure',
+};
+
 function narrowToBodyType(fullPrompt, bodyType) {
   const desc = BODY_TYPE_DESC[bodyType];
   if (!desc) return fullPrompt;
@@ -869,6 +875,47 @@ function narrowToBodyType(fullPrompt, bodyType) {
     .replace(/• Leave a VISIBLE EMPTY [a-z]+ HORIZONTAL BAND[^\n]*\n?/g, '')
     .replace(/between rows 1↔2 and between rows 2↔3/g, '')
     .replace(/ALL 9 CELLS MUST BE FILLED/g, 'ALL 3 CELLS MUST BE FILLED');
+}
+
+// Rewrite the shared 3×3 prompt into a single-portrait instruction.
+// One body × one height × one model, framed as a studio portrait that
+// fills the full canvas → GPT devotes the entire ~1024 px wide output
+// to one person instead of 1/9 of it. This is the premium path:
+// 9 separate GPT calls per product, but every mannequin is near-double
+// the native resolution of the 1×3 strip approach.
+function narrowToSingleCell(fullPrompt, bodyType, height) {
+  const bodyDesc = BODY_TYPE_DESC[bodyType];
+  const heightDesc = HEIGHT_DESC[height];
+  if (!bodyDesc || !heightDesc) return fullPrompt;
+  return fullPrompt
+    .replace(/NINE \(9\)/g, 'ONE (1)')
+    .replace(/all 9 full-body models/g, 'the SINGLE full-body model')
+    .replace(/all nine/gi, 'the one')
+    .replace(/9 full-body/g, '1 full-body')
+    .replace(/9 cells/g, 'the single frame')
+    .replace(/9 pieces/g, 'the single frame')
+    .replace(/9 variants/g, 'the single variant')
+    .replace(
+      /ARRANGE them in a 3×3 grid \(3 rows × 3 columns\)[^\.]*\./g,
+      'OUTPUT ONE SINGLE full-body portrait that FILLS the entire image frame edge-to-edge, maximum resolution and detail.',
+    )
+    .replace(/3×3 grid \(3 rows × 3 columns\)/g, 'single full-body portrait')
+    .replace(/clean 3×3 grid/g, 'clean single portrait')
+    .replace(
+      /ROWS = body type \(top → bottom\):[\s\S]*?Row 3 — FULL[^\n]*/,
+      `BODY TYPE: ${bodyDesc}`,
+    )
+    .replace(
+      /COLUMNS = height band \(left → right, within each row\):[\s\S]*?Col 3 — TALL[^\n]*/g,
+      `HEIGHT: ${heightDesc}`,
+    )
+    .replace(/• Leave a VISIBLE EMPTY [a-z]+ HORIZONTAL BAND[^\n]*\n?/g, '')
+    .replace(/• Leave a VISIBLE EMPTY [a-z]+ VERTICAL BAND[^\n]*\n?/g, '')
+    .replace(/between rows 1↔2 and between rows 2↔3/g, '')
+    .replace(/between columns 1↔2 and between columns 2↔3/g, '')
+    .replace(/ALL 9 CELLS MUST BE FILLED/g, 'ONE SINGLE PORTRAIT — NO GRID, NO SPLIT, NO MULTIPLE MODELS')
+    .replace(/Each cell is a HEAD-TO-TOE/g, 'The portrait is a HEAD-TO-TOE')
+    .replace(/model centered in her cell/g, 'model centered in the frame');
 }
 
 // ─── Per-task runner ───────────────────────────────────────────────────
@@ -905,27 +952,40 @@ async function runOne(job) {
 
     // 3. Hand the DRESS request to the content script via a long-lived
     // port. The port keeps the service worker alive for the whole render.
-    // We fan the job out into THREE 1×3 strips (one per body type) so
-    // each cell gets GPT's full landscape width — ~512 px native vs the
-    // ~340 px a 3×3 would give. Each strip comes back as 3 slices; we
-    // concatenate them in body-type order and upload the 9 together.
+    // PREMIUM mode: fan the job out into NINE separate single-portrait
+    // GPT calls (one per body × height). Each call gets GPT's full
+    // landscape canvas (~1024 px wide) for ONE model, which is roughly
+    // 2× the native resolution the 1×3 strip approach gave and ~3× what
+    // the single 3×3 grid gave. The trade-off is wall-clock time:
+    // ~9 chat submissions per product instead of 3.
     const basePrompt = buildPrompt(job);
     const styleRef = await loadStyleReference();
     note(styleRef
       ? `✓ style reference loaded (${Math.round((styleRef.base64.length * 3) / 4 / 1024)} KB)`
       : '⚠ style reference MISSING — attach failed');
-    const BODY_TYPES = ['slim', 'medium', 'full'];
+    const CELLS = [
+      { body: 'slim',   height: 'short' },
+      { body: 'slim',   height: 'mid'   },
+      { body: 'slim',   height: 'tall'  },
+      { body: 'medium', height: 'short' },
+      { body: 'medium', height: 'mid'   },
+      { body: 'medium', height: 'tall'  },
+      { body: 'full',   height: 'short' },
+      { body: 'full',   height: 'mid'   },
+      { body: 'full',   height: 'tall'  },
+    ];
     const slices = [];
-    for (const bodyType of BODY_TYPES) {
-      note(`✏ GPT ga ${bodyType} 1×3 strip yuborilyapti…`);
-      if (bodyType !== BODY_TYPES[0]) {
-        // Start each follow-up body-type render in a brand-new chat so the
-        // composer, context and attachments reset cleanly.
-        note('↺ fresh chat for next body type…');
+    for (let i = 0; i < CELLS.length; i++) {
+      const { body, height } = CELLS[i];
+      const sizeKey = `${body}-${height}`;
+      note(`✏ GPT ga ${sizeKey} premium portrait yuborilyapti (${i + 1}/9)…`);
+      if (i > 0) {
+        // Start each follow-up cell in a brand-new chat so the composer,
+        // context and attachments reset cleanly between portraits.
+        note('↺ fresh chat for next cell…');
         await freshChat(tabId);
       }
-      const prompt = narrowToBodyType(basePrompt, bodyType);
-      const gridKeys = [`${bodyType}-short`, `${bodyType}-mid`, `${bodyType}-tall`];
+      const prompt = narrowToSingleCell(basePrompt, body, height);
       const resp = await askContentPort(tabId, {
         type: 'DRESS',
         prompt,
@@ -934,16 +994,16 @@ async function runOne(job) {
         styleRefBase64: styleRef?.base64 ?? null,
         styleRefMime: styleRef?.mime ?? null,
         scene: null,
-        gridKeys,
+        gridKeys: [sizeKey],
         rows: 1,
-        cols: 3,
+        cols: 1,
         timeoutMs: DRESS_TIMEOUT_MS,
       }, DRESS_TIMEOUT_MS + 30_000);
-      if (!resp?.ok) throw new Error(`${bodyType}: ${resp?.error ?? 'content script failed'}`);
+      if (!resp?.ok) throw new Error(`${sizeKey}: ${resp?.error ?? 'content script failed'}`);
       const strip = Array.isArray(resp.slices) ? resp.slices : [];
-      if (strip.length !== 3) throw new Error(`${bodyType}: expected 3 slices, got ${strip.length}`);
+      if (strip.length !== 1) throw new Error(`${sizeKey}: expected 1 slice, got ${strip.length}`);
       slices.push(...strip);
-      note(`✓ ${bodyType} 3 variant tayyor (jami ${slices.length}/9)`);
+      note(`✓ ${sizeKey} tayyor (jami ${slices.length}/9)`);
     }
     if (slices.length !== 9) throw new Error(`expected 9 slices total, got ${slices.length}`);
 
