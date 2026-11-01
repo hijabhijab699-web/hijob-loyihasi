@@ -1,8 +1,6 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { View, type ViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../theme/ThemeProvider';
 
 interface Props extends ViewProps {
   gradient?: boolean;
@@ -10,39 +8,31 @@ interface Props extends ViewProps {
   contentStyle?: ViewProps['style'];
 }
 
+// Flat white backdrop — the client wanted every page to read as a
+// bright white sheet (not the cream gradient the earlier design used).
+// Decorative layers (silk ribbon, jasmine, wave) draw their own colour
+// against this canvas; the gradient prop is now a no-op kept for
+// backwards compatibility with existing call sites.
+const PAGE_BG = '#ffffff';
+
 export function Screen({
-  gradient = false,
+  gradient: _gradient = false,
   edges = ['top', 'bottom'],
   contentStyle,
   children,
   ...rest
 }: Props) {
-  const { colors, scheme } = useTheme();
-
   const inner = (
     <SafeAreaView
       edges={edges}
       style={[{ flex: 1 }, rest.style]}
     >
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style="dark" />
       <View style={[{ flex: 1 }, contentStyle]}>{children}</View>
     </SafeAreaView>
   );
 
-  if (gradient) {
-    return (
-      <LinearGradient
-        colors={[colors.bg, colors.bgAlt, colors.surface2]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ flex: 1 }}
-      >
-        {inner}
-      </LinearGradient>
-    );
-  }
-
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>{inner}</View>
+    <View style={{ flex: 1, backgroundColor: PAGE_BG }}>{inner}</View>
   );
 }
