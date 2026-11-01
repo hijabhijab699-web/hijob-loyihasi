@@ -420,21 +420,32 @@ export default function CatalogScreen() {
 
   return (
     <Screen>
-      {/* Shared silk + jasmine decor — identical to home.tsx so every
-          tab reads as the same brand surface. */}
+      {/* Cream silk header band — solid warm cream backing anchors the
+          header, with the silk ribbon PNG layered over it so the folds
+          read against the cream. Matches the catalog mockup where the
+          whole top strip is a lush fabric surface. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: -30, left: -40, right: -40,
-          height: SCREEN_W * 0.7,
+          top: 0, left: 0, right: 0,
+          height: SCREEN_W * 0.72,
           zIndex: 0,
+          backgroundColor: '#f5ead6',
+          overflow: 'hidden',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '100%', height: '100%' }}
-          resizeMode="cover"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            width: '100%',
+            aspectRatio: 863 / 1822,
+          }}
+          resizeMode="contain"
         />
       </View>
       {/* Scarf-like green silk wave anchored above the tab bar — matches

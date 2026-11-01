@@ -331,21 +331,27 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      {/* Shared silk + jasmine decor — identical to home.tsx. */}
+      {/* Shared silk + jasmine decor — matches home/catalog. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.5,
+          height: SCREEN_W * 0.72,
           zIndex: 0,
+          backgroundColor: '#f5ead6',
           overflow: 'hidden',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '110%', height: '100%', marginLeft: '-5%', opacity: 1 }}
-          resizeMode="cover"
+          style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0,
+            width: '100%',
+            aspectRatio: 863 / 1822,
+          }}
+          resizeMode="contain"
         />
       </View>
       {/* Scarf-like green silk wave above the tab bar. */}

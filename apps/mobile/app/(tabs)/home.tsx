@@ -252,17 +252,17 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
-      {/* Cream silk ribbon spread across the top. The source PNG is a tall
-          portrait with the silk concentrated near the top-right; we show
-          the TOP slice of it (height anchored to the top of the image)
-          so the fabric reads above the welcome and icons. */}
+      {/* Cream silk header band — solid warm cream backing anchors the
+          header, with the silk ribbon PNG layered over it so the folds
+          read against the cream. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.55,
+          height: SCREEN_W * 0.72,
           zIndex: 0,
+          backgroundColor: '#f5ead6',
           overflow: 'hidden',
         }}
       >
