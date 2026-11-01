@@ -669,58 +669,71 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: SIDE, gap: 12 }}
           >
-            {CATEGORY_DATA.map((cat) => (
-              <Pressable
-                key={cat.id}
-                onPress={() =>
-                  router.push({ pathname: '/(tabs)/catalog', params: { category: cat.id } })
-                }
-                style={({ pressed }) => ({
-                  width: (SCREEN_W - SIDE * 2 - 36) / 4,
-                  opacity: pressed ? 0.85 : 1,
-                })}
-              >
-                <View
-                  style={{
-                    aspectRatio: 3 / 4,
-                    borderRadius: theme.radii.xl,
-                    overflow: 'hidden',
-                    position: 'relative',
-                    ...theme.shadows.sm,
-                  }}
+            {CATEGORY_DATA.map((cat) => {
+              const cellW = (SCREEN_W - SIDE * 2 - 36) / 4;
+              return (
+                <Pressable
+                  key={cat.id}
+                  onPress={() =>
+                    router.push({ pathname: '/(tabs)/catalog', params: { category: cat.id } })
+                  }
+                  style={({ pressed }) => ({
+                    width: cellW,
+                    opacity: pressed ? 0.85 : 1,
+                    gap: 8,
+                  })}
                 >
-                  <Image
-                    source={cat.image}
-                    style={{ width: '100%', height: '100%' }}
-                    resizeMode="cover"
-                  />
-                  {/* Website parity: dark gradient from the bottom so the
-                      caption below reads well regardless of the photo. */}
-                  <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.55)']}
-                    start={{ x: 0, y: 0.4 }}
-                    end={{ x: 0, y: 1 }}
-                    style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0 }}
-                  />
-                  <Text
-                    variant="caption"
-                    numberOfLines={1}
+                  {/* Square image card — the caption now lives OUTSIDE, as a
+                      serif label with a gold diamond, matching the mockup. */}
+                  <View
                     style={{
-                      position: 'absolute',
-                      left: 6,
-                      right: 6,
-                      bottom: 6,
-                      color: '#fff',
-                      fontWeight: '600',
-                      fontSize: 11,
-                      textAlign: 'center',
+                      width: '100%',
+                      aspectRatio: 1,
+                      borderRadius: theme.radii.xl,
+                      overflow: 'hidden',
+                      backgroundColor: colors.surface,
+                      ...theme.shadows.sm,
                     }}
                   >
-                    {t(`home.categories.${cat.id}` as never, { defaultValue: cat.id })}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
+                    <Image
+                      source={cat.image}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      paddingHorizontal: 2,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 14, height: 14, borderRadius: 7,
+                        backgroundColor: colors.gold,
+                        alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: 7, color: '#fff', fontWeight: '700' }}>◆</Text>
+                    </View>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        flex: 1,
+                        fontFamily: theme.fontFamilies.display,
+                        fontSize: 12,
+                        fontWeight: '500',
+                        color: colors.oliveDeep,
+                      }}
+                    >
+                      {t(`home.categories.${cat.id}` as never, { defaultValue: cat.id })}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
           </ScrollView>
         </View>
 
