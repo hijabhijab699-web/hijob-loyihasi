@@ -662,7 +662,7 @@ export default function TryOnScreen() {
                 style={{
                   position: 'absolute',
                   left: 14,
-                  bottom: 40,
+                  bottom: 14,
                   maxWidth: '58%',
                   paddingHorizontal: 10,
                   paddingVertical: 6,
