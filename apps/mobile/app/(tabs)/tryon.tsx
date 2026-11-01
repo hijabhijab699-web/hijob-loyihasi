@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Dimensions, Image, Pressable, ScrollView, Vie
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -385,58 +386,86 @@ export default function TryOnScreen() {
         />
       </View>
 
-      {/* Header */}
+      {/* Welcome header — matches the catalog/home brand treatment:
+          gold kicker, Playfair title with italic "Primerka" + swoosh,
+          jasmine tucked into the top-right corner. */}
       <View
         style={{
-          paddingTop: insets.top + 6,
+          paddingTop: insets.top + 8,
           paddingBottom: 10,
-          paddingHorizontal: 16,
-          flexDirection: 'row',
-          alignItems: 'center',
+          paddingHorizontal: 20,
           backgroundColor: 'transparent',
           zIndex: 2,
+          position: 'relative',
         }}
       >
-        <Pressable
-          onPress={() => router.push('/(tryon-onboarding)/store')}
-          hitSlop={12}
-          style={{ width: 40, height: 40, justifyContent: 'center' }}
-        >
-          <Ionicons name="storefront-outline" size={22} color={colors.ink} />
-        </Pressable>
         <View
+          pointerEvents="none"
           style={{
-            flex: 1,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
+            position: 'absolute',
+            top: insets.top - 4, right: -36,
+            width: 160, height: 110,
+            transform: [{ rotate: '-8deg' }],
           }}
         >
-          <MaterialCommunityIcons name="hanger" size={24} color={colors.goldDark} />
+          <Image
+            source={DECOR_JASMINE}
+            style={{ width: '100%', height: '100%', opacity: 0.95 }}
+            resizeMode="contain"
+          />
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text
+            style={{
+              letterSpacing: 3,
+              textTransform: 'uppercase',
+              fontSize: 10,
+              fontWeight: '600',
+              color: '#8f6a2d',
+            }}
+          >
+            Xush kelibsiz
+          </Text>
+          <Svg width={12} height={12} viewBox="0 0 10 10">
+            <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="#c9a861" />
+          </Svg>
+        </View>
+        <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <Text
             style={{
               fontFamily: 'PlayfairDisplay',
-              fontSize: 20,
-              fontWeight: '700',
-              letterSpacing: 1.6,
-              color: colors.goldDark,
+              fontSize: 28,
+              lineHeight: 32,
+              fontWeight: '500',
+              color: '#1f2a16',
             }}
           >
-            PRIMERKA
+            Virtual{' '}
           </Text>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 14 }}>
-          <HeaderIcon
-            icon="heart-outline"
-            count={wished.size}
-            onPress={() => router.push('/wishlist')}
-          />
-          <HeaderIcon
-            icon="bag-outline"
-            count={cartCount}
-            onPress={() => router.push('/(tabs)/cart')}
-          />
+          <View style={{ position: 'relative' }}>
+            <Text
+              style={{
+                fontFamily: 'PlayfairDisplay',
+                fontSize: 28,
+                lineHeight: 32,
+                fontStyle: 'italic',
+                fontWeight: '600',
+                color: '#487a62',
+              }}
+            >
+              Primerka
+            </Text>
+            <Svg
+              width="100%" height={10} viewBox="0 0 120 10"
+              style={{ position: 'absolute', left: 2, right: 8, bottom: -4 }}
+              pointerEvents="none"
+            >
+              <Path
+                d="M2 7 Q 30 1 60 5 T 118 4"
+                stroke="#5a8c74" strokeWidth={1.4} strokeLinecap="round" fill="none"
+              />
+            </Svg>
+          </View>
         </View>
       </View>
 
