@@ -272,13 +272,14 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-      {/* Jasmine branch — exact mockup placement: top 110, right -40,
-          width 190, rotated -6deg, with a soft drop shadow. */}
+      {/* Jasmine branch — moved up near the header row so it drapes
+          through the status bar and over the top-right icon buttons
+          instead of pinning onto the hero banner. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: 110, right: -40,
+          top: 50, right: -40,
           width: 190, height: 125,
           transform: [{ rotate: '-6deg' }],
           zIndex: 1,
