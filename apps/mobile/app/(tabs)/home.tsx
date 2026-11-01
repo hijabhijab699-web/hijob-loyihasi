@@ -275,28 +275,6 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-      {/* Jasmine branch — stays FIXED at the top-right regardless of
-          scroll. zIndex / elevation raised above the ScrollView content
-          (which was covering it) so the branch reads on top when the
-          user scrolls through categories / fav grid. */}
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: 50, right: -40,
-          width: 190, height: 125,
-          transform: [{ rotate: '-6deg' }],
-          zIndex: 10,
-          elevation: 10,
-        }}
-      >
-        <Image
-          source={DECOR_JASMINE}
-          style={{ width: '100%', height: '100%', opacity: 0.95 }}
-          resizeMode="contain"
-        />
-      </View>
-
       {/* Scarf-like green silk wave above the tab bar — fabric motif
           applied screen-wide so every tab shares the brand surface. */}
       <View
@@ -929,6 +907,26 @@ export default function HomeScreen() {
         </View>
 
       </ScrollView>
+
+      {/* Jasmine branch — rendered AFTER the ScrollView so it paints on
+          top in natural order (iOS zIndex can be flaky when the sibling
+          scrolls). It sits in the Screen's inner View, pinned to the
+          top-right, so the branch never moves while the feed scrolls. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 50, right: -40,
+          width: 190, height: 125,
+          transform: [{ rotate: '-6deg' }],
+        }}
+      >
+        <Image
+          source={DECOR_JASMINE}
+          style={{ width: '100%', height: '100%', opacity: 0.95 }}
+          resizeMode="contain"
+        />
+      </View>
     </Screen>
   );
 }
