@@ -138,142 +138,109 @@ export default function CatalogScreen() {
 
   const listHeader = (
     <>
-      {/* Header */}
-      <View
-        style={{
-          paddingHorizontal: 20,
-          paddingTop: 8,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Pressable
-          onPress={() => safeBack()}
-          hitSlop={12}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: colors.surfaceGlass,
-            borderWidth: 1,
-            borderColor: colors.ruleSoft,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Ionicons name="chevron-back" size={20} color={colors.ink} />
-        </Pressable>
-        <Text
-          variant="displayLarge"
-          color="oliveDeep"
-          style={{ fontSize: 22, letterSpacing: -0.5 }}
-        >
-          24:31
-        </Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Pressable
-            onPress={() => router.push('/wishlist')}
-            hitSlop={8}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: colors.surfaceGlass,
-              borderWidth: 1,
-              borderColor: colors.ruleSoft,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Ionicons name="heart-outline" size={20} color={colors.ink} />
-          </Pressable>
-          <Pressable
-            onPress={() => router.push('/(tabs)/cart')}
-            hitSlop={8}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: colors.surfaceGlass,
-              borderWidth: 1,
-              borderColor: colors.ruleSoft,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Ionicons name="bag-outline" size={20} color={colors.ink} />
-            <View
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: colors.danger,
-                borderWidth: 2,
-                borderColor: colors.bg,
-              }}
-            />
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Title — welcome kicker + serif category name with jade swoosh. */}
-      <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
+      {/* Welcome: kicker + "Каталог 24:31" matches the mockup, with the
+          "24:31" italic in jade and the swoosh underline. */}
+      <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text
-            variant="bodySmall"
             style={{
               letterSpacing: 3,
               textTransform: 'uppercase',
               fontSize: 10,
               fontWeight: '600',
-              color: colors.gold,
+              color: '#8f6a2d',
             }}
           >
-            {t(`catalog.${category}.subtitle` as never, {
-              defaultValue: t('catalog.scarves.subtitle'),
-            })}
+            {lang === 'ru' ? 'Добро пожаловать' : 'Xush kelibsiz'}
           </Text>
-          <Text style={{ color: colors.gold, fontSize: 12 }}>✦</Text>
+          <Svg width={12} height={12} viewBox="0 0 10 10">
+            <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="#c9a861" />
+          </Svg>
         </View>
-        <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end' }}>
+        <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <Text
+            style={{
+              fontFamily: theme.fontFamilies.display,
+              fontSize: 32,
+              lineHeight: 36,
+              fontWeight: '500',
+              color: '#1f2a16',
+            }}
+          >
+            {lang === 'ru' ? 'Каталог ' : 'Katalog '}
+          </Text>
           <View style={{ position: 'relative' }}>
             <Text
               style={{
                 fontFamily: theme.fontFamilies.display,
                 fontSize: 32,
                 lineHeight: 36,
-                fontWeight: '500',
-                color: colors.oliveDeep,
+                fontStyle: 'italic',
+                fontWeight: '600',
+                color: '#487a62',
               }}
             >
-              {t(`home.categories.${category}` as never, {
-                defaultValue: category,
-              })}
+              24:31
             </Text>
             <Svg
-              width="100%"
-              height={10}
-              viewBox="0 0 120 10"
+              width="100%" height={10} viewBox="0 0 120 10"
               style={{ position: 'absolute', left: 2, right: 8, bottom: -4 }}
               pointerEvents="none"
             >
               <Path
                 d="M2 7 Q 30 1 60 5 T 118 4"
-                stroke={colors.olive}
-                strokeWidth={1.4}
-                strokeLinecap="round"
-                fill="none"
+                stroke="#5a8c74" strokeWidth={1.4} strokeLinecap="round" fill="none"
               />
             </Svg>
           </View>
         </View>
       </View>
 
-      {/* Category Tabs */}
+      {/* Search bar — pill shape, jade search icon on left, scan-code
+          square on the right. Matches the mockup .search rule. */}
+      <View
+        style={{
+          marginHorizontal: 20,
+          marginTop: 14,
+          marginBottom: 10,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          backgroundColor: '#fff',
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: 'rgba(201,168,97,0.18)',
+          shadowColor: '#2a2a1f',
+          shadowOpacity: 0.1,
+          shadowOffset: { width: 0, height: 4 },
+          shadowRadius: 10,
+        }}
+      >
+        <Ionicons name="search-outline" size={18} color="#487a62" />
+        <Pressable
+          onPress={() => router.push('/search')}
+          style={{ flex: 1 }}
+          hitSlop={6}
+        >
+          <Text style={{ fontSize: 14, color: '#857e6e' }}>
+            {lang === 'ru' ? 'Поиск по каталогу' : "Katalogdan izlash"}
+          </Text>
+        </Pressable>
+        <View
+          style={{
+            width: 30, height: 30, borderRadius: 8,
+            backgroundColor: '#f8f3e5',
+            alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="scan-outline" size={18} color="#3a6451" />
+        </View>
+      </View>
+
+      {/* Category Tabs — adds an "All" chip in forest green at the
+          start to match the mockup's 24:31 brand chip. */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
