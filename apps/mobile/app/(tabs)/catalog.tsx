@@ -477,23 +477,6 @@ export default function CatalogScreen() {
           resizeMode="cover"
         />
       </View>
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: 50, right: -40,
-          width: 190, height: 125,
-          transform: [{ rotate: '-6deg' }],
-          zIndex: 1,
-        }}
-      >
-        <Image
-          source={DECOR_JASMINE}
-          style={{ width: '100%', height: '100%', opacity: 0.95 }}
-          resizeMode="contain"
-        />
-      </View>
-
       {/* Scarf-like green silk wave anchored above the tab bar — matches
           the fabric motif the client wanted on every screen. */}
       <View
@@ -519,7 +502,7 @@ export default function CatalogScreen() {
           numColumns={2}
           estimatedItemSize={280}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
           ListHeaderComponent={listHeader}
           renderItem={renderProduct}
           refreshControl={

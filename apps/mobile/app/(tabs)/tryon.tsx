@@ -367,23 +367,6 @@ export default function TryOnScreen() {
           resizeMode="cover"
         />
       </View>
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: insets.top + 50, right: -40,
-          width: 190, height: 125,
-          transform: [{ rotate: '-6deg' }],
-          zIndex: 1,
-        }}
-      >
-        <Image
-          source={DECOR_JASMINE}
-          style={{ width: '100%', height: '100%', opacity: 0.95 }}
-          resizeMode="contain"
-        />
-      </View>
-
       {/* Scarf-like green silk wave above the tab bar. */}
       <View
         pointerEvents="none"

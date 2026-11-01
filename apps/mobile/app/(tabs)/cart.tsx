@@ -126,23 +126,6 @@ export default function CartScreen() {
           resizeMode="cover"
         />
       </View>
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: 50, right: -40,
-          width: 190, height: 125,
-          transform: [{ rotate: '-6deg' }],
-          zIndex: 1,
-        }}
-      >
-        <Image
-          source={DECOR_JASMINE}
-          style={{ width: '100%', height: '100%', opacity: 0.95 }}
-          resizeMode="contain"
-        />
-      </View>
-
       {/* Scarf-like green silk wave above the tab bar. */}
       <View
         pointerEvents="none"
@@ -236,7 +219,7 @@ export default function CartScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 0 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120, gap: 0 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

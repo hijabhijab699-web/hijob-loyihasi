@@ -295,7 +295,7 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -426,8 +426,24 @@ export default function HomeScreen() {
 
         {/* ── Welcome ── exact match to the HTML mockup: 32 px Playfair
             headline, italic jade "Muslima" with the SVG swoosh, gold
-            kicker + diamond. */}
-        <View style={{ paddingHorizontal: SIDE + 4, paddingTop: 16, paddingBottom: 12 }}>
+            kicker + diamond. Jasmine branch tucks into the top-right of
+            this block only — scrolls with the welcome, out of the way. */}
+        <View style={{ paddingHorizontal: SIDE + 4, paddingTop: 16, paddingBottom: 12, position: 'relative' }}>
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -8, right: -36,
+              width: 160, height: 110,
+              transform: [{ rotate: '-8deg' }],
+            }}
+          >
+            <Image
+              source={DECOR_JASMINE}
+              style={{ width: '100%', height: '100%', opacity: 0.95 }}
+              resizeMode="contain"
+            />
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text
               style={{
@@ -907,26 +923,6 @@ export default function HomeScreen() {
         </View>
 
       </ScrollView>
-
-      {/* Jasmine branch — rendered AFTER the ScrollView so it paints on
-          top in natural order (iOS zIndex can be flaky when the sibling
-          scrolls). It sits in the Screen's inner View, pinned to the
-          top-right, so the branch never moves while the feed scrolls. */}
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: 50, right: -40,
-          width: 190, height: 125,
-          transform: [{ rotate: '-6deg' }],
-        }}
-      >
-        <Image
-          source={DECOR_JASMINE}
-          style={{ width: '100%', height: '100%', opacity: 0.95 }}
-          resizeMode="contain"
-        />
-      </View>
     </Screen>
   );
 }
