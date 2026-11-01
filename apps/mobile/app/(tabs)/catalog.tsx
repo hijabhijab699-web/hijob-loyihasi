@@ -139,8 +139,24 @@ export default function CatalogScreen() {
   const listHeader = (
     <>
       {/* Welcome: kicker + "Каталог 24:31" matches the mockup, with the
-          "24:31" italic in jade and the swoosh underline. */}
-      <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 4 }}>
+          "24:31" italic in jade and the swoosh underline. Jasmine branch
+          sits in the top-right corner of this block, scrolls with it. */}
+      <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 4, position: 'relative' }}>
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: -8, right: -36,
+            width: 160, height: 110,
+            transform: [{ rotate: '-8deg' }],
+          }}
+        >
+          <Image
+            source={DECOR_JASMINE}
+            style={{ width: '100%', height: '100%', opacity: 0.95 }}
+            resizeMode="contain"
+          />
+        </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text
             style={{
