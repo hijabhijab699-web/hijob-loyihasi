@@ -6,9 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/theme/ThemeProvider';
 
 // Premium Hijab tabbar — cream surface, serif labels, center-floating
-// Примерка bubble in forest green with a gold ring. The outline-only
-// icons sit inside a cream rounded tile when their tab is active so the
-// highlight reads at a glance without changing icon weight.
+// Примерка bubble in forest green with a gold ring. Every tab icon sits
+// inside a soft rounded tile so the tabbar reads as a row of pills; the
+// active tile deepens for a glanceable highlight.
 export default function TabsLayout() {
   const { colors, theme, scheme } = useTheme();
   const { t } = useTranslation();
@@ -16,10 +16,11 @@ export default function TabsLayout() {
   const bottomInset = Math.max(insets.bottom, 10);
 
   const barBg = scheme === 'dark' ? 'rgba(26, 23, 20, 0.98)' : '#ffffff';
-  const activeTileBg = scheme === 'dark' ? 'rgba(201,168,97,0.18)' : '#efe6cf';
-  const inkColor = scheme === 'dark' ? '#f0ebda' : '#2a2a1f';
-  const activeInk = scheme === 'dark' ? colors.gold : '#3a4e2a';
-  const inactiveInk = scheme === 'dark' ? 'rgba(240,235,218,0.55)' : '#4a4a3b';
+  const idleTileBg = scheme === 'dark' ? 'rgba(240,235,218,0.08)' : '#f1ede1';
+  const activeTileBg = scheme === 'dark' ? 'rgba(201,168,97,0.22)' : '#dfe7d4';
+  const inkColor = scheme === 'dark' ? '#f0ebda' : '#4b5a3a';
+  const activeInk = scheme === 'dark' ? colors.gold : '#2f4322';
+  const inactiveInk = scheme === 'dark' ? 'rgba(240,235,218,0.55)' : '#5a6d44';
 
   return (
     <Tabs
@@ -60,13 +61,13 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.home'),
           tabBarIcon: ({ focused }) => (
-            <ActiveTile active={focused} bg={activeTileBg}>
+            <PillTile active={focused} activeBg={activeTileBg} idleBg={idleTileBg}>
               <Ionicons
-                name="home-outline"
+                name={focused ? 'home' : 'home-outline'}
                 size={22}
                 color={focused ? activeInk : inkColor}
               />
-            </ActiveTile>
+            </PillTile>
           ),
         }}
       />
@@ -75,13 +76,13 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.catalog'),
           tabBarIcon: ({ focused }) => (
-            <ActiveTile active={focused} bg={activeTileBg}>
+            <PillTile active={focused} activeBg={activeTileBg} idleBg={idleTileBg}>
               <Ionicons
-                name="grid-outline"
+                name={focused ? 'grid' : 'grid-outline'}
                 size={22}
                 color={focused ? activeInk : inkColor}
               />
-            </ActiveTile>
+            </PillTile>
           ),
         }}
       />
@@ -133,13 +134,13 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.cart'),
           tabBarIcon: ({ focused }) => (
-            <ActiveTile active={focused} bg={activeTileBg}>
+            <PillTile active={focused} activeBg={activeTileBg} idleBg={idleTileBg}>
               <Ionicons
-                name="bag-handle-outline"
+                name={focused ? 'bag-handle' : 'bag-handle-outline'}
                 size={22}
                 color={focused ? activeInk : inkColor}
               />
-            </ActiveTile>
+            </PillTile>
           ),
         }}
       />
@@ -148,13 +149,13 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.profile'),
           tabBarIcon: ({ focused }) => (
-            <ActiveTile active={focused} bg={activeTileBg}>
+            <PillTile active={focused} activeBg={activeTileBg} idleBg={idleTileBg}>
               <Ionicons
-                name="person-outline"
+                name={focused ? 'person' : 'person-outline'}
                 size={22}
                 color={focused ? activeInk : inkColor}
               />
-            </ActiveTile>
+            </PillTile>
           ),
         }}
       />
@@ -162,26 +163,27 @@ export default function TabsLayout() {
   );
 }
 
-// Wraps the tab icon in a soft cream pill when its tab is active —
-// matches the mockup's "highlighted current tab" treatment without
-// changing icon weight. Non-active state is a transparent tile the
-// same size so the label never jumps up/down between tabs.
-function ActiveTile({
+// Every tab icon sits inside a soft rounded tile so the tabbar reads as
+// a row of pills. The active tile deepens to the olive-mint accent and
+// the icon switches to its filled variant for a glanceable highlight.
+function PillTile({
   active,
-  bg,
+  activeBg,
+  idleBg,
   children,
 }: {
   active: boolean;
-  bg: string;
+  activeBg: string;
+  idleBg: string;
   children: React.ReactNode;
 }) {
   return (
     <View
       style={{
-        width: 44,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: active ? bg : 'transparent',
+        width: 46,
+        height: 34,
+        borderRadius: 14,
+        backgroundColor: active ? activeBg : idleBg,
         alignItems: 'center',
         justifyContent: 'center',
       }}
