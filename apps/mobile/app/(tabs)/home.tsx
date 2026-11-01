@@ -312,7 +312,9 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* ── Header ── */}
+        {/* ── Header ── menu + logo cluster LEFT, utility icons RIGHT.
+            Matches the approved mockup where the brand mark sits next to
+            the burger instead of floating in the middle of the row. */}
         <View
           style={{
             paddingHorizontal: SIDE,
@@ -322,7 +324,7 @@ export default function HomeScreen() {
             alignItems: 'center',
           }}
         >
-          <View style={{ width: 40 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Pressable
               onPress={() => router.push('/settings')}
               hitSlop={12}
@@ -339,9 +341,8 @@ export default function HomeScreen() {
             >
               <Ionicons name="menu-outline" size={20} color={colors.ink} />
             </Pressable>
+            <Logo size={44} />
           </View>
-
-          <Logo size={44} />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Pressable
@@ -640,6 +641,25 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
+        {/* Jasmine inter-section decoration — right-side, between shops
+            and categories, mirrors the mockup. */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 540, right: -50,
+            width: 160, height: 110,
+            transform: [{ rotate: '18deg' }],
+            opacity: 0.9,
+          }}
+        >
+          <Image
+            source={DECOR_JASMINE}
+            style={{ width: '100%', height: '100%' }}
+            resizeMode="contain"
+          />
+        </View>
+
         {/* ── Categories ── */}
         <View style={{ marginTop: 24 }}>
           <View style={{ paddingHorizontal: SIDE, marginBottom: 14 }}>
@@ -719,6 +739,25 @@ export default function HomeScreen() {
               );
             })}
           </ScrollView>
+        </View>
+
+        {/* Jasmine between categories and favorites — right-side,
+            matches mockup. */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 920, right: -40,
+            width: 170, height: 110,
+            transform: [{ rotate: '-10deg' }],
+            opacity: 0.85,
+          }}
+        >
+          <Image
+            source={DECOR_JASMINE}
+            style={{ width: '100%', height: '100%' }}
+            resizeMode="contain"
+          />
         </View>
 
         {/* ── Favorites (TZ Phase 4) ── 2-column grid of nearby/arrival
