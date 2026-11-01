@@ -350,22 +350,21 @@ export default function TryOnScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      {/* Shared decor — silk ribbon + jasmine stay behind the header so the
-          Primerka screen matches the rest of the tab bar. Cream base layer
-          boosts contrast. */}
+      {/* Shared silk + jasmine decor — identical to home.tsx. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.45,
+          height: SCREEN_W * 0.5,
           zIndex: 0,
-          backgroundColor: 'rgba(239, 230, 207, 0.5)',
+          backgroundColor: '#efe6cf',
+          overflow: 'hidden',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '100%', height: '100%', opacity: 1 }}
+          style={{ width: '110%', height: '100%', marginLeft: '-5%', opacity: 1 }}
           resizeMode="cover"
         />
       </View>
@@ -373,15 +372,15 @@ export default function TryOnScreen() {
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: insets.top + 60, right: -40,
-          width: 180, height: 120,
+          top: insets.top + 50, right: -40,
+          width: 190, height: 125,
           transform: [{ rotate: '-6deg' }],
           zIndex: 1,
         }}
       >
         <Image
           source={DECOR_JASMINE}
-          style={{ width: '100%', height: '100%', opacity: 0.9 }}
+          style={{ width: '100%', height: '100%', opacity: 0.95 }}
           resizeMode="contain"
         />
       </View>

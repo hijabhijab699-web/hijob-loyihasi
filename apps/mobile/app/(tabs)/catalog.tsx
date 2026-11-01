@@ -492,24 +492,22 @@ export default function CatalogScreen() {
 
   return (
     <Screen>
-      {/* Shared decor — silk ribbon + jasmine echo the home/profile screens.
-          React Native has no mix-blend-mode: multiply equivalent, so we
-          strengthen contrast with a slight gold tint and a cream base layer
-          behind the image, otherwise the beige ribbon disappears into the
-          cream page background. */}
+      {/* Shared silk + jasmine decor — identical to home.tsx so every
+          tab reads as the same brand surface. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
-          height: SCREEN_W * 0.45,
+          height: SCREEN_W * 0.5,
           zIndex: 0,
-          backgroundColor: 'rgba(239, 230, 207, 0.5)',
+          backgroundColor: '#efe6cf',
+          overflow: 'hidden',
         }}
       >
         <Image
           source={DECOR_SILK_TOP}
-          style={{ width: '100%', height: '100%', opacity: 1 }}
+          style={{ width: '110%', height: '100%', marginLeft: '-5%', opacity: 1 }}
           resizeMode="cover"
         />
       </View>
@@ -517,15 +515,15 @@ export default function CatalogScreen() {
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: 60, right: -40,
-          width: 200, height: 130,
+          top: 50, right: -40,
+          width: 190, height: 125,
           transform: [{ rotate: '-6deg' }],
           zIndex: 1,
         }}
       >
         <Image
           source={DECOR_JASMINE}
-          style={{ width: '100%', height: '100%', opacity: 1 }}
+          style={{ width: '100%', height: '100%', opacity: 0.95 }}
           resizeMode="contain"
         />
       </View>
