@@ -49,7 +49,7 @@ const GLASS = 'rgba(38,32,24,0.55)';
 // Default fitting-room backdrop: sits behind every hero and thumbnail so the
 // screen never shows an empty/dark box. AI renders already contain this
 // scene and cover it fully; plain product photos float on top of it.
-const FITTING_ROOM = require('../../assets/fitting-room.jpg');
+const FITTING_ROOM = require('../../assets/fitting-room-marble.webp');
 const GOLD_GRADIENT = ['#D9BC85', '#B8955A'] as const;
 
 // "Yorug'lik" cycles a light wash over the fitting-room photo.
