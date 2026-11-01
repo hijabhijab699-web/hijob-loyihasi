@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path } from 'react-native-svg';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { Logo } from '../../src/components/Logo';
@@ -17,6 +18,13 @@ import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SIDE = 20;
+
+// Decorative premium hijab aesthetic — jasmine branch + beige silk ribbon
+// pulled from the mockup the client approved. They sit absolutely over the
+// scrolling home feed and never intercept touches.
+const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
+const DECOR_SILK_TOP = require('../../assets/decor/silk-top.png');
+const DECOR_HERO_HOME = require('../../assets/decor/hero-home.webp');
 
 interface HomeFeed {
   stores: Array<{ id: string; brandName: string; logoUrl: string | null }>;
@@ -247,8 +255,43 @@ export default function HomeScreen() {
 
   return (
     <Screen gradient>
+      {/* Beige silk ribbon anchored to the very top of the screen. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: SCREEN_W * 0.3,
+          zIndex: 0,
+        }}
+      >
+        <Image
+          source={DECOR_SILK_TOP}
+          style={{ width: '100%', height: '100%', opacity: 0.9 }}
+          resizeMode="cover"
+        />
+      </View>
+      {/* Jasmine branch tucked into the upper-right corner, below the header
+          so it decorates the welcome area without covering the icons. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 60, right: -40,
+          width: 200, height: 130,
+          transform: [{ rotate: '-6deg' }],
+          zIndex: 1,
+        }}
+      >
+        <Image
+          source={DECOR_JASMINE}
+          style={{ width: '100%', height: '100%', opacity: 0.95 }}
+          resizeMode="contain"
+        />
+      </View>
+
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 40, zIndex: 2 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -376,24 +419,74 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── Welcome ── */}
+        {/* ── Welcome ── premium serif greeting with the first-name/brand
+            picked out in italic jade so it reads like editorial copy, not a
+            UI label. The small swoosh underline mirrors the website mockup. */}
         <View style={{ paddingHorizontal: SIDE, marginTop: 20 }}>
-          <Text
-            variant="bodySmall"
-            color="muted"
-            style={{ letterSpacing: 2, textTransform: 'uppercase', fontSize: 11 }}
-          >
-            {lang === 'ru' ? 'Добро пожаловать' : 'Xush kelibsiz'}
-          </Text>
-          <Text
-            variant="displayLarge"
-            color="oliveDeep"
-            style={{ marginTop: 4, fontSize: 30, lineHeight: 36 }}
-          >
-            {user?.fullName
-              ? `${lang === 'ru' ? 'Привет' : 'Salom'}, ${user.fullName.split(' ')[0]}`
-              : (lang === 'ru' ? 'Откройте свой стиль' : "O'z uslubingizni toping")}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text
+              variant="bodySmall"
+              style={{
+                letterSpacing: 3,
+                textTransform: 'uppercase',
+                fontSize: 10,
+                fontWeight: '600',
+                color: colors.gold,
+              }}
+            >
+              {lang === 'ru' ? 'Добро пожаловать' : 'Xush kelibsiz'}
+            </Text>
+            <Text style={{ color: colors.gold, fontSize: 12 }}>✦</Text>
+          </View>
+          {(() => {
+            const greet = lang === 'ru' ? 'Привет' : 'Salom';
+            const name = user?.fullName?.split(' ')[0]
+              ?? (lang === 'ru' ? 'Muslima' : 'Muslima');
+            return (
+              <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <Text
+                  style={{
+                    fontFamily: theme.fontFamilies.display,
+                    fontSize: 32,
+                    lineHeight: 36,
+                    fontWeight: '500',
+                    color: colors.oliveDeep,
+                  }}
+                >
+                  {greet},{' '}
+                </Text>
+                <View style={{ position: 'relative' }}>
+                  <Text
+                    style={{
+                      fontFamily: theme.fontFamilies.display,
+                      fontSize: 32,
+                      lineHeight: 36,
+                      fontStyle: 'italic',
+                      fontWeight: '600',
+                      color: colors.olive,
+                    }}
+                  >
+                    {name}
+                  </Text>
+                  <Svg
+                    width="100%"
+                    height={10}
+                    viewBox="0 0 120 10"
+                    style={{ position: 'absolute', left: 2, right: 8, bottom: -4 }}
+                    pointerEvents="none"
+                  >
+                    <Path
+                      d="M2 7 Q 30 1 60 5 T 118 4"
+                      stroke={colors.olive}
+                      strokeWidth={1.4}
+                      strokeLinecap="round"
+                      fill="none"
+                    />
+                  </Svg>
+                </View>
+              </View>
+            );
+          })()}
         </View>
 
         {/* ── Hero carousel ── admin-curated banners replace the static
@@ -405,63 +498,19 @@ export default function HomeScreen() {
             onPress={() => router.push('/(tabs)/tryon')}
             style={{ marginHorizontal: SIDE, marginTop: 20 }}
           >
-            <LinearGradient
-              colors={[colors.oliveDeep, '#4E5230']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+            {/* Fallback hero when no admin banners are set: a single
+                illustrative Hijab-collection image that doubles as the CTA
+                into the Virtual primerka screen. Image already contains the
+                headline and features baked in, so no overlay text here. */}
+            <Image
+              source={DECOR_HERO_HOME}
               style={{
+                width: '100%',
+                aspectRatio: 16 / 9,
                 borderRadius: theme.radii['2xl'],
-                padding: 20,
-                flexDirection: 'row',
-                alignItems: 'center',
-                overflow: 'hidden',
-                minHeight: 110,
               }}
-            >
-              <View style={{ flex: 1, gap: 8 }}>
-                <View
-                  style={{
-                    backgroundColor: colors.gold,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderRadius: theme.radii.sm,
-                    alignSelf: 'flex-start',
-                  }}
-                >
-                  <Text variant="caption" style={{ color: '#fff', fontWeight: '700', fontSize: 10, letterSpacing: 1 }}>
-                    AI POWERED
-                  </Text>
-                </View>
-                <Text
-                  variant="titleMedium"
-                  style={{ color: colors.goldSoft, fontSize: 18, lineHeight: 24 }}
-                >
-                  {lang === 'ru' ? 'Виртуальная\nпримерка' : 'Virtual\nprimerka'}
-                </Text>
-                <Text
-                  variant="caption"
-                  style={{ color: 'rgba(228,206,154,0.7)', fontSize: 11, lineHeight: 15 }}
-                >
-                  {lang === 'ru'
-                    ? 'Примерьте перед покупкой'
-                    : "Xarid qilishdan oldin kiyib ko'ring"}
-                </Text>
-              </View>
-              <View
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 36,
-                  backgroundColor: 'rgba(201,169,110,0.15)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1.5,
-                  borderColor: 'rgba(201,169,110,0.3)',
-                }}
-              >
-                <Ionicons name="body-outline" size={34} color={colors.goldSoft} />
-              </View>
-            </LinearGradient>
+              resizeMode="cover"
+            />
           </Pressable>
         )}
 
