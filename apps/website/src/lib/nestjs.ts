@@ -7,11 +7,31 @@ import type {
   ProductBadge,
 } from './types';
 
-// Fall back to the production API when neither env var is set so a
-// preview deploy (or a missing Vercel env) still serves real data
-// instead of 502-ing against localhost:4000.
-export const API_URL =
-  process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'https://api.2431.uz/api/v1';
+// Resolve the Nest API base URL defensively: prefer a correctly-set
+// env var, but silently discard anything that would blow up the server
+// fetch (empty string, missing protocol, localhost on a hosted deploy).
+// Without this guard a stale Vercel env like `localhost:4000` kept the
+// production SSR failing with ECONNREFUSED while the client-side proxy
+// (which runs after hydration and so can be fixed by redeploy) looked
+// fine.
+function resolveApiUrl(): string {
+  const candidates = [process.env.API_URL, process.env.NEXT_PUBLIC_API_URL];
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    if (!/^https?:\/\//i.test(trimmed)) continue;
+    // Only accept localhost in dev — a Vercel/production build should
+    // never talk to a localhost backend.
+    if (process.env.NODE_ENV === 'production' && /localhost|127\.0\.0\.1/i.test(trimmed)) {
+      continue;
+    }
+    return trimmed.replace(/\/$/, '');
+  }
+  return 'https://api.2431.uz/api/v1';
+}
+
+export const API_URL = resolveApiUrl();
 
 export const USD_RATE = Number(process.env.NEXT_PUBLIC_USD_RATE ?? 12600) || 12600;
 
