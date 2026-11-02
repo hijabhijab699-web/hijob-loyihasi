@@ -109,10 +109,9 @@ export default function AdminPage() {
                 Kirish
               </button>
             </form>
-            <p className="mt-4 text-xs text-ink-muted text-center">
-              Standart parol: <span className="font-mono">hijob2026</span> ·
-              o&apos;zgartirish uchun <span className="font-mono">ADMIN_PASSWORD</span> env
-            </p>
+            {/* Hint deliberately omitted so the default password isn't
+                published on a public page. Admin parolni ADMIN_PASSWORD
+                env var orqali o'zgartiring. */}
           </div>
         </div>
       </section>
