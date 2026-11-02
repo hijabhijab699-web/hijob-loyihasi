@@ -369,7 +369,13 @@ export class SellerService {
   async listProducts(userId: string) {
     const seller = await this.requireSeller(userId);
     const rows = await this.prisma.product.findMany({
-      where: { sellerId: seller.id },
+      where: {
+        sellerId: seller.id,
+        // Soft-deleted (archived) products stay in the DB so order history
+        // and style jobs keep their FKs, but the seller's own list hides
+        // them — "delete" in the UI should actually remove the card.
+        status: { not: ProductStatus.archived },
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { variants: true } },
