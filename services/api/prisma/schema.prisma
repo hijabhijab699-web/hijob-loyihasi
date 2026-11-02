@@ -53,6 +53,7 @@ enum ProductStatus {
 enum CategoryId {
   scarves
   dresses
+  abaya
   shoes
   bags
   accessories

@@ -59,6 +59,15 @@ const POOL: Record<CategoryId, Record<SizeKey, MannequinRef[]>> = {
     'XXL':[{ url: 'https://images.pexels.com/photos/2866077/pexels-photo-2866077.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200&fit=crop', label: "ko'ylak XXL (plus)" }],
     'one-size': [{ url: 'https://images.pexels.com/photos/2866077/pexels-photo-2866077.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200&fit=crop', label: "ko'ylak neutral" }],
   },
+  abaya: {
+    'XS': [{ url: 'https://images.pexels.com/photos/2866077/pexels-photo-2866077.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200&fit=crop', label: 'abaya XS' }],
+    'S':  [{ url: 'https://images.pexels.com/photos/2866077/pexels-photo-2866077.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200&fit=crop', label: 'abaya S' }],
+    'M':  [{ url: 'https://images.pexels.com/photos/2866077/pexels-photo-2866077.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200&fit=crop', label: 'abaya M' }],
+    'L':  [{ url: 'https://images.pexels.com/photos/2866077/pexels-photo-2866077.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200&fit=crop', label: 'abaya L' }],
+    'XL': [{ url: 'https://images.pexels.com/photos/2866077/pexels-photo-2866077.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200&fit=crop', label: 'abaya XL' }],
+    'XXL':[{ url: 'https://images.pexels.com/photos/2866077/pexels-photo-2866077.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200&fit=crop', label: 'abaya XXL' }],
+    'one-size': [{ url: 'https://images.pexels.com/photos/2866077/pexels-photo-2866077.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200&fit=crop', label: 'abaya neutral' }],
+  },
   shoes: {
     'XS': [{ url: 'https://images.pexels.com/photos/6764007/pexels-photo-6764007.jpeg?auto=compress&cs=tinysrgb&w=800&h=1000&fit=crop', label: 'poyabzal standart' }],
     'S':  [{ url: 'https://images.pexels.com/photos/6764007/pexels-photo-6764007.jpeg?auto=compress&cs=tinysrgb&w=800&h=1000&fit=crop', label: 'poyabzal standart' }],
