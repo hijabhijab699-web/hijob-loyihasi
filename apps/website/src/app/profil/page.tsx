@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { User, ShoppingBag, Heart, Settings, LogOut, Package, Clock, Award } from 'lucide-react';
+import { User, ShoppingBag, Heart, Settings, LogOut, Package, Clock, Award, LogIn } from 'lucide-react';
 import { useCart } from '@/components/providers/CartProvider';
 import { useWishlist } from '@/components/providers/WishlistProvider';
 import { useOrders } from '@/components/providers/OrdersProvider';
 import { useLoyalty, LOYALTY_PERCENT } from '@/components/providers/LoyaltyProvider';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { formatPrice } from '@/lib/format';
 
 const PROFILE_KEY = 'hijob.profile';
@@ -27,6 +28,7 @@ export default function ProfilPage() {
   const ordersStore = useOrders();
   const loyalty = useLoyalty();
   const toast = useToast();
+  const auth = useAuth();
   const [profile, setProfile] = useState<Profile>(EMPTY);
   const [editing, setEditing] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -43,6 +45,19 @@ export default function ProfilPage() {
     }
     setHydrated(true);
   }, []);
+
+  // When the user is logged into the real backend account, seed the
+  // local guest form with that account's data so the two flows don't
+  // disagree about who the user is.
+  useEffect(() => {
+    if (auth.user) {
+      setProfile((p) => ({
+        ...p,
+        name: p.name || auth.user!.fullName,
+        phone: p.phone || auth.user!.phone,
+      }));
+    }
+  }, [auth.user]);
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +100,54 @@ export default function ProfilPage() {
         <h1 className="font-serif text-3xl md:text-4xl font-bold text-ink">
           Profil
         </h1>
+
+        {/* Account state — real backend account overrides the guest form. */}
+        {hydrated && auth.hydrated && (
+          auth.user ? (
+            <div className="mt-6 rounded-2xl bg-white border border-rule p-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                  <User className="w-6 h-6 text-brand" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium text-ink truncate">
+                    {auth.user.fullName}
+                  </p>
+                  <p className="text-xs text-ink-muted truncate">
+                    @{auth.user.username} · {auth.user.phone}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  auth.logout();
+                  toast.info('Hisobdan chiqdingiz');
+                }}
+                className="shrink-0 text-sm font-medium text-ink-muted hover:text-brand inline-flex items-center gap-1.5"
+              >
+                <LogOut className="w-4 h-4" />
+                Chiqish
+              </button>
+            </div>
+          ) : (
+            <div className="mt-6 rounded-2xl bg-brand/5 border border-brand/20 p-5 flex items-center justify-between gap-4 flex-wrap">
+              <div className="min-w-0">
+                <p className="font-medium text-ink">Hisobga kiring</p>
+                <p className="text-sm text-ink-muted mt-0.5">
+                  Buyurtmalaringizni saqlash va qurilmalar o'rtasida sinxronlash uchun.
+                </p>
+              </div>
+              <Link
+                href="/kirish?next=/profil"
+                className="shrink-0 bg-brand text-white px-5 py-2.5 rounded-xl font-medium hover:bg-brand-dark transition-colors inline-flex items-center gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                Kirish
+              </Link>
+            </div>
+          )
+        )}
 
         {/* Loyalty strip */}
         <div className="mt-6 rounded-2xl bg-gradient-to-r from-brand to-brand-dark text-white p-5 md:p-6 flex items-center justify-between gap-4">

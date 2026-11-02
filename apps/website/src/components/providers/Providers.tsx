@@ -7,23 +7,26 @@ import { RecentProvider } from './RecentProvider';
 import { OrdersProvider } from './OrdersProvider';
 import { LoyaltyProvider } from './LoyaltyProvider';
 import { FaceProvider } from './FaceProvider';
+import { AuthProvider } from './AuthProvider';
 import { LocaleProvider } from '@/components/i18n/LocaleProvider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <LocaleProvider>
       <ToastProvider>
-        <FaceProvider>
-          <LoyaltyProvider>
-            <OrdersProvider>
-              <RecentProvider>
-                <WishlistProvider>
-                  <CartProvider>{children}</CartProvider>
-                </WishlistProvider>
-              </RecentProvider>
-            </OrdersProvider>
-          </LoyaltyProvider>
-        </FaceProvider>
+        <AuthProvider>
+          <FaceProvider>
+            <LoyaltyProvider>
+              <OrdersProvider>
+                <RecentProvider>
+                  <WishlistProvider>
+                    <CartProvider>{children}</CartProvider>
+                  </WishlistProvider>
+                </RecentProvider>
+              </OrdersProvider>
+            </LoyaltyProvider>
+          </FaceProvider>
+        </AuthProvider>
       </ToastProvider>
     </LocaleProvider>
   );
