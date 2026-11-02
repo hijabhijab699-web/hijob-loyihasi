@@ -7,8 +7,11 @@ import type {
   ProductBadge,
 } from './types';
 
+// Fall back to the production API when neither env var is set so a
+// preview deploy (or a missing Vercel env) still serves real data
+// instead of 502-ing against localhost:4000.
 export const API_URL =
-  process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+  process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'https://api.2431.uz/api/v1';
 
 export const USD_RATE = Number(process.env.NEXT_PUBLIC_USD_RATE ?? 12600) || 12600;
 
