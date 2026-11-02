@@ -3,8 +3,8 @@ import { Type } from 'class-transformer';
 
 export class CatalogFiltersDto {
   @IsOptional()
-  @IsIn(['scarves', 'dresses', 'shoes', 'bags', 'accessories'])
-  category?: 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
+  @IsIn(['scarves', 'dresses', 'abaya', 'shoes', 'bags', 'accessories'])
+  category?: 'scarves' | 'dresses' | 'abaya' | 'shoes' | 'bags' | 'accessories';
 
   @IsOptional()
   @IsUUID()

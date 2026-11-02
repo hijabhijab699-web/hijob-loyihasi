@@ -19,7 +19,7 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>2.0.0</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
@@ -33,13 +33,9 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>48</string>
+	<string>5</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>24:31 yetkazib berish manzilini belgilash uchun joylashuvdan foydalanadi.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>24:31 yetkazib berish manzilini belgilash uchun joylashuvdan foydalanadi.</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>12.0</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -62,6 +58,10 @@
 	<string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>24:31 lokal server orqali rasm va ma'lumotlarni yuklash uchun lokal tarmoqdan foydalanadi.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>24:31 yetkazib berish manzilini belgilash uchun joylashuvdan foydalanadi.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>24:31 yetkazib berish manzilini belgilash uchun joylashuvdan foydalanadi.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your microphone</string>
 	<key>NSPhotoLibraryUsageDescription</key>

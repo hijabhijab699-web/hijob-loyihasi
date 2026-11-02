@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { Alert, Dimensions, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
@@ -22,7 +22,7 @@ const DECOR_SILK_TOP = require('../../assets/decor/silk-ribbon.webp');
 const DECOR_JASMINE = require('../../assets/decor/jasmine.webp');
 const DECOR_WAVE_BOTTOM = require('../../assets/decor/wave-bottom.webp');
 
-type CategoryId = 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
+type CategoryId = 'scarves' | 'dresses' | 'abaya' | 'shoes' | 'bags' | 'accessories';
 
 interface Product {
   id: string;
@@ -39,9 +39,10 @@ interface Product {
 // Same hero webp images the website and the home-tab tiles use, so the pill
 // chip, the big tiles on the home tab, and the website homepage all agree
 // on how a category looks.
-const CATEGORY_IMAGES: Record<CategoryId, number> = {
+const CATEGORY_IMAGES: Partial<Record<CategoryId, number>> = {
   scarves: require('../../assets/category-ipak.webp'),
   dresses: require('../../assets/category-shoyi.webp'),
+  abaya: require('../../assets/category-shoyi.webp'),
   bags: require('../../assets/category-pashmina.webp'),
   accessories: require('../../assets/category-shifon.webp'),
 };
@@ -79,20 +80,39 @@ export default function CatalogScreen() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [bodyFit, setBodyFit] = useState<'slim' | 'regular' | 'plus' | null>(null);
 
-  const { data, isError, refetch } = useQuery({
+  // Paginated catalog — pulls 10 products per page from the server and
+  // appends them as the buyer scrolls. Keeps the first paint lightweight
+  // and avoids sending megabytes of product rows for categories that
+  // contain thousands of items.
+  const PAGE_SIZE = 10;
+  const {
+    data,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
     queryKey: ['products', category, selectedColor, bodyFit],
-    queryFn: async () =>
-      (await api.get('/catalog/products', {
+    queryFn: async ({ pageParam }) => {
+      const res = await api.get('/catalog/products', {
         params: {
           category,
           ...(selectedColor && { color: selectedColor }),
           ...(bodyFit && { bodyFit }),
-          pageSize: 20,
+          page: pageParam,
+          pageSize: PAGE_SIZE,
         },
-      })).data,
+      });
+      return res.data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: any) =>
+      lastPage?.hasNext ? (lastPage.page ?? 1) + 1 : undefined,
   });
 
-  const products: Product[] = data?.items ?? [];
+  const products: Product[] = (data?.pages ?? []).flatMap((p: any) => p?.items ?? []);
 
   // Wishlist toggle — the catalog card hearts share one mutation to avoid
   // one in-flight request per card and keep wishlist count queries in sync.
@@ -167,13 +187,13 @@ export default function CatalogScreen() {
               textTransform: 'uppercase',
               fontSize: 10,
               fontWeight: '600',
-              color: '#8f6a2d',
+              color: '#ffffff',
             }}
           >
             {lang === 'ru' ? 'Добро пожаловать' : 'Xush kelibsiz'}
           </Text>
           <Svg width={12} height={12} viewBox="0 0 10 10">
-            <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="#c9a861" />
+            <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="#ffffff" />
           </Svg>
         </View>
         <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -264,7 +284,7 @@ export default function CatalogScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, gap: 10 }}
       >
-        {(['scarves', 'dresses', 'bags', 'accessories'] as CategoryId[]).map((c) => {
+        {(['scarves', 'dresses', 'abaya', 'bags', 'accessories'] as CategoryId[]).map((c) => {
           const active = c === category;
           return (
             <Pressable
@@ -426,10 +446,11 @@ export default function CatalogScreen() {
       pointerEvents="none"
       style={{
         position: 'absolute',
-        top: insets.top, left: 0, right: 0,
-        height: SCREEN_W * 0.42,
+        top: 0, left: 0, right: 0,
+        height: SCREEN_W * 0.5 + insets.top,
         zIndex: 0,
         overflow: 'hidden',
+        backgroundColor: '#f6ede0',
       }}
     >
       <Image
@@ -443,9 +464,18 @@ export default function CatalogScreen() {
         }}
         resizeMode="cover"
       />
+      {/* Multi-stop fade so the silk pattern dissolves into pure
+          white without a visible seam at the ribbon's bottom. */}
       <LinearGradient
-        colors={['transparent', 'transparent', 'rgba(255,255,255,0.4)', '#ffffff']}
-        locations={[0, 0.6, 0.85, 1]}
+        colors={[
+          'transparent',
+          'transparent',
+          'rgba(255,255,255,0.35)',
+          'rgba(255,255,255,0.70)',
+          'rgba(255,255,255,0.92)',
+          '#ffffff',
+        ]}
+        locations={[0, 0.25, 0.45, 0.65, 0.85, 1]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
     </View>
@@ -482,6 +512,23 @@ export default function CatalogScreen() {
           contentContainerStyle={{ paddingBottom: 120 }}
           ListHeaderComponent={listHeader}
           renderItem={renderProduct}
+          // Fetch the next 10 products when the buyer gets near the
+          // bottom. Threshold 0.5 means "when half a viewport away" —
+          // early enough that the spinner at the bottom usually isn't
+          // visible before the new rows arrive.
+          onEndReachedThreshold={0.5}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                <ActivityIndicator color={colors.oliveDeep} />
+              </View>
+            ) : null
+          }
           refreshControl={
             <RefreshControl
               refreshing={false}
@@ -491,18 +538,24 @@ export default function CatalogScreen() {
             />
           }
           ListEmptyComponent={
-            <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
-              <Ionicons
-                name={isError ? 'cloud-offline-outline' : 'search-outline'}
-                size={48}
-                color={colors.muted}
-              />
-              <Text variant="body" color="muted">
-                {isError
-                  ? (lang === 'ru' ? 'Не удалось загрузить товары' : "Mahsulotlar yuklanmadi")
-                  : (lang === 'ru' ? 'Товары не найдены' : 'Mahsulot topilmadi')}
-              </Text>
-            </View>
+            isLoading ? (
+              <View style={{ alignItems: 'center', paddingTop: 60 }}>
+                <ActivityIndicator color={colors.oliveDeep} />
+              </View>
+            ) : (
+              <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
+                <Ionicons
+                  name={isError ? 'cloud-offline-outline' : 'search-outline'}
+                  size={48}
+                  color={colors.muted}
+                />
+                <Text variant="body" color="muted">
+                  {isError
+                    ? (lang === 'ru' ? 'Не удалось загрузить товары' : "Mahsulotlar yuklanmadi")
+                    : (lang === 'ru' ? 'Товары не найдены' : 'Mahsulot topilmadi')}
+                </Text>
+              </View>
+            )
           }
         />
       </View>

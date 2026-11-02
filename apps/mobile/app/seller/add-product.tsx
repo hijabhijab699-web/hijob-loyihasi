@@ -32,63 +32,42 @@ import { api } from '../../src/api/client';
 import { errorMessage, errorTitle } from '../../src/lib/api-errors';
 import { safeBack } from '../../src/lib/safe-back';
 import { useUzsRate, usdToUzs, formatUzs } from '../../src/lib/currency';
-import { SCENES, type SceneId } from '../../src/lib/scenes';
+import type { SceneId } from '../../src/lib/scenes';
 
-type CategoryId = 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
+type CategoryId = 'scarves' | 'dresses' | 'abaya' | 'bags' | 'accessories';
 
 const CATEGORIES: Array<{ id: CategoryId; labelUz: string; labelRu: string }> = [
   { id: 'scarves', labelUz: "Ro'mollar / hijoblar", labelRu: 'Платки / хиджабы' },
-  { id: 'dresses', labelUz: "Ko'ylaklar / abayalar", labelRu: 'Платья / абайи' },
-  { id: 'shoes', labelUz: 'Poyabzallar', labelRu: 'Обувь' },
+  { id: 'dresses', labelUz: "Ko'ylaklar", labelRu: 'Платья' },
+  { id: 'abaya', labelUz: 'Abayalar', labelRu: 'Абайи' },
   { id: 'bags', labelUz: 'Sumkalar', labelRu: 'Сумки' },
   { id: 'accessories', labelUz: 'Aksessuarlar', labelRu: 'Аксессуары' },
 ];
 
-// Hijab-common palette the seller can tap through. Hex must be #RRGGBB to
-// satisfy the backend regex. Adding a custom colour means typing the hex.
-const COLOR_SWATCHES: Array<{ hex: string; label: string }> = [
-  { hex: '#1A1A1A', label: 'Qora' },
-  { hex: '#FBF7EA', label: 'Oq' },
-  { hex: '#9A3C3C', label: 'Qizil' },
-  { hex: '#2D3B5C', label: 'Ko\'k' },
-  { hex: '#4B7A4B', label: 'Yashil' },
-  { hex: '#B5CDA3', label: 'Och yashil' },
-  { hex: '#B38B4A', label: 'Oltin' },
-  { hex: '#8E8E76', label: 'Zaytun' },
-  { hex: '#8F7E4F', label: 'Xaki' },
-  { hex: '#D4C3A0', label: 'Qum' },
-  { hex: '#B85C4A', label: 'Terakot' },
-  { hex: '#F5894A', label: 'Apelsin' },
-  { hex: '#E8B0B0', label: 'Pushti' },
-  { hex: '#B097C6', label: 'Lavanda' },
-  { hex: '#8B5CF6', label: 'Binafsha' },
-  { hex: '#E8E3D4', label: 'Rang-barang' },
-  { hex: '#D4B86A', label: 'Noodatiy' },
+const ALL_SIZES = [
+  'one-size',
+  'XS',
+  'S',
+  'M',
+  'L',
+  'XL',
+  'XXL',
+  'XXXL',
 ];
-
-const SIZE_PRESETS: Record<CategoryId, string[]> = {
-  scarves: ['one-size', '110x110', '140x140'],
-  dresses: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-  shoes: ['35', '36', '37', '38', '39', '40', '41', '42'],
-  bags: ['one-size'],
-  accessories: ['one-size'],
-};
 
 interface Variant {
   color: string;
   colorHex: string;
-  size: string;
-  stock: string; // kept as string for TextInput, parsed on submit
+  sizes: Record<string, string>; // size name -> stock count (string for TextInput)
   sku: string;
   priceUsd: string; // optional, blank = fall back to basePriceUsd
   images: string[];
 }
 
-const emptyVariant = (categoryId: CategoryId): Variant => ({
+const emptyVariant = (): Variant => ({
   color: 'Qora',
   colorHex: '#1A1A1A',
-  size: SIZE_PRESETS[categoryId][0] || 'one-size',
-  stock: '10',
+  sizes: { 'one-size': '10' },
   sku: '',
   priceUsd: '',
   images: [],
@@ -117,7 +96,7 @@ export default function AddProductScreen() {
   const [basePriceUzs, setBasePriceUzs] = useState('');
   const uzsRate = useUzsRate();
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
-  const [variants, setVariants] = useState<Variant[]>([emptyVariant('scarves')]);
+  const [variants, setVariants] = useState<Variant[]>([emptyVariant()]);
   const [showCategory, setShowCategory] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   // Podium backdrop the buyer sees behind the mannequin on the Primerka
@@ -142,9 +121,13 @@ export default function AddProductScreen() {
     for (const v of variants) {
       if (!v.color.trim()) return false;
       if (!/^#[0-9A-Fa-f]{6}$/.test(v.colorHex)) return false;
-      if (!v.size.trim()) return false;
-      const stock = Number(v.stock);
-      if (!Number.isInteger(stock) || stock < 0) return false;
+      const entries = Object.entries(v.sizes);
+      if (entries.length === 0) return false;
+      for (const [size, stockStr] of entries) {
+        if (!size.trim()) return false;
+        const stock = Number(stockStr);
+        if (!Number.isInteger(stock) || stock < 0) return false;
+      }
     }
     return true;
   }, [titleRu, coverUrl, resolvedUsdPrice, variants]);
@@ -226,7 +209,25 @@ export default function AddProductScreen() {
   const removeVariant = (index: number) =>
     setVariants((vs) => (vs.length <= 1 ? vs : vs.filter((_, i) => i !== index)));
 
-  const addVariant = () => setVariants((vs) => [...vs, emptyVariant(categoryId)]);
+  const addVariant = () => setVariants((vs) => [...vs, emptyVariant()]);
+
+  const toggleVariantSize = (index: number, size: string) =>
+    setVariants((vs) =>
+      vs.map((v, i) => {
+        if (i !== index) return v;
+        const next = { ...v.sizes };
+        if (next[size] !== undefined) delete next[size];
+        else next[size] = '10';
+        return { ...v, sizes: next };
+      }),
+    );
+
+  const setVariantSizeStock = (index: number, size: string, stock: string) =>
+    setVariants((vs) =>
+      vs.map((v, i) =>
+        i !== index ? v : { ...v, sizes: { ...v.sizes, [size]: stock.replace(/[^0-9]/g, '') } },
+      ),
+    );
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -239,15 +240,17 @@ export default function AddProductScreen() {
         basePriceUsd: Math.round(resolvedUsdPrice * 100) / 100,
         coverUrl: coverUrl!,
         attributes: { sceneId },
-        variants: variants.map((v, i) => ({
-          color: v.color.trim(),
-          colorHex: v.colorHex,
-          size: v.size.trim(),
-          stock: Number(v.stock || 0),
-          sku: (v.sku.trim() || `${slugify(titleRu)}-${v.size}-${i + 1}-${Math.random().toString(36).slice(2, 7)}`).toUpperCase(),
-          priceUsd: v.priceUsd ? Number(v.priceUsd) : undefined,
-          images: v.images.length ? v.images : undefined,
-        })),
+        variants: variants.flatMap((v, vi) =>
+          Object.entries(v.sizes).map(([size, stockStr], si) => ({
+            color: v.color.trim(),
+            colorHex: v.colorHex,
+            size: size.trim(),
+            stock: Number(stockStr || 0),
+            sku: (v.sku.trim() || `${slugify(titleRu)}-${size}-${vi + 1}-${si + 1}-${Math.random().toString(36).slice(2, 5)}`).toUpperCase(),
+            priceUsd: v.priceUsd ? Number(v.priceUsd) : undefined,
+            images: v.images.length ? v.images : undefined,
+          })),
+        ),
       };
       const { data } = await api.post('/seller/products', payload);
       return data as { id: string };
@@ -441,60 +444,6 @@ export default function AddProductScreen() {
           </>
         )}
 
-        {/* Mannequin podium backdrop — three studio scenes the buyer sees
-            on the Primerka tab + product hero. Default: 'beige'. */}
-        <Text variant="label" color="muted" style={{ marginTop: 20, marginBottom: 8 }}>
-          Orqa fon (podium)
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 10, paddingVertical: 2 }}
-        >
-          {SCENES.map((s) => {
-            const active = s.id === sceneId;
-            return (
-              <Pressable
-                key={s.id}
-                onPress={() => setSceneId(s.id)}
-                style={{
-                  width: 110,
-                  borderRadius: 14,
-                  borderWidth: active ? 3 : 1,
-                  borderColor: active ? colors.gold : colors.rule,
-                  overflow: 'hidden',
-                  backgroundColor: colors.surface,
-                }}
-              >
-                <Image
-                  source={s.source}
-                  style={{ width: '100%', height: 130 }}
-                  resizeMode="cover"
-                />
-                <View
-                  style={{
-                    paddingVertical: 6,
-                    paddingHorizontal: 8,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text
-                    variant="caption"
-                    style={{ fontSize: 11, fontWeight: '600', color: colors.ink }}
-                  >
-                    {s.label.uz}
-                  </Text>
-                  {active && (
-                    <Ionicons name="checkmark-circle" size={16} color={colors.gold} />
-                  )}
-                </View>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
         {/* Variants */}
         <View style={styles.variantsHeader}>
           <Text variant="label" color="muted">
@@ -523,37 +472,17 @@ export default function AddProductScreen() {
               )}
             </View>
 
-            {/* Color swatches */}
+            {/* Size pills (multi-select) */}
             <Text variant="caption" color="muted" style={{ marginBottom: 6 }}>
-              Rang
-            </Text>
-            <View style={styles.swatchRow}>
-              {COLOR_SWATCHES.map((sw) => {
-                const active = v.colorHex === sw.hex;
-                return (
-                  <Pressable
-                    key={sw.hex}
-                    onPress={() => updateVariant(i, { color: sw.label, colorHex: sw.hex })}
-                    style={[
-                      styles.swatch,
-                      { backgroundColor: sw.hex, borderColor: active ? colors.gold : colors.rule, borderWidth: active ? 3 : 1 },
-                    ]}
-                  />
-                );
-              })}
-            </View>
-
-            {/* Size pills */}
-            <Text variant="caption" color="muted" style={{ marginTop: 10, marginBottom: 6 }}>
-              O'lcham
+              O'lchamlar (bosib tanlang)
             </Text>
             <View style={styles.sizeRow}>
-              {SIZE_PRESETS[categoryId].map((s) => {
-                const active = v.size === s;
+              {ALL_SIZES.map((s) => {
+                const active = v.sizes[s] !== undefined;
                 return (
                   <Pressable
                     key={s}
-                    onPress={() => updateVariant(i, { size: s })}
+                    onPress={() => toggleVariantSize(i, s)}
                     style={[
                       styles.sizePill,
                       {
@@ -574,27 +503,61 @@ export default function AddProductScreen() {
               })}
             </View>
 
-            {/* Stock + optional price */}
-            <View style={styles.row2}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Field
-                  label="Zaxira"
-                  value={v.stock}
-                  onChangeText={(t) => updateVariant(i, { stock: t.replace(/[^0-9]/g, '') })}
-                  keyboardType="number-pad"
-                  compact
-                />
+            {/* Per-size stock inputs */}
+            {Object.keys(v.sizes).length > 0 && (
+              <View style={{ marginTop: 12, gap: 8 }}>
+                <Text variant="caption" color="muted">
+                  Har bir o'lcham uchun zaxira
+                </Text>
+                {Object.entries(v.sizes).map(([size, stockStr]) => (
+                  <View
+                    key={size}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: colors.surface2,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: colors.rule,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      gap: 10,
+                    }}
+                  >
+                    <View style={{ minWidth: 70 }}>
+                      <Text variant="body" color="ink" style={{ fontWeight: '600' }}>
+                        {size}
+                      </Text>
+                    </View>
+                    <TextInput
+                      value={stockStr}
+                      onChangeText={(t) => setVariantSizeStock(i, size, t)}
+                      keyboardType="number-pad"
+                      placeholder="dona"
+                      style={{
+                        flex: 1,
+                        color: colors.ink,
+                        fontSize: 15,
+                        paddingVertical: 4,
+                      }}
+                      placeholderTextColor={colors.muted}
+                    />
+                    <Text variant="caption" color="muted">dona</Text>
+                  </View>
+                ))}
               </View>
-              <View style={{ flex: 1 }}>
-                <Field
-                  label="Narx (ixt.)"
-                  value={v.priceUsd}
-                  onChangeText={(t) => updateVariant(i, { priceUsd: t.replace(/[^0-9.]/g, '') })}
-                  keyboardType="decimal-pad"
-                  placeholder="asos narx"
-                  compact
-                />
-              </View>
+            )}
+
+            {/* Optional price */}
+            <View style={{ marginTop: 10 }}>
+              <Field
+                label="Narx (ixt.)"
+                value={v.priceUsd}
+                onChangeText={(t) => updateVariant(i, { priceUsd: t.replace(/[^0-9.]/g, '') })}
+                keyboardType="decimal-pad"
+                placeholder="asos narx"
+                compact
+              />
             </View>
 
             {/* Images */}
@@ -655,11 +618,6 @@ export default function AddProductScreen() {
                   key={c.id}
                   onPress={() => {
                     setCategoryId(c.id);
-                    setVariants((vs) =>
-                      vs.map((v) =>
-                        SIZE_PRESETS[c.id].includes(v.size) ? v : { ...v, size: SIZE_PRESETS[c.id][0]! },
-                      ),
-                    );
                     setShowCategory(false);
                   }}
                   style={[styles.modalRow, { borderColor: colors.rule }]}
@@ -757,8 +715,6 @@ const styles = StyleSheet.create({
   variantsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 10 },
   variantCard: { borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 12 },
   variantHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  swatchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  swatch: { width: 32, height: 32, borderRadius: 16 },
   sizeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   sizePill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1 },
   row2: { flexDirection: 'row', marginTop: 10 },

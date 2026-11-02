@@ -635,6 +635,67 @@ function buildDressPrompt(job) {
   ].join('\n');
 }
 
+// Abaya — a one-piece modest garment that comes WITH its own built-in
+// hood/scarf covering the head, neck and shoulders. The AI must NOT add a
+// separate beige hijab wrap on top; the garment IS already a hooded abaya,
+// and the hood/scarf is part of the product itself. Think: a full black
+// one-piece gown + attached hood like the reference the seller uploads.
+function buildAbayaPrompt(job) {
+  const chroma = chromaFor(job.colorHex);
+  const sizeLine = job.targetSize
+    ? `Abaya size: ${job.targetSize} — tailor the fit to this size's silhouette in every cell.`
+    : 'Abaya size: standard — natural flowing fit in every cell.';
+  return [
+    '*** READ BEFORE DRAWING — HARD RULE ***',
+    'The PRODUCT reference image (attached as image #2) is a HOODED ABAYA — a ONE-PIECE modest garment whose HEAD COVER / HIJAB IS BUILT INTO THE GARMENT ITSELF. The hood, neck wrap and body are a SINGLE continuous piece of fabric in the SAME colour and material. You MUST reproduce the garment as ONE piece: the fabric flows seamlessly from the top of the head, around the face, over the shoulders, down the body to the ankles — all in the garment\'s original colour from the reference image. There is NO separate beige hijab, NO cream wrap, NO contrasting head cover added on top. The head is covered BY THE ABAYA ITSELF.',
+    '',
+    'Ultra-realistic fashion-catalogue composite photo containing NINE (9) full-body modest-fashion young women models, each WEARING THE SAME HOODED ABAYA from the attached PRODUCT reference image.',
+    '',
+    'ONE reference image is attached:',
+    '  (1) PRODUCT image — the hooded abaya to showcase. Reproduce its colour, drape, hood shape, sleeves (loose/wide), length (ankle-length), and silhouette EXACTLY in every one of the 9 cells. The hood is UP in every cell, covering the hair and framing the face in a soft oval. The fabric from the hood continues DOWN AND AROUND the face, over the shoulders and chest, with NO visible seam between "hijab" and "dress" — because they are the same garment.',
+    '',
+    'STRICT RULES:',
+    '  • The abaya and its built-in hood are ONE garment in ONE colour (taken from reference 2). Never render the head cover in a different colour from the body.',
+    '  • NEVER add a beige / cream / contrasting hijab, scarf, shawl or wrap on top of the abaya. The product covers the head itself.',
+    '  • The face oval is visible (eyes, nose, mouth, closed-mouth soft smile). Hair, forehead, ears and neck are covered by the garment\'s own fabric.',
+    '  • Hands and face are the only skin shown. No bare arms, no bare neckline, no bare chest, no bare ankles.',
+    '',
+    'MANDATORY — ALL 9 CELLS MUST BE FILLED. Every one of the 9 grid cells contains ONE complete head-to-toe model wearing the hooded abaya. NO empty cell, NO blank cell, NO duplicate pose in two cells, NO half-figure. If you cannot fit all 9, re-plan the grid so all 9 cells each hold a complete model BEFORE drawing.',
+    '',
+    ...GRID_ROWS_COLS,
+    '',
+    'Garment colour: TAKE IT FROM THE PRODUCT REFERENCE IMAGE (reference 2) EXACTLY — do not re-tint, do not shift hue, do not substitute. The seller-selected variant swatch is informational only; the pixels in reference 2 are authoritative. The hood is the SAME colour as the body of the abaya because they are the same garment.',
+    sizeLine,
+    '',
+    FULL_BODY_SHOT,
+    '',
+    ...gridGutters(chroma),
+    '',
+    ...COMMON_MODEL_IDENTITY,
+    '• HEAD + NECK COVER — the abaya\'s OWN BUILT-IN HOOD (NOT a separate hijab):',
+    '  — The hood is UP, fabric smoothly covering the top of the head, framing the face in a gentle oval, and flowing down onto the shoulders and chest as part of the garment itself.',
+    '  — Material and colour IDENTICAL to the body of the abaya (same fabric, same tone, no seam, no contrast).',
+    '  — Hair, forehead, ears and neck fully covered by this hood.',
+    '  — ABSOLUTELY NO separate beige/cream wrap, NO shawl, NO stole, NO extra scarf. The product itself IS the head cover.',
+    '• Plain modest flat shoes on the feet in a neutral tone that complements the abaya — no bare feet.',
+    '',
+    'Abaya (every cell — the PRODUCT being showcased):',
+    '• Reproduce the hooded abaya from reference 2 EXACTLY: colour, fabric texture, hood shape, sleeve width, length and silhouette.',
+    '• Loose flowing silhouette falling to the ankles; wide/open sleeves if the reference shows them; no belting unless the reference has it.',
+    '• Fabric visible from the top of the hood down to the hem; hands rest naturally at the sides so the garment is unobstructed.',
+    '',
+    'Pose (SAME in every cell — MANDATORY, identical orientation across the whole 9-grid):',
+    "• Body and face BOTH turned slightly to the viewer's RIGHT at a three-quarter angle (~15–20°) so the camera clearly sees the model's RIGHT cheek. NEVER turned to the left, NEVER full-front, NEVER in profile.",
+    '• Full-body standing, feet almost together with weight gently on one leg, shoulders soft, elegant upright posture that shows the abaya silhouette clearly.',
+    '• Both arms relaxed along the body (NOT crossed in front, NOT holding anything).',
+    '• Soft closed-mouth smile, eyes to camera.',
+    '',
+    ...commonBackground(chroma, 'dress'),
+    '',
+    finalOutput(chroma),
+  ].join('\n');
+}
+
 function buildBagPrompt(job) {
   const chroma = chromaFor(job.colorHex);
   return [
@@ -827,6 +888,7 @@ function buildPrompt(job) {
   }
   switch (category) {
     case 'dresses':     return buildDressPrompt(job);
+    case 'abaya':       return buildAbayaPrompt(job);
     case 'bags':        return buildBagPrompt(job);
     case 'shoes':       return buildShoePrompt(job);
     case 'accessories': return buildAccessoryPrompt(job);

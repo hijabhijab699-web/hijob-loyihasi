@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, Linking, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path } from 'react-native-svg';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -82,22 +83,30 @@ export default function ShopDetailScreen() {
     enabled: !!id,
   });
 
-  const productsQ = useQuery<{ items: Product[] }>({
+  const SHOP_PAGE_SIZE = 10;
+  const productsQ = useInfiniteQuery({
     queryKey: ['store-products', id, { category, color, sort }],
-    queryFn: async () => (await api.get(`/catalog/products`, {
-      params: {
-        sellerId: id,
-        ...(category && { category }),
-        ...(color && { color }),
-        sort,
-        pageSize: 50,
-      },
-    })).data,
+    queryFn: async ({ pageParam }) => {
+      const res = await api.get(`/catalog/products`, {
+        params: {
+          sellerId: id,
+          ...(category && { category }),
+          ...(color && { color }),
+          sort,
+          page: pageParam,
+          pageSize: SHOP_PAGE_SIZE,
+        },
+      });
+      return res.data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: any) =>
+      lastPage?.hasNext ? (lastPage.page ?? 1) + 1 : undefined,
     enabled: !!id && productsOpen,
   });
 
   const store = storeQ.data;
-  const products = productsQ.data?.items ?? [];
+  const products: Product[] = (productsQ.data?.pages ?? []).flatMap((p: any) => p?.items ?? []);
   const availableColors = useMemo(() => {
     const seen = new Map<string, string>();
     for (const p of products) {
@@ -108,17 +117,19 @@ export default function ShopDetailScreen() {
     return Array.from(seen.entries()).map(([color, hex]) => ({ color, hex }));
   }, [products]);
 
-  // Shared cream silk ribbon with jasmine branch tucked into the top
-  // right — matches the mockup's single combined header decoration. The
-  // ribbon reaches above the safe area so its curves meet the actual
-  // top of the device.
+  // Combined silk + jasmine header decoration — the silk ribbon
+  // crowns the top of the screen and the jasmine branch anchors the
+  // right side at the avatar's height, exactly as the shop mockup
+  // sets up the hero area. Tall enough to cover the avatar block so
+  // the jasmine sits beside it, not above or below.
+  const RIBBON_H = SCREEN_W * 0.95 + insets.top;
   const silkRibbon = (
     <View
       pointerEvents="none"
       style={{
         position: 'absolute',
         top: 0, left: 0, right: 0,
-        height: SCREEN_W * 0.55 + insets.top,
+        height: RIBBON_H,
         zIndex: 0,
         overflow: 'hidden',
       }}
@@ -128,27 +139,36 @@ export default function ShopDetailScreen() {
         style={{
           position: 'absolute',
           top: 0,
-          left: -SCREEN_W * 0.05,
-          width: SCREEN_W * 1.1,
+          left: -SCREEN_W * 0.1,
+          width: SCREEN_W * 1.2,
           aspectRatio: 1847 / 851,
         }}
         resizeMode="cover"
       />
+      {/* Jasmine branch anchored at the avatar's vertical centre, big
+          enough to echo the mockup. Rotated so the stem drapes down-left
+          toward the "Safia" title. */}
       <Image
         source={DECOR_JASMINE}
         style={{
           position: 'absolute',
-          top: insets.top + 60,
-          right: -30,
-          width: 180, height: 160,
-          opacity: 0.95,
-          transform: [{ rotate: '-6deg' }],
+          top: insets.top + 120,
+          right: -40,
+          width: 240, height: 220,
+          opacity: 0.97,
+          transform: [{ rotate: '12deg' }],
         }}
         resizeMode="contain"
       />
       <LinearGradient
-        colors={['transparent', 'transparent', 'rgba(255,255,255,0.75)', '#ffffff']}
-        locations={[0, 0.45, 0.75, 1]}
+        colors={[
+          'transparent',
+          'transparent',
+          'rgba(255,255,255,0.4)',
+          'rgba(255,255,255,0.9)',
+          '#ffffff',
+        ]}
+        locations={[0, 0.35, 0.65, 0.85, 1]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
     </View>
@@ -167,106 +187,174 @@ export default function ShopDetailScreen() {
   return (
     <Screen topDecoration={silkRibbon}>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
-        {/* Header — back pill + "Магазин" label matches the mockup. */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        {/* Header — back pill with a layered gold ring + glass surface
+            and a serif "Магазин" label with a diamond mark, so the top
+            row reads as a polished chapter header rather than a generic
+            nav bar. */}
+        <View
+          style={{
+            paddingHorizontal: 20,
+            paddingTop: 10,
+            paddingBottom: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
           <Pressable
             onPress={() => safeBack()}
-            style={{
-              width: 44, height: 44, borderRadius: 22,
-              backgroundColor: '#ffffff',
-              borderWidth: 1, borderColor: 'rgba(201,168,97,0.18)',
+            hitSlop={10}
+            style={({ pressed }) => ({
+              width: 46, height: 46, borderRadius: 23,
+              backgroundColor: 'rgba(255,255,255,0.92)',
+              borderWidth: 1.2, borderColor: 'rgba(201,168,97,0.35)',
               alignItems: 'center', justifyContent: 'center',
-              shadowColor: '#2a2a1f', shadowOpacity: 0.08,
-              shadowOffset: { width: 0, height: 2 }, shadowRadius: 6,
+              shadowColor: '#2a2a1f',
+              shadowOpacity: 0.12,
+              shadowOffset: { width: 0, height: 4 },
+              shadowRadius: 10,
+              transform: [{ scale: pressed ? 0.96 : 1 }],
+            })}
+          >
+            <Ionicons name="chevron-back" size={20} color="#1f2a16" />
+          </Pressable>
+
+          {/* Chapter label pill — serif title with a diamond glyph so it
+              echoes the kickers used on the other tabs. */}
+          <View
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              marginRight: 46 + 12,
             }}
           >
-            <Ionicons name="arrow-back" size={18} color={colors.ink} />
-          </Pressable>
-          <Text variant="body" color="muted" style={{ fontSize: 14, color: '#857e6e' }}>
-            {isRu ? 'Магазин' : "Do'kon"}
-          </Text>
-        </View>
-
-        {/* Profile card — big avatar with gold ring, serif name with
-            verified check, muted subtitle, and star rating centered. */}
-        <View style={{ paddingHorizontal: 20, alignItems: 'center', marginTop: 8, marginBottom: 20 }}>
-          <View style={{
-            width: 136, height: 136, borderRadius: 68,
-            alignItems: 'center', justifyContent: 'center',
-            padding: 4,
-          }}>
-            <View style={{
-              width: '100%', height: '100%', borderRadius: 68,
-              backgroundColor: colors.oliveDeep,
-              alignItems: 'center', justifyContent: 'center',
-              overflow: 'hidden',
-              borderWidth: 2.5,
-              borderColor: '#c9a861',
-              shadowColor: '#2a2a1f',
-              shadowOpacity: 0.25,
-              shadowOffset: { width: 0, height: 10 },
-              shadowRadius: 18,
-            }}>
-              {store.logoUrl ? (
-                <Image source={{ uri: store.logoUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-              ) : (
-                <Text style={{
-                  fontFamily: theme.fontFamilies.display,
-                  fontSize: 56, lineHeight: 60,
-                  color: '#c9a861', fontWeight: '600',
-                  fontStyle: 'italic',
-                }}>
-                  {store.brandName.slice(0, 1).toUpperCase()}
-                </Text>
-              )}
+            <View style={{ flex: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{
+                fontFamily: theme.fontFamilies.display,
+                fontSize: 18,
+                fontWeight: '600',
+                color: '#1f2a16',
+                letterSpacing: 0.3,
+              }}>
+                {isRu ? 'Магазин' : "Do'kon"}
+              </Text>
+              <View style={{
+                width: 14, height: 14, borderRadius: 7,
+                backgroundColor: '#c9a861',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Svg width={7} height={7} viewBox="0 0 10 10">
+                  <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="#ffffff" />
+                </Svg>
+              </View>
             </View>
           </View>
+        </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {/* Profile card — big avatar with gold ring, large serif
+            brand name with a single gold check-badge beside it, muted
+            owner subtitle, and star rating centred. Trust badges
+            (TOP / PREMIUM) move onto their own quiet row below so the
+            name line stays uncluttered. */}
+        <View style={{ paddingHorizontal: 20, alignItems: 'center', marginTop: 4, marginBottom: 20 }}>
+          <View style={{
+            width: 150, height: 150, borderRadius: 75,
+            backgroundColor: colors.oliveDeep,
+            alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden',
+            borderWidth: 3,
+            borderColor: '#c9a861',
+            shadowColor: '#1f2a16',
+            shadowOpacity: 0.30,
+            shadowOffset: { width: 0, height: 14 },
+            shadowRadius: 22,
+          }}>
+            {store.logoUrl ? (
+              <Image source={{ uri: store.logoUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+            ) : (
+              <Text style={{
+                fontFamily: 'PlayfairDisplay-Italic',
+                fontSize: 72, lineHeight: 78,
+                color: '#c9a861',
+                fontWeight: '600',
+              }}>
+                {store.brandName.slice(0, 1).toUpperCase()}
+              </Text>
+            )}
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 20, flexWrap: 'wrap', justifyContent: 'center' }}>
             <Text style={{
               fontFamily: theme.fontFamilies.display,
               fontSize: 30, lineHeight: 34,
               fontWeight: '600',
               color: '#1f2a16',
+              textAlign: 'center',
             }}>
               {store.brandName}
             </Text>
             {store.verified && (
               <View style={{
-                width: 22, height: 22, borderRadius: 11,
+                width: 26, height: 26, borderRadius: 13,
                 backgroundColor: '#c9a861',
                 alignItems: 'center', justifyContent: 'center',
+                shadowColor: '#8f6a2d',
+                shadowOpacity: 0.3,
+                shadowOffset: { width: 0, height: 2 },
+                shadowRadius: 4,
               }}>
-                <Ionicons name="checkmark" size={14} color="#ffffff" />
-              </View>
-            )}
-            {store.isPremium && (
-              <View style={{ backgroundColor: colors.gold, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                <Text variant="caption" style={{ fontSize: 10, color: colors.oliveDeep, fontWeight: '700' }}>PREMIUM</Text>
-              </View>
-            )}
-            {store.isTop && !store.isPremium && (
-              <View style={{ backgroundColor: colors.oliveDeep, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                <Text variant="caption" style={{ fontSize: 10, color: colors.goldSoft, fontWeight: '700' }}>TOP</Text>
+                <Ionicons name="checkmark" size={16} color="#ffffff" />
               </View>
             )}
           </View>
 
           {store.ownerName && (
-            <Text style={{ marginTop: 4, fontSize: 14, color: '#857e6e' }}>
+            <Text style={{ marginTop: 6, fontSize: 15, color: '#857e6e' }}>
               {store.ownerName}
             </Text>
           )}
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
             <Ionicons name="star" size={16} color="#c9a861" />
-            <Text style={{ fontSize: 14, color: '#4a4a3b', fontWeight: '500' }}>
+            <Text style={{ fontSize: 15, color: '#4a4a3b', fontWeight: '500' }}>
               {store.rating.toFixed(1)} · {store.reviewsCount} {isRu ? 'отзывов' : 'baho'}
             </Text>
           </View>
 
+          {(store.isPremium || store.isTop) && (
+            <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+              {store.isPremium && (
+                <View style={{
+                  backgroundColor: '#c9a861',
+                  paddingHorizontal: 10, paddingVertical: 4,
+                  borderRadius: 999,
+                }}>
+                  <Text style={{ fontSize: 10, color: '#1f2a16', fontWeight: '700', letterSpacing: 1 }}>PREMIUM</Text>
+                </View>
+              )}
+              {store.isTop && !store.isPremium && (
+                <View style={{
+                  backgroundColor: 'rgba(90,140,116,0.14)',
+                  paddingHorizontal: 10, paddingVertical: 4,
+                  borderRadius: 999,
+                }}>
+                  <Text style={{ fontSize: 10, color: '#3a6451', fontWeight: '700', letterSpacing: 1 }}>TOP</Text>
+                </View>
+              )}
+            </View>
+          )}
+
           {store.description && (
-            <Text variant="body" color="muted" style={{ marginTop: 10, textAlign: 'center', fontSize: 13, lineHeight: 19 }}>
+            <Text style={{
+              marginTop: 12, textAlign: 'center',
+              fontSize: 13, lineHeight: 19,
+              color: '#857e6e',
+              paddingHorizontal: 16,
+            }}>
               {store.description}
             </Text>
           )}
@@ -407,22 +495,23 @@ export default function ShopDetailScreen() {
         </View>
 
         {/* Products count card — olive-deep hero rail with a grid chip
-            on the left and a decorative jasmine + bag illustration tucked
-            into the right edge, matches the "8 товаров" card in the mockup. */}
+            on the left and a decorative shopping bag + jasmine
+            composition on the right, matching the "8 товаров" card in
+            the mockup. */}
         <View style={{
-          marginTop: 20, marginHorizontal: 20,
-          paddingHorizontal: 18, paddingVertical: 20,
+          marginTop: 24, marginHorizontal: 20,
+          paddingHorizontal: 18, paddingVertical: 22,
           borderRadius: 22,
           backgroundColor: colors.oliveDeep,
           flexDirection: 'row', alignItems: 'center', gap: 14,
           overflow: 'hidden',
           shadowColor: '#1f2a16',
-          shadowOpacity: 0.25,
-          shadowOffset: { width: 0, height: 8 },
-          shadowRadius: 16,
+          shadowOpacity: 0.30,
+          shadowOffset: { width: 0, height: 10 },
+          shadowRadius: 20,
         }}>
           <View style={{
-            width: 48, height: 48, borderRadius: 14,
+            width: 50, height: 50, borderRadius: 14,
             backgroundColor: 'rgba(255,255,255,0.14)',
             alignItems: 'center', justifyContent: 'center',
           }}>
@@ -430,27 +519,70 @@ export default function ShopDetailScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{
-              color: '#f1dfa4', fontWeight: '700', fontSize: 18,
+              color: '#f1dfa4', fontWeight: '700', fontSize: 20,
               fontFamily: theme.fontFamilies.display,
             }}>
               {store.productsCount} {isRu ? 'товаров' : 'ta mahsulot'}
             </Text>
-            <Text style={{ color: 'rgba(241,223,164,0.65)', fontSize: 12, marginTop: 2 }}>
+            <Text style={{ color: 'rgba(241,223,164,0.65)', fontSize: 13, marginTop: 2 }}>
               {isRu ? 'Каталог магазина' : "Do'kon katalogi"}
             </Text>
           </View>
-          <Image
-            source={DECOR_JASMINE}
+
+          {/* Decorative bag + jasmine on right — jasmine spills around
+              a cream shopping bag that holds the shop's initial. */}
+          <View
+            pointerEvents="none"
             style={{
               position: 'absolute',
-              right: -22, top: -4,
-              width: 120, height: 90,
-              opacity: 0.9,
-              transform: [{ rotate: '8deg' }],
+              right: -8, top: -12, bottom: -12,
+              width: 150,
+              alignItems: 'center', justifyContent: 'center',
             }}
-            resizeMode="contain"
-            pointerEvents="none"
-          />
+          >
+            <Image
+              source={DECOR_JASMINE}
+              style={{
+                position: 'absolute',
+                right: -20, top: -16,
+                width: 160, height: 140,
+                opacity: 0.95,
+                transform: [{ rotate: '14deg' }],
+              }}
+              resizeMode="contain"
+            />
+            <View style={{
+              position: 'absolute',
+              right: 24, top: 14,
+              width: 60, height: 64,
+              borderRadius: 10,
+              backgroundColor: '#f1dfa4',
+              borderWidth: 1.5,
+              borderColor: '#c9a861',
+              alignItems: 'center', justifyContent: 'center',
+              shadowColor: '#1f2a16',
+              shadowOpacity: 0.25,
+              shadowOffset: { width: 0, height: 4 },
+              shadowRadius: 6,
+            }}>
+              {/* Bag handles */}
+              <View style={{
+                position: 'absolute', top: -10,
+                width: 36, height: 16, borderRadius: 12,
+                borderWidth: 2.5, borderColor: '#c9a861',
+                borderBottomWidth: 0,
+                backgroundColor: 'transparent',
+              }} />
+              <Text style={{
+                fontFamily: 'PlayfairDisplay-Italic',
+                fontSize: 28, lineHeight: 32,
+                color: '#8f6a2d',
+                fontWeight: '700',
+              }}>
+                {store.brandName.slice(0, 1).toUpperCase()}
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* Category breakdown — larger pills with soft shadow, active
@@ -626,49 +758,93 @@ export default function ShopDetailScreen() {
                 </Text>
               </View>
             ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
-                {products.map((p) => (
-                  <Pressable
-                    key={p.id}
-                    onPress={() => router.push({ pathname: '/product/[id]', params: { id: p.id } })}
-                    style={{ width: '50%', padding: 6 }}
-                  >
-                    <View style={{
-                      backgroundColor: '#ffffff', borderRadius: 20, overflow: 'hidden',
-                      borderWidth: 1, borderColor: 'rgba(201,168,97,0.14)',
-                      shadowColor: '#2a2a1f', shadowOpacity: 0.08,
-                      shadowOffset: { width: 0, height: 4 }, shadowRadius: 10,
-                    }}>
-                      <View style={{ position: 'relative' }}>
-                        <Image source={{ uri: p.coverUrl }} style={{ width: '100%', aspectRatio: 0.78 }} resizeMode="cover" />
-                        <View style={{
-                          position: 'absolute', top: 10, right: 10,
-                          width: 32, height: 32, borderRadius: 16,
-                          backgroundColor: 'rgba(255,255,255,0.9)',
-                          alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <Ionicons name="heart-outline" size={16} color="#3a6451" />
+              <>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
+                  {products.map((p) => (
+                    <Pressable
+                      key={p.id}
+                      onPress={() => router.push({ pathname: '/product/[id]', params: { id: p.id } })}
+                      style={{ width: '50%', padding: 6 }}
+                    >
+                      <View style={{
+                        backgroundColor: '#ffffff', borderRadius: 20, overflow: 'hidden',
+                        borderWidth: 1, borderColor: 'rgba(201,168,97,0.14)',
+                        shadowColor: '#2a2a1f', shadowOpacity: 0.08,
+                        shadowOffset: { width: 0, height: 4 }, shadowRadius: 10,
+                      }}>
+                        <View style={{ position: 'relative' }}>
+                          <Image source={{ uri: p.coverUrl }} style={{ width: '100%', aspectRatio: 0.78 }} resizeMode="cover" />
+                          <View style={{
+                            position: 'absolute', top: 10, right: 10,
+                            width: 32, height: 32, borderRadius: 16,
+                            backgroundColor: 'rgba(255,255,255,0.9)',
+                            alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <Ionicons name="heart-outline" size={16} color="#3a6451" />
+                          </View>
+                        </View>
+                        <View style={{ padding: 12 }}>
+                          <Text numberOfLines={1} style={{
+                            fontSize: 13, fontWeight: '600',
+                            color: '#1f2a16',
+                            fontFamily: theme.fontFamilies.display,
+                          }}>
+                            {p.title[lang] || p.title.uz || p.title.ru}
+                          </Text>
+                          <Text style={{
+                            color: '#3a6451', fontWeight: '700',
+                            marginTop: 4, fontSize: 14,
+                          }}>
+                            ${p.basePriceUsd}
+                          </Text>
                         </View>
                       </View>
-                      <View style={{ padding: 12 }}>
-                        <Text numberOfLines={1} style={{
-                          fontSize: 13, fontWeight: '600',
-                          color: '#1f2a16',
-                          fontFamily: theme.fontFamilies.display,
-                        }}>
-                          {p.title[lang] || p.title.uz || p.title.ru}
-                        </Text>
-                        <Text style={{
-                          color: '#3a6451', fontWeight: '700',
-                          marginTop: 4, fontSize: 14,
-                        }}>
-                          ${p.basePriceUsd}
-                        </Text>
-                      </View>
-                    </View>
+                    </Pressable>
+                  ))}
+                </View>
+
+                {/* "Load more" footer — pulls the next page of 10
+                    products from the backend when the buyer taps it.
+                    Hidden once the server reports no more pages. */}
+                {productsQ.hasNextPage ? (
+                  <Pressable
+                    onPress={() => {
+                      if (!productsQ.isFetchingNextPage) productsQ.fetchNextPage();
+                    }}
+                    disabled={productsQ.isFetchingNextPage}
+                    style={({ pressed }) => ({
+                      marginTop: 16,
+                      marginBottom: 8,
+                      alignSelf: 'center',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingHorizontal: 20,
+                      paddingVertical: 12,
+                      borderRadius: 999,
+                      backgroundColor: colors.oliveDeep,
+                      borderWidth: 1,
+                      borderColor: '#c9a861',
+                      opacity: pressed ? 0.9 : 1,
+                      shadowColor: '#1f2a16',
+                      shadowOpacity: 0.2,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowRadius: 8,
+                    })}
+                  >
+                    {productsQ.isFetchingNextPage ? (
+                      <ActivityIndicator size="small" color="#f1dfa4" />
+                    ) : (
+                      <Ionicons name="arrow-down-circle-outline" size={16} color="#f1dfa4" />
+                    )}
+                    <Text style={{ color: '#f1dfa4', fontWeight: '700', fontSize: 13 }}>
+                      {productsQ.isFetchingNextPage
+                        ? (isRu ? 'Загрузка...' : 'Yuklanmoqda...')
+                        : (isRu ? 'Показать ещё' : "Yana ko'rish")}
+                    </Text>
                   </Pressable>
-                ))}
-              </View>
+                ) : null}
+              </>
             )}
           </View>
         )}

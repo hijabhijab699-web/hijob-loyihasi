@@ -43,6 +43,24 @@ interface Options {
   districts: string[];
 }
 
+const PRESET_COUNTRIES = ['Uzbekistan', 'Kazakhstan', 'Kyrgyzstan', 'Tajikistan'];
+const UZ_CITIES = [
+  'Toshkent',
+  'Samarqand',
+  'Buxoro',
+  'Andijon',
+  "Farg'ona",
+  'Namangan',
+  'Qarshi',
+  'Nukus',
+  'Urganch',
+  'Jizzax',
+  'Guliston',
+  'Navoiy',
+  'Termiz',
+  "Qo'qon",
+];
+
 export default function StoresScreen() {
   const { colors, theme } = useTheme();
   const router = useRouter();
@@ -104,11 +122,17 @@ export default function StoresScreen() {
   }
 
   const openOptions: string[] = useMemo(() => {
-    if (filterOpen === 'country') return options?.countries ?? [];
-    if (filterOpen === 'city') return options?.cities ?? [];
-    if (filterOpen === 'district') return options?.districts ?? [];
+    const uniq = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)));
+    if (filterOpen === 'country') {
+      return uniq([...(options?.countries ?? []), ...PRESET_COUNTRIES]);
+    }
+    if (filterOpen === 'city') {
+      const uzCities = country === null || country === 'Uzbekistan' ? UZ_CITIES : [];
+      return uniq([...(options?.cities ?? []), ...uzCities]);
+    }
+    if (filterOpen === 'district') return uniq(options?.districts ?? []);
     return [];
-  }, [filterOpen, options]);
+  }, [filterOpen, options, country]);
 
   function pickOption(v: string | null) {
     if (filterOpen === 'country') setCountry(v);
@@ -152,7 +176,7 @@ export default function StoresScreen() {
       </View>
 
       {/* Filter chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 10 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 10 }}>
         <FilterChip
           label={coords ? (isRu ? `${radiusKm} км вокруг` : `${radiusKm} km atrofida`) : (isRu ? 'Рядом' : 'Yaqin atrofda')}
           icon="location"
@@ -195,11 +219,11 @@ export default function StoresScreen() {
 
       {/* Stores list */}
       {isLoading ? (
-        <View style={{ padding: 40, alignItems: 'center' }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={colors.oliveDeep} />
         </View>
       ) : stores.length === 0 ? (
-        <View style={{ padding: 40, alignItems: 'center' }}>
+        <View style={{ flex: 1, padding: 40, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="storefront-outline" size={48} color={colors.muted} />
           <Text variant="body" color="muted" style={{ marginTop: 12, textAlign: 'center' }}>
             {isRu ? 'Магазинов не найдено' : "Hech qanday do'kon topilmadi"}
@@ -216,6 +240,7 @@ export default function StoresScreen() {
         <FlatList
           data={stores}
           keyExtractor={(s) => s.id}
+          style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
           renderItem={({ item }) => (
             <StoreCard
@@ -232,7 +257,7 @@ export default function StoresScreen() {
       )}
 
       {/* Option picker */}
-      <Modal visible={!!filterOpen} transparent animationType="slide" onRequestClose={() => setFilterOpen(null)}>
+      <Modal visible={!!filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(null)}>
         <Pressable onPress={() => setFilterOpen(null)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
           <Pressable
             onPress={(e) => e.stopPropagation()}
@@ -366,7 +391,7 @@ function StoreCard({ store, onPress, colors, theme, isRu }: { store: Store; onPr
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
           <Ionicons name="star" size={12} color={colors.gold} />
           <Text variant="caption" color="muted" style={{ fontSize: 11 }}>
-            {store.rating.toFixed(1)} · {store.reviewsCount}
+            {Number(store.rating ?? 0).toFixed(1)} · {store.reviewsCount ?? 0}
           </Text>
         </View>
         {(store.city || store.district) && (
@@ -377,11 +402,11 @@ function StoreCard({ store, onPress, colors, theme, isRu }: { store: Store; onPr
             </Text>
           </View>
         )}
-        {store.distanceKm !== null && (
+        {store.distanceKm !== null && store.distanceKm !== undefined && (
           <Text variant="caption" color="gold" style={{ fontSize: 11, fontWeight: '600', marginTop: 2 }}>
-            {store.distanceKm < 1
-              ? `${Math.round(store.distanceKm * 1000)} m`
-              : `${store.distanceKm.toFixed(1)} km`}
+            {Number(store.distanceKm) < 1
+              ? `${Math.round(Number(store.distanceKm) * 1000)} m`
+              : `${Number(store.distanceKm).toFixed(1)} km`}
           </Text>
         )}
       </View>

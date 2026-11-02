@@ -62,8 +62,8 @@ export class CreateProductDto {
   @IsString()
   descriptionRu?: string;
 
-  @IsIn(['scarves', 'dresses', 'shoes', 'bags', 'accessories'])
-  categoryId!: 'scarves' | 'dresses' | 'shoes' | 'bags' | 'accessories';
+  @IsIn(['scarves', 'dresses', 'abaya', 'shoes', 'bags', 'accessories'])
+  categoryId!: 'scarves' | 'dresses' | 'abaya' | 'shoes' | 'bags' | 'accessories';
 
   @IsNumber()
   @Min(1)

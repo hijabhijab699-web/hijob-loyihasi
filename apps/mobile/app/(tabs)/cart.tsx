@@ -115,10 +115,11 @@ export default function CartScreen() {
       pointerEvents="none"
       style={{
         position: 'absolute',
-        top: insets.top, left: 0, right: 0,
-        height: SCREEN_W * 0.42,
+        top: 0, left: 0, right: 0,
+        height: SCREEN_W * 0.5 + insets.top,
         zIndex: 0,
         overflow: 'hidden',
+        backgroundColor: '#f6ede0',
       }}
     >
       <Image
@@ -132,9 +133,18 @@ export default function CartScreen() {
         }}
         resizeMode="cover"
       />
+      {/* Multi-stop fade so the silk pattern dissolves into pure
+          white without a visible seam at the ribbon's bottom. */}
       <LinearGradient
-        colors={['transparent', 'transparent', 'rgba(255,255,255,0.4)', '#ffffff']}
-        locations={[0, 0.6, 0.85, 1]}
+        colors={[
+          'transparent',
+          'transparent',
+          'rgba(255,255,255,0.35)',
+          'rgba(255,255,255,0.70)',
+          'rgba(255,255,255,0.92)',
+          '#ffffff',
+        ]}
+        locations={[0, 0.25, 0.45, 0.65, 0.85, 1]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
     </View>
@@ -189,12 +199,12 @@ export default function CartScreen() {
               textTransform: 'uppercase',
               fontSize: 10,
               fontWeight: '600',
-              color: colors.gold,
+              color: '#ffffff',
             }}
           >
             {isRu ? 'Моя корзина' : 'Mening savatim'}
           </Text>
-          <Text style={{ color: colors.gold, fontSize: 12 }}>✦</Text>
+          <Text style={{ color: '#ffffff', fontSize: 12 }}>✦</Text>
         </View>
         <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
           <View style={{ position: 'relative' }}>

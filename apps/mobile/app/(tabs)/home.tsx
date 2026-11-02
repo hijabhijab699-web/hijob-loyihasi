@@ -256,10 +256,11 @@ export default function HomeScreen() {
       pointerEvents="none"
       style={{
         position: 'absolute',
-        top: insets.top, left: 0, right: 0,
-        height: SCREEN_W * 0.42,
+        top: 0, left: 0, right: 0,
+        height: SCREEN_W * 0.5 + insets.top,
         zIndex: 0,
         overflow: 'hidden',
+        backgroundColor: '#f6ede0',
       }}
     >
       <Image
@@ -273,9 +274,18 @@ export default function HomeScreen() {
         }}
         resizeMode="cover"
       />
+      {/* Multi-stop fade so the silk pattern dissolves into pure
+          white without a visible seam at the ribbon's bottom. */}
       <LinearGradient
-        colors={['transparent', 'transparent', 'rgba(255,255,255,0.4)', '#ffffff']}
-        locations={[0, 0.6, 0.85, 1]}
+        colors={[
+          'transparent',
+          'transparent',
+          'rgba(255,255,255,0.35)',
+          'rgba(255,255,255,0.70)',
+          'rgba(255,255,255,0.92)',
+          '#ffffff',
+        ]}
+        locations={[0, 0.25, 0.45, 0.65, 0.85, 1]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
     </View>
@@ -452,22 +462,6 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text
-              style={{
-                letterSpacing: 3,
-                textTransform: 'uppercase',
-                fontSize: 10,
-                fontWeight: '600',
-                color: '#8f6a2d',
-              }}
-            >
-              {lang === 'ru' ? 'Добро пожаловать' : 'Xush kelibsiz'}
-            </Text>
-            <Svg width={12} height={12} viewBox="0 0 10 10">
-              <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="#c9a861" />
-            </Svg>
-          </View>
           {(() => {
             // Brand voice: the greeting always says "Muslima" — the
             // design pins this name regardless of the signed-in user.
@@ -554,27 +548,87 @@ export default function HomeScreen() {
               paddingHorizontal: SIDE,
             }}
           >
-            <Text
-              numberOfLines={1}
-              style={{
-                fontFamily: theme.fontFamilies.display,
-                fontSize: 17,
-                fontWeight: '500',
-                color: colors.oliveDeep,
-                flexShrink: 1,
-              }}
-            >
-              {t('home.stores')}
-            </Text>
+            {/* Premium pill title — cream pill with a gold frame and a
+                jasmine blossom perched over its top-left corner so the
+                flower reads as a decorative stamp spilling off the
+                badge. */}
+            <View style={{ flexShrink: 1, position: 'relative' }}>
+              <View
+                style={{
+                  height: 30,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  paddingLeft: 36,
+                  paddingRight: 16,
+                  borderRadius: 999,
+                  backgroundColor: '#faf2e1',
+                  borderWidth: 1,
+                  borderColor: '#c9a861',
+                  shadowColor: '#1f2a16',
+                  shadowOpacity: 0.08,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowRadius: 5,
+                }}
+              >
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontFamily: theme.fontFamilies.display,
+                    fontSize: 13,
+                    lineHeight: 15,
+                    fontWeight: '700',
+                    color: colors.oliveDeep,
+                    textAlignVertical: 'center',
+                    includeFontPadding: false,
+                  }}
+                >
+                  {t('home.stores')}
+                </Text>
+              </View>
+              <Image
+                source={DECOR_JASMINE}
+                style={{
+                  position: 'absolute',
+                  left: -18,
+                  top: -16,
+                  width: 54,
+                  height: 48,
+                  transform: [{ rotate: '-14deg' }],
+                }}
+                resizeMode="contain"
+                pointerEvents="none"
+              />
+            </View>
             <Pressable
               onPress={() => router.push('/stores')}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
               hitSlop={6}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 999,
+                backgroundColor: colors.oliveDeep,
+                borderWidth: 1,
+                borderColor: '#c9a861',
+                shadowColor: '#1f2a16',
+                shadowOpacity: 0.22,
+                shadowOffset: { width: 0, height: 2 },
+                shadowRadius: 5,
+                transform: [{ scale: pressed ? 0.96 : 1 }],
+              })}
             >
-              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.gold }}>
+              <Text style={{
+                fontSize: 10,
+                fontWeight: '700',
+                color: '#f1dfa4',
+                letterSpacing: 0.2,
+              }}>
                 {t('home.allStores')}
               </Text>
-              <Ionicons name="arrow-forward" size={12} color={colors.gold} />
+              <Ionicons name="arrow-forward" size={11} color="#f1dfa4" />
             </Pressable>
           </View>
 
@@ -675,17 +729,57 @@ export default function HomeScreen() {
 
         {/* ── Categories ── */}
         <View style={{ marginTop: 24 }}>
-          <View style={{ paddingHorizontal: SIDE, marginBottom: 14 }}>
-            <Text
-              style={{
-                fontFamily: theme.fontFamilies.display,
-                fontSize: 17,
-                fontWeight: '500',
-                color: colors.oliveDeep,
-              }}
-            >
-              {lang === 'ru' ? 'Категории' : 'Kategoriyalar'}
-            </Text>
+          <View style={{ paddingHorizontal: SIDE, marginBottom: 14, flexDirection: 'row' }}>
+            {/* Premium pill title — mirrors the "Новые магазины" badge
+                with a jasmine blossom spilling off the top-left. */}
+            <View style={{ position: 'relative' }}>
+              <View
+                style={{
+                  height: 30,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  paddingLeft: 36,
+                  paddingRight: 16,
+                  borderRadius: 999,
+                  backgroundColor: '#faf2e1',
+                  borderWidth: 1,
+                  borderColor: '#c9a861',
+                  shadowColor: '#1f2a16',
+                  shadowOpacity: 0.08,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowRadius: 5,
+                }}
+              >
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontFamily: theme.fontFamilies.display,
+                    fontSize: 13,
+                    lineHeight: 15,
+                    fontWeight: '700',
+                    color: colors.oliveDeep,
+                    textAlignVertical: 'center',
+                    includeFontPadding: false,
+                  }}
+                >
+                  {lang === 'ru' ? 'Категории' : 'Kategoriyalar'}
+                </Text>
+              </View>
+              <Image
+                source={DECOR_JASMINE}
+                style={{
+                  position: 'absolute',
+                  left: -18,
+                  top: -16,
+                  width: 54,
+                  height: 48,
+                  transform: [{ rotate: '-14deg' }],
+                }}
+                resizeMode="contain"
+                pointerEvents="none"
+              />
+            </View>
           </View>
 
           <ScrollView
@@ -784,30 +878,85 @@ export default function HomeScreen() {
               paddingHorizontal: SIDE,
             }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
-              <Text style={{ color: colors.gold, fontSize: 13 }}>✦</Text>
-              <Text
-                numberOfLines={1}
+            {/* Premium pill title — same cream+gold badge with a
+                jasmine blossom spilling off the top-left corner. */}
+            <View style={{ flexShrink: 1, position: 'relative' }}>
+              <View
                 style={{
-                  fontFamily: theme.fontFamilies.display,
-                  fontSize: 17,
-                  fontWeight: '500',
-                  color: colors.oliveDeep,
-                  flexShrink: 1,
+                  height: 30,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  paddingLeft: 36,
+                  paddingRight: 16,
+                  borderRadius: 999,
+                  backgroundColor: '#faf2e1',
+                  borderWidth: 1,
+                  borderColor: '#c9a861',
+                  shadowColor: '#1f2a16',
+                  shadowOpacity: 0.08,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowRadius: 5,
                 }}
               >
-                {lang === 'ru' ? 'Избранные магазины' : "Yaqin atrofdagi do'konlar"}
-              </Text>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontFamily: theme.fontFamilies.display,
+                    fontSize: 13,
+                    lineHeight: 15,
+                    fontWeight: '700',
+                    color: colors.oliveDeep,
+                    textAlignVertical: 'center',
+                    includeFontPadding: false,
+                  }}
+                >
+                  {lang === 'ru' ? 'Избранные магазины' : "Yaqin atrofdagi do'konlar"}
+                </Text>
+              </View>
+              <Image
+                source={DECOR_JASMINE}
+                style={{
+                  position: 'absolute',
+                  left: -18,
+                  top: -16,
+                  width: 54,
+                  height: 48,
+                  transform: [{ rotate: '-14deg' }],
+                }}
+                resizeMode="contain"
+                pointerEvents="none"
+              />
             </View>
             <Pressable
               onPress={() => router.push('/(tabs)/catalog')}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
               hitSlop={6}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 999,
+                backgroundColor: colors.oliveDeep,
+                borderWidth: 1,
+                borderColor: '#c9a861',
+                shadowColor: '#1f2a16',
+                shadowOpacity: 0.22,
+                shadowOffset: { width: 0, height: 2 },
+                shadowRadius: 5,
+                transform: [{ scale: pressed ? 0.96 : 1 }],
+              })}
             >
-              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.gold }}>
+              <Text style={{
+                fontSize: 10,
+                fontWeight: '700',
+                color: '#f1dfa4',
+                letterSpacing: 0.2,
+              }}>
                 {t('common.seeAll')}
               </Text>
-              <Ionicons name="arrow-forward" size={12} color={colors.gold} />
+              <Ionicons name="arrow-forward" size={11} color="#f1dfa4" />
             </Pressable>
           </View>
 

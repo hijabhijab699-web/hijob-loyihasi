@@ -181,6 +181,17 @@ export default function TryOnScreen() {
     enabled: !!tryonCompleted && !!storeId && productIds.length === 0,
   });
 
+  // Current store's display name — used in the top switcher pill so the
+  // buyer always sees which shop's items the Primerka is pulling from
+  // and can tap to pick another one.
+  const currentStoreQuery = useQuery<{ brandName: string }>({
+    queryKey: ['tryon-current-store', storeId],
+    queryFn: async () =>
+      (await api.get(`/catalog/stores/${storeId}`)).data,
+    enabled: !!storeId,
+    staleTime: 5 * 60_000,
+  });
+
   const products = useMemo(() => {
     if ((collectionQuery.data?.length ?? 0) > 0) {
       // Only clothing categories make sense here; the store already filters,
@@ -351,17 +362,33 @@ export default function TryOnScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      {/* Cream silk ribbon header — shared across all tabs. Shorter
-          compact band to match the mockup; this screen renders without
-          <Screen>, so top:0 is already the actual top of the device. */}
+      {/* Cream fallback behind the status bar so any transparent
+          pixels in the silk-ribbon artwork read as fabric, never as
+          window darkness. Only as tall as the top safe area so it does
+          not bleed into the content below. */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: insets.top, left: 0, right: 0,
-          height: SCREEN_W * 0.42,
+          top: 0, left: 0, right: 0,
+          height: insets.top + 4,
+          backgroundColor: '#f6ede0',
+          zIndex: 0,
+        }}
+      />
+      {/* Cream silk ribbon header — reaches above the status bar
+          with a smooth multi-stop fade so there is no visible seam at
+          the ribbon's bottom. Container has cream background so any
+          transparent silk pixels never read as window darkness. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: SCREEN_W * 0.5 + insets.top,
           zIndex: 0,
           overflow: 'hidden',
+          backgroundColor: '#f6ede0',
         }}
       >
         <Image
@@ -376,8 +403,15 @@ export default function TryOnScreen() {
           resizeMode="cover"
         />
         <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(255,255,255,0.4)', '#ffffff']}
-          locations={[0, 0.6, 0.85, 1]}
+          colors={[
+            'transparent',
+            'transparent',
+            'rgba(255,255,255,0.35)',
+            'rgba(255,255,255,0.70)',
+            'rgba(255,255,255,0.92)',
+            '#ffffff',
+          ]}
+          locations={[0, 0.25, 0.45, 0.65, 0.85, 1]}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
       </View>
@@ -428,21 +462,77 @@ export default function TryOnScreen() {
             resizeMode="contain"
           />
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text
-            style={{
-              letterSpacing: 3,
-              textTransform: 'uppercase',
-              fontSize: 10,
-              fontWeight: '600',
-              color: '#8f6a2d',
-            }}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text
+              style={{
+                letterSpacing: 3,
+                textTransform: 'uppercase',
+                fontSize: 10,
+                fontWeight: '600',
+                color: '#ffffff',
+              }}
+            >
+              Xush kelibsiz
+            </Text>
+            <Svg width={12} height={12} viewBox="0 0 10 10">
+              <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="#ffffff" />
+            </Svg>
+          </View>
+
+          {/* Store switcher — shows the brand name of the shop whose
+              items Primerka is pulling from and lets the buyer pick a
+              different one. Taps the onboarding store-pick screen,
+              which already handles persistence + routing back. */}
+          <Pressable
+            onPress={() => router.push('/(tryon-onboarding)/store')}
+            hitSlop={6}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingLeft: 10,
+              paddingRight: 8,
+              paddingVertical: 5,
+              borderRadius: 999,
+              backgroundColor: '#ffffff',
+              borderWidth: 1,
+              borderColor: '#c9a861',
+              shadowColor: '#2a2a1f',
+              shadowOpacity: 0.08,
+              shadowOffset: { width: 0, height: 2 },
+              shadowRadius: 5,
+              opacity: pressed ? 0.9 : 1,
+              maxWidth: 180,
+            })}
           >
-            Xush kelibsiz
-          </Text>
-          <Svg width={12} height={12} viewBox="0 0 10 10">
-            <Path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="#c9a861" />
-          </Svg>
+            <View style={{
+              width: 18, height: 18, borderRadius: 9,
+              backgroundColor: '#f1dfa4',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Ionicons name="storefront" size={10} color="#8f6a2d" />
+            </View>
+            <Text
+              numberOfLines={1}
+              style={{
+                fontSize: 11,
+                fontWeight: '700',
+                color: '#1f2a16',
+                flexShrink: 1,
+                maxWidth: 110,
+              }}
+            >
+              {currentStoreQuery.data?.brandName ?? "Do'konni tanlang"}
+            </Text>
+            <View style={{
+              width: 18, height: 18, borderRadius: 9,
+              backgroundColor: '#f5efe3',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Ionicons name="chevron-forward" size={11} color="#8f6a2d" />
+            </View>
+          </Pressable>
         </View>
         <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <Text

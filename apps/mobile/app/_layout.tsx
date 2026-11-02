@@ -77,11 +77,21 @@ export default function RootLayout() {
   if (!fontsLoaded || !i18nReady) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#ffffff' }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'fade',
+                // iOS otherwise exposes a dark window background under
+                // the status bar/notch between frames — set every
+                // screen's container to white so the silk ribbon never
+                // has darkness bleeding through from behind it.
+                contentStyle: { backgroundColor: '#ffffff' },
+              }}
+            >
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(onboarding)" />

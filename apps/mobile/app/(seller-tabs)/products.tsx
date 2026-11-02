@@ -8,7 +8,7 @@ import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { api } from '../../src/api/client';
-import { sceneById, SCENES, type SceneId } from '../../src/lib/scenes';
+import { sceneById, type SceneId } from '../../src/lib/scenes';
 import * as ImagePicker from 'expo-image-picker';
 
 // Backend product status enum (prisma ProductStatus). "published" is what the
@@ -410,7 +410,7 @@ export default function SellerProductsScreen() {
 const CATEGORIES = [
   { id: 'scarves', label: { uz: "Ro'mol", ru: 'Платок', en: 'Scarf', ar: 'طرحة' } },
   { id: 'dresses', label: { uz: "Ko'ylak", ru: 'Платье', en: 'Dress', ar: 'فستان' } },
-  { id: 'shoes',   label: { uz: 'Poyabzal', ru: 'Обувь', en: 'Shoes', ar: 'أحذية' } },
+  { id: 'abaya',   label: { uz: 'Abaya', ru: 'Абайя', en: 'Abaya', ar: 'عباية' } },
   { id: 'bags',    label: { uz: 'Sumka', ru: 'Сумка', en: 'Bag', ar: 'حقيبة' } },
   { id: 'accessories', label: { uz: 'Aksessuar', ru: 'Аксессуар', en: 'Accessory', ar: 'إكسسوار' } },
 ] as const;
@@ -459,7 +459,7 @@ function EditProductModal({
   const [priceUsd, setPriceUsd] = useState(String(product.basePriceUsd));
   const [categoryId, setCategoryId] = useState<string>('scarves');
   const [bodyFit, setBodyFit] = useState<'slim' | 'regular' | 'plus' | null>(null);
-  const [sceneId, setSceneId] = useState<SceneId | null>((product.sceneId as SceneId) ?? null);
+  const [sceneId, setSceneId] = useState<SceneId | null>((product.sceneId as SceneId) ?? 'beige');
   const [variants, setVariants] = useState<FullVariant[]>([]);
   // Raw cover (what the seller uploaded) — this is what gets replaced
   // when the seller picks a new image, and what we PATCH back.
@@ -480,7 +480,7 @@ function EditProductModal({
     setPriceUsd(String(full.basePriceUsd));
     setCategoryId(full.categoryId ?? 'scarves');
     setBodyFit(full.bodyFit ?? null);
-    setSceneId((full.attributes?.sceneId as SceneId) ?? null);
+    setSceneId((full.attributes?.sceneId as SceneId) ?? 'beige');
     setCoverUrl(full.rawCoverUrl ?? full.coverUrl ?? null);
     setStyledUrl(full.styledImageUrl ?? full.coverUrl ?? null);
     setVariants(
@@ -643,60 +643,6 @@ function EditProductModal({
                   resizeMode="contain"
                 />
               )}
-            </View>
-
-            {/* Scene thumbnails — visible pick */}
-            <Text
-              variant="caption"
-              color="muted"
-              style={{ fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}
-            >
-              {L('Orqa fon', 'Фон', 'Backdrop', 'الخلفية')}
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
-              {SCENES.map((s) => {
-                const active = s.id === sceneId;
-                return (
-                  <Pressable
-                    key={s.id}
-                    onPress={() => setSceneId(s.id)}
-                    style={{
-                      flex: 1,
-                      borderRadius: 12,
-                      borderWidth: active ? 3 : 1,
-                      borderColor: active ? colors.gold : colors.rule,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <Image source={s.source} style={{ width: '100%', height: 90 }} resizeMode="cover" />
-                    <View
-                      style={{
-                        paddingVertical: 6,
-                        alignItems: 'center',
-                        backgroundColor: colors.surface,
-                      }}
-                    >
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: colors.ink }}>
-                        {s.label.uz}
-                      </Text>
-                    </View>
-                    {active && (
-                      <View
-                        style={{
-                          position: 'absolute',
-                          top: 6,
-                          right: 6,
-                          backgroundColor: colors.gold,
-                          borderRadius: 10,
-                          padding: 2,
-                        }}
-                      >
-                        <Ionicons name="checkmark" size={12} color={colors.ink} />
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
             </View>
 
             {/* Cover image upload */}

@@ -499,7 +499,7 @@ export default function SellerDashboard() {
                 >
                   <View
                     style={{
-                      height: 100,
+                      aspectRatio: 3 / 4,
                       backgroundColor: PLACEHOLDER_BG[i % PLACEHOLDER_BG.length],
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -507,7 +507,7 @@ export default function SellerDashboard() {
                     }}
                   >
                     {prod.coverUrl ? (
-                      <Image source={{ uri: prod.coverUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      <Image source={{ uri: prod.coverUrl }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
                     ) : (
                       <Ionicons name="ribbon-outline" size={32} color="rgba(255,255,255,0.3)" />
                     )}

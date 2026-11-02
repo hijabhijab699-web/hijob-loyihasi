@@ -85,7 +85,7 @@ export class TryOnService {
     });
     if (!variant) throw new NotFoundException('VARIANT_NOT_FOUND');
     const category = variant.product.categoryId;
-    if (category !== 'scarves' && category !== 'dresses') {
+    if (category !== 'scarves' && category !== 'dresses' && category !== 'abaya') {
       throw new BadRequestException('CATEGORY_NOT_SUPPORTED_YET');
     }
 
@@ -100,7 +100,7 @@ export class TryOnService {
     let mode: 'scarf-template' | 'scarf-procedural' | 'dress-template' = 'scarf-procedural';
     const template = variant.garmentTemplate;
 
-    if (category === 'dresses') {
+    if (category === 'dresses' || category === 'abaya') {
       // Dresses only work with a real template (no procedural fallback for full-body).
       if (!template || !template.canonicalImageKey) {
         throw new BadRequestException('DRESS_TEMPLATE_MISSING');
