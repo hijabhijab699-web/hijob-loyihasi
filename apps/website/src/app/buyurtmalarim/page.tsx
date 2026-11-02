@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Package, Search, ArrowRight, Clock } from 'lucide-react';
+import { Package, Search, ArrowRight, Clock, LogIn, UserCheck } from 'lucide-react';
 import { useOrders } from '@/components/providers/OrdersProvider';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { formatPrice } from '@/lib/format';
 
 export default function MyOrdersPage() {
   const router = useRouter();
   const { orders, isHydrated } = useOrders();
+  const auth = useAuth();
   const [lookupId, setLookupId] = useState('');
 
   const submit = (e: React.FormEvent) => {
@@ -35,6 +37,43 @@ export default function MyOrdersPage() {
         <p className="text-ink-muted mt-2">
           Bu brauzerda qilgan buyurtmalaringiz ro&apos;yxati va kuzatish.
         </p>
+
+        {/* Account notice — guests see a sign-in nudge so they know
+            their history will travel with them; signed-in users see a
+            confirmation so they trust that their orders are preserved. */}
+        {auth.hydrated && (
+          auth.user ? (
+            <div className="mt-5 rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-start gap-3 text-sm">
+              <UserCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-emerald-900">
+                  Hisobga kirgansiz — {auth.user.fullName}
+                </p>
+                <p className="text-emerald-800/80 mt-0.5">
+                  Buyurtmalaringiz Hijob hisobingizga biriktirilgan va boshqa qurilmalarda ham ko&apos;rinadi.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-xl bg-brand/5 border border-brand/20 p-4 flex items-start gap-3 text-sm">
+              <LogIn className="w-5 h-5 text-brand shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-ink">
+                  Buyurtmalaringiz faqat shu brauzerda saqlanmoqda
+                </p>
+                <p className="text-ink-muted mt-0.5">
+                  Hisobga kirsangiz, buyurtmalar sinxronlanadi va boshqa qurilmalardan ham ko&apos;rinadi.
+                </p>
+              </div>
+              <Link
+                href="/kirish?next=/buyurtmalarim"
+                className="shrink-0 text-sm font-semibold text-brand hover:text-brand-dark whitespace-nowrap"
+              >
+                Kirish →
+              </Link>
+            </div>
+          )
+        )}
 
         {/* Lookup */}
         <form onSubmit={submit} className="mt-6 card p-5">
