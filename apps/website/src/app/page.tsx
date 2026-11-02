@@ -9,6 +9,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { NewsletterForm } from '@/components/NewsletterForm';
 import { InstagramFeed } from '@/components/InstagramFeed';
 import { HeroSection } from '@/components/HeroSection';
+import { PopularProductsClient } from '@/components/PopularProductsClient';
 
 const stats = [
   { value: '2,400+', label: 'Mamnun mijozlar' },
@@ -115,35 +116,10 @@ export default async function HomePage() {
       </section>
 
       {/* ===== 5. POPULAR PRODUCTS ===== */}
-      <section className="py-12 md:py-16">
-        <div className="container-main">
-          <div className="flex items-center justify-between mb-10 reveal-up">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold">
-              Mashhur mahsulotlar
-            </h2>
-            <Link
-              href="/katalog"
-              className="text-brand font-medium hover:text-brand-dark transition-colors flex items-center gap-1 hover:gap-2"
-            >
-              Barchasi
-              <ArrowRight size={16} />
-            </Link>
-          </div>
-          {products.length === 0 ? (
-            <p className="text-center text-ink-muted py-10">
-              Mahsulotlar yuklanmoqda yoki backend ulanmagan.
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-              {products.map((p, i) => (
-                <div key={p.id} className={`reveal-up reveal-delay-${(i % 3) + 1}`}>
-                  <ProductCard product={p} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Seeded with the SSR result when it worked; the client fills in
+          if the SSR fetch failed (edge → VPS flakiness) so the user
+          never sees an empty section. */}
+      <PopularProductsClient initial={products} />
 
       {/* ===== 5B. PROMO STRIP ===== */}
       <section className="py-6 bg-accent/10 border-y border-accent/20">
