@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -17,6 +17,7 @@ import { useCart } from '@/components/providers/CartProvider';
 import { useOrders } from '@/components/providers/OrdersProvider';
 import { useLoyalty } from '@/components/providers/LoyaltyProvider';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { Award } from 'lucide-react';
 import { checkPromo, createOrder } from '@/lib/api-client';
 import { formatPrice } from '@/lib/format';
@@ -62,9 +63,19 @@ export default function CheckoutPage() {
   const ordersStore = useOrders();
   const loyalty = useLoyalty();
   const toast = useToast();
+  const auth = useAuth();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+
+  // Prefill from the backend account so a signed-in buyer doesn't have
+  // to retype their name/phone each checkout. Only runs once per auth
+  // state change and never overwrites a field the buyer already edited.
+  useEffect(() => {
+    if (!auth.user) return;
+    setName((prev) => prev || auth.user!.fullName);
+    setPhone((prev) => prev || auth.user!.phone);
+  }, [auth.user]);
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState(CITIES[0]);

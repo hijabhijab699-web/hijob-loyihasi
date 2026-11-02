@@ -11,9 +11,14 @@ import {
   Heart,
   ShoppingBag,
   User,
+  LogIn,
+  LogOut,
+  Store,
+  Package,
 } from 'lucide-react';
 import { useCart } from '@/components/providers/CartProvider';
 import { useWishlist } from '@/components/providers/WishlistProvider';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { useLocale } from '@/components/i18n/LocaleProvider';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
@@ -26,7 +31,23 @@ export function Navbar() {
 
   const { count: cartCount } = useCart();
   const { ids: wishlistIds } = useWishlist();
+  const auth = useAuth();
   const { t } = useLocale();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  // Close the profile dropdown on outside click so it doesn't linger
+  // over the page when the user clicks away.
+  useEffect(() => {
+    if (!profileOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!profileRef.current?.contains(e.target as Node)) setProfileOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [profileOpen]);
+
+  const firstInitial = auth.user?.fullName?.trim().charAt(0).toUpperCase() ?? '';
 
   const navLinks = [
     { href: '/katalog', label: t.nav.catalog },
@@ -124,13 +145,83 @@ export function Navbar() {
                 </span>
               )}
             </Link>
-            <Link
-              href="/profil"
-              className="hidden md:block p-2 hover:text-brand transition-colors"
-              aria-label="Profil"
-            >
-              <User className="w-5 h-5" />
-            </Link>
+            {/* Desktop profile — initial avatar + dropdown when signed in,
+                plain icon → /kirish otherwise. The dropdown lets the user
+                reach their orders and the seller dashboard without a
+                page-load. */}
+            <div className="hidden md:block relative" ref={profileRef}>
+              {auth.hydrated && auth.user ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setProfileOpen((v) => !v)}
+                    className="w-9 h-9 rounded-full bg-brand text-white font-semibold text-sm flex items-center justify-center hover:bg-brand-dark transition-colors"
+                    aria-label="Profil"
+                  >
+                    {firstInitial || <User className="w-4 h-4" />}
+                  </button>
+                  {profileOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-rule rounded-2xl shadow-lg overflow-hidden">
+                      <div className="px-4 py-3 border-b border-rule-light">
+                        <p className="font-medium text-ink truncate">{auth.user.fullName}</p>
+                        <p className="text-xs text-ink-muted truncate mt-0.5">
+                          @{auth.user.username}
+                        </p>
+                      </div>
+                      <div className="py-1">
+                        <Link
+                          href="/profil"
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-bg-warm"
+                        >
+                          <User className="w-4 h-4 text-ink-muted" />
+                          Profil
+                        </Link>
+                        <Link
+                          href="/buyurtmalarim"
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-bg-warm"
+                        >
+                          <Package className="w-4 h-4 text-ink-muted" />
+                          Buyurtmalarim
+                        </Link>
+                        {auth.user.role === 'seller' && (
+                          <a
+                            href="https://hijab-admin.vercel.app"
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-bg-warm"
+                          >
+                            <Store className="w-4 h-4 text-ink-muted" />
+                            Sotuvchi paneli
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            auth.logout();
+                            setProfileOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-bg-warm border-t border-rule-light"
+                        >
+                          <LogOut className="w-4 h-4 text-ink-muted" />
+                          Chiqish
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <Link
+                  href="/kirish"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-ink hover:text-brand px-3 py-2 border border-rule rounded-full hover:border-brand transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Kirish
+                </Link>
+              )}
+            </div>
             <button
               onClick={() => setSearchOpen((v) => !v)}
               className="md:hidden p-2 hover:text-brand transition-colors"
@@ -181,6 +272,42 @@ export function Navbar() {
         {mobileOpen && (
           <div className="md:hidden bg-white border-t border-rule-light">
             <nav className="container-main py-4 flex flex-col gap-1">
+              {/* Auth card at the top of the drawer so the user's state
+                  is the first thing they see. Signed-in shows name +
+                  Chiqish; signed-out shows a Kirish primary button. */}
+              {auth.hydrated && (
+                auth.user ? (
+                  <div className="mb-3 p-3 rounded-xl bg-brand/5 border border-brand/15 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-brand text-white font-semibold flex items-center justify-center shrink-0">
+                      {firstInitial || <User className="w-5 h-5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-ink truncate">{auth.user.fullName}</p>
+                      <p className="text-xs text-ink-muted truncate">@{auth.user.username}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        auth.logout();
+                        setMobileOpen(false);
+                      }}
+                      className="text-xs text-ink-muted hover:text-brand p-2"
+                      aria-label="Chiqish"
+                    >
+                      <LogOut className="w-5 h-5" />
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    href="/kirish"
+                    onClick={() => setMobileOpen(false)}
+                    className="mb-3 flex items-center justify-center gap-2 bg-brand text-white py-3 rounded-xl font-medium"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    Kirish / Ro&apos;yxatdan o&apos;tish
+                  </Link>
+                )
+              )}
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -205,6 +332,18 @@ export function Navbar() {
               >
                 Profil
               </Link>
+              {auth.user?.role === 'seller' && (
+                <a
+                  href="https://hijab-admin.vercel.app"
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => setMobileOpen(false)}
+                  className="py-3 px-2 text-base font-medium text-ink hover:text-brand hover:bg-bg-warm rounded-lg transition-colors inline-flex items-center gap-2"
+                >
+                  <Store className="w-4 h-4" />
+                  Sotuvchi paneli
+                </a>
+              )}
             </nav>
           </div>
         )}
