@@ -90,17 +90,32 @@ export class StyleJobsService {
       }),
     );
 
+    // Dedupe by resolved mannequin URL — categories whose sizes all land on
+    // the same mannequin silhouette (currently dresses + abaya) would
+    // otherwise produce N identical GPT renders. One job per distinct
+    // mannequin is enough; the first size that resolved to that mannequin
+    // becomes the representative targetSize (downstream matching picks the
+    // closest render by size, and identical mannequins fall through fine).
+    const dedupedTargets: Array<{ size: string | null; mannequinUrl: string }> = [];
+    const seen = new Set<string>();
+    for (let i = 0; i < targets.length; i++) {
+      const url = resolvedMannequins[i]!;
+      if (seen.has(url)) continue;
+      seen.add(url);
+      dedupedTargets.push({ size: targets[i] ?? null, mannequinUrl: url });
+    }
+
     const created = await this.prisma.$transaction(
-      targets.map((size, i) =>
+      dedupedTargets.map((t) =>
         this.prisma.productStyleJob.create({
           data: {
             productId,
             sellerId: seller.id,
-            mannequinUrl: resolvedMannequins[i]!,
+            mannequinUrl: t.mannequinUrl,
             hijabUrl: input.hijabUrl,
             tyingStyle: input.tyingStyle ?? 'classical',
             colorHex: input.colorHex ?? '#8A8D5B',
-            targetSize: size,
+            targetSize: t.size,
           },
         }),
       ),
