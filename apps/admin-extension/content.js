@@ -17,7 +17,7 @@
  */
 
 (() => {
-  console.log('[N24:31] content v1.3.2 ready', { url: location.href });
+  console.log('[N24:31] content v1.3.3 ready', { url: location.href });
 
   // ─── Message handler (one-shot: PING, DIAGNOSE) ────────────────────
 
@@ -1070,15 +1070,38 @@
   // and pastes into the editor, but newer builds don't always react to the
   // bare file-input change. We try all three until the preview appears.
   async function attachFile(file) {
+    // Wait for the composer to be interactive first — on a fresh chat the
+    // page's JS can take 2-5 seconds AFTER DOMContentLoaded before the
+    // form + textarea are mounted. Without this guard the strategies fire
+    // against half-mounted DOM and the preview never shows up.
+    if (!(await waitForComposer(20_000))) {
+      console.warn('[N24:31] composer never appeared');
+      return false;
+    }
+    // Give React one more tick to wire the file input / drop handlers.
+    await sleep(600);
+
     const composerEl = composer();
     const formEl = composerForm() ?? composerEl?.closest('main') ?? document.body;
     if (!composerEl || !formEl) return false;
 
-    const inputs = findFileInputs();
-    const startCount = attachmentCount();
-
+    // File-input is the most reliable path on the current ChatGPT build
+    // (paste and drop are rate-limited and sometimes silently dropped
+    // between consecutive attach calls), so we try it first.
     const strategies = [
-      // 1) paste a File into the editor
+      // 1) file input change — most reliable, mimics the "+" button.
+      () => {
+        const inputs = findFileInputs();
+        for (const input of inputs) {
+          try {
+            input.files = transferOf(file).files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          } catch (e) {
+            console.warn('[N24:31] input attach failed', e);
+          }
+        }
+      },
+      // 2) paste a File into the editor
       () => {
         try {
           composerEl.focus();
@@ -1093,7 +1116,7 @@
           console.warn('[N24:31] paste attach failed', e);
         }
       },
-      // 2) drag + drop onto the form
+      // 3) drag + drop onto the form
       () => {
         try {
           const dt = transferOf(file);
@@ -1106,24 +1129,19 @@
           console.warn('[N24:31] drop attach failed', e);
         }
       },
-      // 3) file input change
-      () => {
-        for (const input of inputs) {
-          try {
-            input.files = transferOf(file).files;
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-          } catch (e) {
-            console.warn('[N24:31] input attach failed', e);
-          }
-        }
-      },
     ];
 
+    const startCount = attachmentCount();
     for (let i = 0; i < strategies.length; i++) {
       strategies[i]();
-      const ok = await waitForNewAttachment(startCount, 15_000);
+      // 25s per strategy — large reference images can take ~15s to upload
+      // through ChatGPT's own pipeline before the preview thumbnail renders,
+      // and 15s was cutting it off on slower connections.
+      const ok = await waitForNewAttachment(startCount, 25_000);
       if (ok) {
         console.log('[N24:31] attach OK via strategy', i + 1);
+        // Extra settle so the next attach's startCount read is stable.
+        await sleep(400);
         return true;
       }
     }
