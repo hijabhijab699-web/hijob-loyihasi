@@ -647,12 +647,22 @@ export class SellerService {
     if (!product) throw new NotFoundException('PRODUCT_NOT_FOUND');
     if (product.sellerId !== seller.id) throw new ForbiddenException('NOT_YOUR_PRODUCT');
 
-    // Soft delete: flip to archived so order history, saved items and
-    // style jobs don't break with FK violations.
-    await this.prisma.product.update({
-      where: { id: productId },
-      data: { status: ProductStatus.archived },
-    });
+    // Soft delete: flip to archived so order history and saved items
+    // keep their FKs intact. Pending/running style jobs for this product
+    // are hard-deleted so the admin dev-ai queue doesn't keep offering
+    // GPT work for a product the seller no longer wants rendered.
+    await this.prisma.$transaction([
+      this.prisma.productStyleJob.deleteMany({
+        where: {
+          productId,
+          status: { in: ['pending', 'running'] },
+        },
+      }),
+      this.prisma.product.update({
+        where: { id: productId },
+        data: { status: ProductStatus.archived },
+      }),
+    ]);
     return { ok: true };
   }
 
