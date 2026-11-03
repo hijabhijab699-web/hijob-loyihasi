@@ -58,11 +58,14 @@ const STORE_COLORS = STORE_PALETTE.map((p) => p.ring);
 // the app so there's no network dependency and the layout matches cross-
 // platform. Slug → scarf type mapping mirrors apps/website/src/lib/categories.ts.
 const CATEGORY_DATA = [
-  { id: 'scarves', image: require('../../assets/decor/cat-platki.webp') },
-  { id: 'dresses', image: require('../../assets/decor/cat-platya.webp') },
-  { id: 'abaya', image: require('../../assets/decor/cat-abaya.webp') },
-  { id: 'bags', image: require('../../assets/decor/cat-sumki.webp') },
-  { id: 'accessories', image: require('../../assets/decor/cat-aksess.webp') },
+  { id: 'scarves', image: require('../../assets/decor/cat-platki.webp'), fit: 'cover' },
+  { id: 'dresses', image: require('../../assets/decor/cat-platya.webp'), fit: 'cover' },
+  // The abaya shot is a tall full-figure on a white background —
+  // cover would chop the head and hem. Contain keeps the whole figure
+  // visible; the surrounding card already supplies the cream backdrop.
+  { id: 'abaya', image: require('../../assets/decor/cat-abaya.webp'), fit: 'contain' },
+  { id: 'bags', image: require('../../assets/decor/cat-sumki.webp'), fit: 'cover' },
+  { id: 'accessories', image: require('../../assets/decor/cat-aksess.webp'), fit: 'cover' },
 ] as const;
 
 const PLACEHOLDER_BG = ['#B5B891', '#E4CE9A', '#D4C3A0', '#C4C88C', '#D9D0BE', '#E8DFCC'];
@@ -821,7 +824,7 @@ export default function HomeScreen() {
                     <Image
                       source={cat.image}
                       style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
+                      resizeMode={cat.fit as 'cover' | 'contain'}
                     />
                   </View>
                   <View
