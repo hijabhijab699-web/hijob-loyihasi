@@ -60,10 +60,7 @@ const STORE_COLORS = STORE_PALETTE.map((p) => p.ring);
 const CATEGORY_DATA = [
   { id: 'scarves', image: require('../../assets/decor/cat-platki.webp'), fit: 'cover', backdrop: null, bg: null },
   { id: 'dresses', image: require('../../assets/decor/cat-platya.webp'), fit: 'cover', backdrop: null, bg: null },
-  // Portrait aspect — show the full figure (contain) and let the cream
-  // card backdrop blend with the arch tones in the image rather than
-  // cropping the head/hem to fill a square.
-  { id: 'abaya', image: require('../../assets/decor/cat-abaya.webp'), fit: 'contain', backdrop: null, bg: '#f6ead8' },
+  { id: 'abaya', image: require('../../assets/decor/cat-abaya.webp'), fit: 'cover', backdrop: null, bg: null },
   { id: 'bags', image: require('../../assets/decor/cat-sumki.webp'), fit: 'cover', backdrop: null, bg: null },
   { id: 'accessories', image: require('../../assets/decor/cat-aksess.webp'), fit: 'cover', backdrop: null, bg: null },
 ] as const;
