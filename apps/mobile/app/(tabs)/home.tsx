@@ -60,6 +60,10 @@ const STORE_COLORS = STORE_PALETTE.map((p) => p.ring);
 const CATEGORY_DATA = [
   { id: 'scarves', image: require('../../assets/decor/cat-platki.webp') },
   { id: 'dresses', image: require('../../assets/decor/cat-platya.webp') },
+  // No bundled abaya hero yet; the dress mannequin is visually closest
+  // until the brand ships a dedicated photo. The catalog pill uses the
+  // real coverUrl from the categories API, so the mismatch is only here.
+  { id: 'abaya', image: require('../../assets/decor/cat-platya.webp') },
   { id: 'bags', image: require('../../assets/decor/cat-sumki.webp') },
   { id: 'accessories', image: require('../../assets/decor/cat-aksess.webp') },
 ] as const;

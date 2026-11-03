@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -79,6 +79,16 @@ export default function CatalogScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [bodyFit, setBodyFit] = useState<'slim' | 'regular' | 'plus' | null>(null);
+
+  // Tab screens stay mounted, so useState's initializer only runs once —
+  // without this, tapping a different category tile on home re-navigates
+  // here but keeps the previously-selected pill. Mirror the param into
+  // state whenever it changes.
+  useEffect(() => {
+    if (params.category && params.category !== category) {
+      setCategory(params.category);
+    }
+  }, [params.category]);
 
   // Paginated catalog — pulls 10 products per page from the server and
   // appends them as the buyer scrolls. Keeps the first paint lightweight
