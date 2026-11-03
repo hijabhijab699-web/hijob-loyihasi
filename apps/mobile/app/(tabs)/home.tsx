@@ -58,14 +58,19 @@ const STORE_COLORS = STORE_PALETTE.map((p) => p.ring);
 // the app so there's no network dependency and the layout matches cross-
 // platform. Slug → scarf type mapping mirrors apps/website/src/lib/categories.ts.
 const CATEGORY_DATA = [
-  { id: 'scarves', image: require('../../assets/decor/cat-platki.webp'), fit: 'cover', bg: null },
-  { id: 'dresses', image: require('../../assets/decor/cat-platya.webp'), fit: 'cover', bg: null },
-  // Full-figure portrait with a white studio backdrop — fill the card
-  // with the same warm cream the other photos' baked-in backgrounds show
-  // so the row reads as one row, not a white rectangle in the middle.
-  { id: 'abaya', image: require('../../assets/decor/cat-abaya.webp'), fit: 'contain', bg: '#efe7d3' },
-  { id: 'bags', image: require('../../assets/decor/cat-sumki.webp'), fit: 'cover', bg: null },
-  { id: 'accessories', image: require('../../assets/decor/cat-aksess.webp'), fit: 'cover', bg: null },
+  { id: 'scarves', image: require('../../assets/decor/cat-platki.webp'), fit: 'cover', backdrop: null },
+  { id: 'dresses', image: require('../../assets/decor/cat-platya.webp'), fit: 'cover', backdrop: null },
+  // The abaya shot is a cutout on white; the other tiles are full
+  // scenes with jasmine arches baked in. Layer the shared jasmine
+  // backdrop behind the abaya figure so the row reads uniformly.
+  {
+    id: 'abaya',
+    image: require('../../assets/decor/cat-abaya.webp'),
+    fit: 'contain',
+    backdrop: require('../../assets/decor/jasmine.webp'),
+  },
+  { id: 'bags', image: require('../../assets/decor/cat-sumki.webp'), fit: 'cover', backdrop: null },
+  { id: 'accessories', image: require('../../assets/decor/cat-aksess.webp'), fit: 'cover', backdrop: null },
 ] as const;
 
 const PLACEHOLDER_BG = ['#B5B891', '#E4CE9A', '#D4C3A0', '#C4C88C', '#D9D0BE', '#E8DFCC'];
@@ -817,10 +822,17 @@ export default function HomeScreen() {
                       aspectRatio: 1,
                       borderRadius: 20,
                       overflow: 'hidden',
-                      backgroundColor: cat.bg ?? colors.surface,
+                      backgroundColor: colors.surface,
                       ...theme.shadows.sm,
                     }}
                   >
+                    {cat.backdrop && (
+                      <Image
+                        source={cat.backdrop}
+                        style={{ position: 'absolute', width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                    )}
                     <Image
                       source={cat.image}
                       style={{ width: '100%', height: '100%' }}
