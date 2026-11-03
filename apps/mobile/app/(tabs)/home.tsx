@@ -60,15 +60,7 @@ const STORE_COLORS = STORE_PALETTE.map((p) => p.ring);
 const CATEGORY_DATA = [
   { id: 'scarves', image: require('../../assets/decor/cat-platki.webp'), fit: 'cover', backdrop: null },
   { id: 'dresses', image: require('../../assets/decor/cat-platya.webp'), fit: 'cover', backdrop: null },
-  // The abaya shot is a cutout on white; the other tiles are full
-  // scenes with jasmine arches baked in. Layer the shared jasmine
-  // backdrop behind the abaya figure so the row reads uniformly.
-  {
-    id: 'abaya',
-    image: require('../../assets/decor/cat-abaya.webp'),
-    fit: 'contain',
-    backdrop: require('../../assets/decor/jasmine.webp'),
-  },
+  { id: 'abaya', image: require('../../assets/decor/cat-abaya.webp'), fit: 'cover', backdrop: null },
   { id: 'bags', image: require('../../assets/decor/cat-sumki.webp'), fit: 'cover', backdrop: null },
   { id: 'accessories', image: require('../../assets/decor/cat-aksess.webp'), fit: 'cover', backdrop: null },
 ] as const;
