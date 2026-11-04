@@ -244,32 +244,34 @@ export default function ProductScreen() {
               </View>
             </View>
 
-            {/* Carousel Dots */}
-            <View
-              style={{
-                position: 'absolute',
-                bottom: 16,
-                alignSelf: 'center',
-                flexDirection: 'row',
-                gap: 6,
-                left: 0,
-                right: 0,
-                justifyContent: 'center',
-              }}
-            >
-              {[0, 1, 2].map((i) => (
-                <View
-                  key={i}
-                  style={{
-                    width: i === activeImage ? 24 : 8,
-                    height: 4,
-                    borderRadius: 999,
-                    backgroundColor:
-                      i === activeImage ? colors.oliveDeep : 'rgba(54,57,36,0.3)',
-                  }}
-                />
-              ))}
-            </View>
+            {/* Carousel Dots — only when the product has more than one image */}
+            {(product.gallery?.length ?? 0) > 1 && (
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: 16,
+                  alignSelf: 'center',
+                  flexDirection: 'row',
+                  gap: 6,
+                  left: 0,
+                  right: 0,
+                  justifyContent: 'center',
+                }}
+              >
+                {product.gallery!.map((_, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      width: i === activeImage ? 24 : 8,
+                      height: 4,
+                      borderRadius: 999,
+                      backgroundColor:
+                        i === activeImage ? colors.oliveDeep : 'rgba(54,57,36,0.3)',
+                    }}
+                  />
+                ))}
+              </View>
+            )}
           </View>
 
           {/* Product Content */}

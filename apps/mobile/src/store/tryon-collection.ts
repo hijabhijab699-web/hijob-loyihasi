@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  */
 const KEY = 'n2431.tryonCollection.v1';
 
-export const TRYON_ALLOWED_CATEGORIES = new Set(['scarves', 'dresses', 'shoes']);
+export const TRYON_ALLOWED_CATEGORIES = new Set(['scarves', 'dresses', 'abaya', 'shoes']);
 
 export interface TryonItem {
   productId: string;
