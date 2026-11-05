@@ -52,16 +52,20 @@ export function ProductCard({ product, showAddToCart = true }: Props) {
   return (
     <div className="card group hover-lift">
       <div className="relative">
+        {/* Portrait frame (3:4) with object-contain so full-length
+            clothing shots (abayas, dresses) show the head and hem.
+            A cream backdrop fills the letterbox when the source image
+            has a different aspect. */}
         <Link
           href={`/mahsulot/${product.id}`}
-          className="relative block aspect-square rounded-t-2xl overflow-hidden"
+          className="relative block aspect-[3/4] rounded-t-2xl overflow-hidden bg-bg-cream"
         >
           <Image
             src={product.image}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 50vw, 33vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="object-contain transition-transform duration-300 group-hover:scale-105"
           />
         </Link>
         {product.badge && (
