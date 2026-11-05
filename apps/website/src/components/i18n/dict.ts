@@ -85,7 +85,7 @@ export const UZ: Dict = {
     title1: 'Mukammallikni',
     title2: 'his qiling',
     subtitle:
-      "Har bir ayol uchun yaratilgan premium sifatli ro'mollar va hijoblar",
+      "Ro'mollar, abayalar, ko'ylaklar va aksessuarlar — AI primerka bilan onlayn tanlang",
   },
   sections: {
     categories: 'Kategoriyalar',
@@ -138,7 +138,7 @@ export const RU: Dict = {
     title1: 'Почувствуйте',
     title2: 'совершенство',
     subtitle:
-      'Премиальные платки и хиджабы, созданные для каждой женщины',
+      'Платки, абайи, платья и аксессуары — выбирайте онлайн с AI-примеркой',
   },
   sections: {
     categories: 'Категории',
@@ -191,7 +191,7 @@ export const EN: Dict = {
     title1: 'Feel the',
     title2: 'perfection',
     subtitle:
-      'Premium scarves and hijabs crafted for every woman',
+      'Scarves, abayas, dresses and accessories — shop online with AI virtual try-on',
   },
   sections: {
     categories: 'Categories',
