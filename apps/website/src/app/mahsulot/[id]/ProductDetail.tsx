@@ -136,12 +136,16 @@ export default function ProductDetail({ product, reviews, related }: Props) {
         <div className="container-main grid md:grid-cols-2 gap-8 md:gap-12">
           {/* Images */}
           <div>
-            <div className="relative aspect-square rounded-2xl overflow-hidden bg-bg-warm">
+            {/* Portrait 3:4 with contain so full-length clothing shots
+                (abayas, dresses) show head-to-hem without cropping. The
+                cream backdrop matches the catalog card so the buyer
+                moves between list and detail without a visual jump. */}
+            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-bg-cream">
               <Image
                 src={gallery}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw"
                 priority
               />

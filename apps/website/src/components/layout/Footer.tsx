@@ -56,17 +56,17 @@ export function Footer() {
             <Link href="/" className="inline-flex items-center gap-2">
               <Image
                 src="/logo.png"
-                alt="Hijob"
+                alt="24:31"
                 width={40}
                 height={40}
                 className="w-10 h-10 rounded-lg"
               />
-              <span className="font-serif text-2xl font-bold text-white">
-                Hijob
+              <span className="font-serif text-2xl font-bold text-white tracking-tight">
+                24:31
               </span>
             </Link>
             <p className="mt-4 text-sm text-white/60 leading-relaxed">
-              Premium sifatli ro&apos;mollar va hijoblar. Har bir ayol uchun mukammal uslub.
+              Ro&apos;mollar, abayalar, ko&apos;ylaklar va aksessuarlar. AI virtual primerka bilan modest kiyimlar marketpleysi.
             </p>
             <div className="mt-6 flex gap-3">
               <a
@@ -170,7 +170,7 @@ export function Footer() {
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex flex-col md:flex-row items-center gap-3 md:gap-6">
             <p className="text-xs text-white/40">
-              &copy; {new Date().getFullYear()} Hijob. Barcha huquqlar himoyalangan.
+              &copy; {new Date().getFullYear()} 24:31 Hijab. Barcha huquqlar himoyalangan.
             </p>
             <Link href="/maxfiylik" className="text-xs text-white/40 hover:text-white underline">
               Maxfiylik siyosati

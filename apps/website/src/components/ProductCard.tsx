@@ -54,12 +54,25 @@ export function ProductCard({ product, showAddToCart = true }: Props) {
       <div className="relative">
         {/* Portrait frame (3:4) with object-contain so full-length
             clothing shots (abayas, dresses) show the head and hem.
-            A cream backdrop fills the letterbox when the source image
-            has a different aspect. */}
+            A soft jasmine backdrop fills the letterbox so each card
+            reads as a styled studio shot, not a plain product cut-out. */}
         <Link
           href={`/mahsulot/${product.id}`}
           className="relative block aspect-[3/4] rounded-t-2xl overflow-hidden bg-bg-cream"
         >
+          {/* Decorative backdrop layer — low opacity so the figure
+              stays the hero. Sits under the product photo. */}
+          <Image
+            src="/images/card-backdrop.webp"
+            alt=""
+            fill
+            sizes="(max-width: 768px) 50vw, 33vw"
+            className="object-cover opacity-50"
+            aria-hidden
+          />
+          {/* Warm gradient wash to pull the backdrop into the brand
+              palette instead of leaving it a flat jasmine photo. */}
+          <div className="absolute inset-0 bg-gradient-to-b from-bg-cream/40 via-transparent to-bg-cream/60" />
           <Image
             src={product.image}
             alt={product.name}

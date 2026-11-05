@@ -81,18 +81,18 @@ export function Navbar() {
             {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
 
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
+          {/* Logo — 24:31 crown icon from the mobile app + wordmark */}
+          <Link href="/" className="flex items-center gap-2.5 group">
             <Image
               src="/logo.png"
-              alt="Hijob"
+              alt="24:31"
               width={44}
               height={44}
               priority
               className="w-9 h-9 md:w-11 md:h-11 rounded-xl shadow-sm group-hover:shadow-md transition-shadow"
             />
-            <span className="font-serif text-2xl md:text-3xl font-bold text-brand">
-              Hijob
+            <span className="font-serif text-xl md:text-2xl font-bold text-brand-dark tracking-tight">
+              24:31
             </span>
           </Link>
 
