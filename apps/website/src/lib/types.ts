@@ -1,6 +1,6 @@
 export type ProductBadge = 'new' | 'sale' | 'bestseller';
 
-export type CategorySlug = 'scarves' | 'dresses' | 'bags' | 'accessories';
+export type CategorySlug = 'scarves' | 'dresses' | 'abaya' | 'bags' | 'accessories';
 
 export interface ApiProductVariant {
   id: string;

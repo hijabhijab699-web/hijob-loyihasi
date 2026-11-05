@@ -15,6 +15,12 @@ export const CATEGORIES: Category[] = [
     description: "Oqshom va kundalik ko'ylaklar",
   },
   {
+    slug: 'abaya',
+    name: 'Abayalar',
+    image: '/images/category-abaya.webp',
+    description: "Klassik va zamonaviy abayalar",
+  },
+  {
     slug: 'bags',
     name: "Sumkalar",
     image: '/images/category-pashmina.webp',

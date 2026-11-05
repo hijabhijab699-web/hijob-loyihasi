@@ -16,7 +16,17 @@ import { fetchProducts } from '@/lib/api-client';
 import type { Product, ProductsListResponse } from '@/lib/types';
 import { ProductCard } from '@/components/ProductCard';
 
-const CATEGORIES = ['Barchasi', 'Ipak', 'Shoyi', 'Shifon', 'Pashmina'] as const;
+// Keep this list in sync with apps/website/src/lib/categories.ts and the
+// backend's CategoryId enum. Each item carries the user-facing label and
+// the backend slug the catalog API filters on.
+const CATEGORIES: { slug: string; label: string }[] = [
+  { slug: '', label: 'Barchasi' },
+  { slug: 'scarves', label: "Ro'mollar" },
+  { slug: 'dresses', label: "Ko'ylaklar" },
+  { slug: 'abaya', label: 'Abayalar' },
+  { slug: 'bags', label: 'Sumkalar' },
+  { slug: 'accessories', label: 'Aksessuarlar' },
+];
 
 const COLORS: { name: string; hex: string; border?: boolean }[] = [
   { name: 'Oq', hex: '#FFFFFF', border: true },
@@ -60,12 +70,15 @@ export default function KatalogClient() {
   const initialSort = searchParams?.get('sort') ?? 'popular';
   const initialSearch = searchParams?.get('q') ?? '';
 
+  // activeCategory holds the BACKEND slug (e.g. "abaya", "" for all).
+  // The URL and the catalog API both speak slugs; only the pills render
+  // the Uzbek label from CATEGORIES.
   const [activeCategory, setActiveCategory] = useState<string>(() => {
-    if (!initialCategory) return 'Barchasi';
+    if (!initialCategory) return '';
     const match = CATEGORIES.find(
-      (c) => c.toLowerCase() === initialCategory.toLowerCase(),
+      (c) => c.slug.toLowerCase() === initialCategory.toLowerCase(),
     );
-    return match ?? 'Barchasi';
+    return match?.slug ?? '';
   });
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedFabrics, setSelectedFabrics] = useState<string[]>([]);
@@ -88,7 +101,7 @@ export default function KatalogClient() {
   const load = useCallback(async () => {
     setLoading(true);
     const res = await fetchProducts({
-      category: activeCategory !== 'Barchasi' ? activeCategory : undefined,
+      category: activeCategory || undefined,
       colors: selectedColors.join(','),
       fabrics: selectedFabrics.join(','),
       sizes: selectedSizes.join(','),
@@ -135,7 +148,7 @@ export default function KatalogClient() {
     );
 
   const clearAll = () => {
-    setActiveCategory('Barchasi');
+    setActiveCategory('');
     setSelectedColors([]);
     setSelectedFabrics([]);
     setSelectedSizes([]);
@@ -145,8 +158,10 @@ export default function KatalogClient() {
 
   const activeFilters = useMemo(() => {
     const arr: { label: string; clear: () => void }[] = [];
-    if (activeCategory !== 'Barchasi')
-      arr.push({ label: activeCategory, clear: () => setActiveCategory('Barchasi') });
+    if (activeCategory) {
+      const catLabel = CATEGORIES.find((c) => c.slug === activeCategory)?.label ?? activeCategory;
+      arr.push({ label: catLabel, clear: () => setActiveCategory('') });
+    }
     selectedColors.forEach((c) => arr.push({ label: c, clear: () => toggleColor(c) }));
     selectedFabrics.forEach((f) => arr.push({ label: f, clear: () => toggleFabric(f) }));
     selectedSizes.forEach((s) => arr.push({ label: `O'lcham: ${s}`, clear: () => toggleSize(s) }));
@@ -292,15 +307,15 @@ export default function KatalogClient() {
           <div className="flex gap-2 py-3 overflow-x-auto scrollbar-hide">
             {CATEGORIES.map((cat) => (
               <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
+                key={cat.slug || 'all'}
+                onClick={() => setActiveCategory(cat.slug)}
                 className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeCategory === cat
+                  activeCategory === cat.slug
                     ? 'bg-brand text-white'
                     : 'bg-bg-warm text-ink hover:bg-rule-light'
                 }`}
               >
-                {cat}
+                {cat.label}
               </button>
             ))}
           </div>

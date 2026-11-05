@@ -1,40 +1,43 @@
 import type { Config } from 'tailwindcss';
 
+// Palette mirrors @n2431/design-tokens (apps/mobile/packages/design-tokens).
+// Olive primary + gold accent; cream surfaces. Keep this in sync with
+// packages/design-tokens/src/colors.ts when the mobile palette shifts.
 const config: Config = {
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#7C6354',
-          dark: '#5D4A3E',
-          light: '#8B6F5C',
+          DEFAULT: '#8A8D5B',
+          dark: '#363924',
+          light: '#B5B891',
         },
         accent: {
-          DEFAULT: '#C4A265',
-          dark: '#B8956A',
-          light: '#D4B87A',
+          DEFAULT: '#C9A96E',
+          dark: '#A88848',
+          light: '#E4CE9A',
         },
         bg: {
-          DEFAULT: '#ffffff',
-          warm: '#F7F2ED',
-          cream: '#FAF7F4',
-          dark: '#1E1614',
-          footer: '#161110',
+          DEFAULT: '#FFFFFF',
+          warm: '#F7F2E6',
+          cream: '#EFE6CF',
+          dark: '#161513',
+          footer: '#15150F',
         },
         ink: {
-          DEFAULT: '#4A3F3A',
-          dark: '#1E1614',
-          muted: '#8B8178',
+          DEFAULT: '#2A2820',
+          dark: '#1C1A14',
+          muted: '#857E6E',
           light: '#B0A898',
         },
         rule: {
-          DEFAULT: '#E8E0D8',
-          light: '#F0EAE4',
+          DEFAULT: '#D9D0BE',
+          light: '#E7DEC8',
         },
       },
       fontFamily: {
-        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        serif: ['"Playfair Display"', '"Cormorant Garamond"', 'Georgia', 'serif'],
         sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
