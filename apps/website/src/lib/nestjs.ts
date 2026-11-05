@@ -161,6 +161,7 @@ export function toCategory(c: ApiCategory, locale: 'uz' | 'ru' | 'en' = 'uz'): C
   const covers: Record<string, string> = {
     scarves: '/images/category-ipak.webp',
     dresses: '/images/category-shoyi.webp',
+    abaya: '/images/category-abaya.webp',
     bags: '/images/category-pashmina.webp',
     accessories: '/images/category-shifon.webp',
   };

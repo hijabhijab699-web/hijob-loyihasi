@@ -149,8 +149,8 @@ export function FaceScanner({ onDone }: Props) {
   if (step === 'intro') {
     return (
       <div className="relative min-h-[70vh] flex flex-col items-center justify-center px-5 py-10 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#D4B87A]/15 flex items-center justify-center">
-          <Sparkles className="w-10 h-10 text-[#D4B87A]" />
+        <div className="w-20 h-20 rounded-full bg-[#E4CE9A]/15 flex items-center justify-center">
+          <Sparkles className="w-10 h-10 text-[#E4CE9A]" />
         </div>
         <h2 className="mt-5 font-serif text-2xl md:text-3xl font-bold text-[#F0EBDA]">
           Avatar yarataylik
@@ -163,7 +163,7 @@ export function FaceScanner({ onDone }: Props) {
         <div className="mt-8 w-full max-w-xs space-y-3">
           <button
             onClick={() => setStep('camera')}
-            className="w-full bg-[#D4B87A] text-[#1B1B14] rounded-xl px-6 py-3.5 font-medium flex items-center justify-center gap-2 hover:bg-[#D4B87A]/90 transition-colors"
+            className="w-full bg-[#E4CE9A] text-[#1B1B14] rounded-xl px-6 py-3.5 font-medium flex items-center justify-center gap-2 hover:bg-[#E4CE9A]/90 transition-colors"
           >
             <Camera className="w-5 h-5" />
             Yuz skaneri (kamera)
@@ -220,7 +220,7 @@ export function FaceScanner({ onDone }: Props) {
             rx="110"
             ry="140"
             fill="none"
-            stroke="#D4B87A"
+            stroke="#E4CE9A"
             strokeWidth="3"
             strokeDasharray="8 6"
           />
@@ -245,7 +245,7 @@ export function FaceScanner({ onDone }: Props) {
           <button
             onClick={captureFromVideo}
             disabled={!cameraReady || capturing}
-            className="w-16 h-16 rounded-full bg-[#D4B87A] hover:bg-[#D4B87A]/90 flex items-center justify-center shadow-lg disabled:opacity-50"
+            className="w-16 h-16 rounded-full bg-[#E4CE9A] hover:bg-[#E4CE9A]/90 flex items-center justify-center shadow-lg disabled:opacity-50"
             aria-label="Suratga olish"
           >
             {capturing ? (
@@ -270,8 +270,8 @@ export function FaceScanner({ onDone }: Props) {
     return (
       <div className="px-5 py-6">
         <div className="flex items-center justify-center gap-2 mb-6">
-          <div className="w-6 h-1 rounded-full bg-[#D4B87A]" />
-          <div className="w-6 h-1 rounded-full bg-[#D4B87A]" />
+          <div className="w-6 h-1 rounded-full bg-[#E4CE9A]" />
+          <div className="w-6 h-1 rounded-full bg-[#E4CE9A]" />
           <div className="w-6 h-1 rounded-full bg-white/15" />
           <div className="w-6 h-1 rounded-full bg-white/15" />
         </div>
@@ -291,7 +291,7 @@ export function FaceScanner({ onDone }: Props) {
                 onClick={() => setBodyTypeLocal(b.key)}
                 className={`relative aspect-[3/4] rounded-2xl overflow-hidden border-2 transition-all ${
                   active
-                    ? 'border-[#D4B87A] bg-[#D4B87A]/10'
+                    ? 'border-[#E4CE9A] bg-[#E4CE9A]/10'
                     : 'border-white/10 bg-white/5 hover:border-white/20'
                 }`}
               >
@@ -304,7 +304,7 @@ export function FaceScanner({ onDone }: Props) {
                 <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
                   <p
                     className={`text-xs font-medium ${
-                      active ? 'text-[#D4B87A]' : 'text-[#F0EBDA]'
+                      active ? 'text-[#E4CE9A]' : 'text-[#F0EBDA]'
                     }`}
                   >
                     {b.label}
@@ -312,7 +312,7 @@ export function FaceScanner({ onDone }: Props) {
                   <p className="text-[10px] text-[#948E7E]">{b.sub}</p>
                 </div>
                 {active && (
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#D4B87A] flex items-center justify-center">
+                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#E4CE9A] flex items-center justify-center">
                     <Check className="w-3 h-3 text-[#1B1B14]" />
                   </div>
                 )}
@@ -324,7 +324,7 @@ export function FaceScanner({ onDone }: Props) {
         <div className="mt-8 max-w-md mx-auto space-y-3">
           <button
             onClick={confirmBody}
-            className="w-full bg-[#D4B87A] text-[#1B1B14] rounded-xl px-6 py-3.5 font-medium flex items-center justify-center gap-2 hover:bg-[#D4B87A]/90 transition-colors"
+            className="w-full bg-[#E4CE9A] text-[#1B1B14] rounded-xl px-6 py-3.5 font-medium flex items-center justify-center gap-2 hover:bg-[#E4CE9A]/90 transition-colors"
           >
             Davom etish
           </button>
@@ -348,13 +348,13 @@ export function FaceScanner({ onDone }: Props) {
   return (
     <div className="relative px-5 py-10 flex flex-col items-center text-center min-h-[70vh]">
       <div className="flex items-center justify-center gap-2 mb-6">
-        <div className="w-6 h-1 rounded-full bg-[#D4B87A]" />
-        <div className="w-6 h-1 rounded-full bg-[#D4B87A]" />
-        <div className="w-6 h-1 rounded-full bg-[#D4B87A]" />
-        <div className="w-6 h-1 rounded-full bg-[#D4B87A]" />
+        <div className="w-6 h-1 rounded-full bg-[#E4CE9A]" />
+        <div className="w-6 h-1 rounded-full bg-[#E4CE9A]" />
+        <div className="w-6 h-1 rounded-full bg-[#E4CE9A]" />
+        <div className="w-6 h-1 rounded-full bg-[#E4CE9A]" />
       </div>
 
-      <div className="w-10 h-10 rounded-full bg-[#D4B87A] flex items-center justify-center">
+      <div className="w-10 h-10 rounded-full bg-[#E4CE9A] flex items-center justify-center">
         <Check className="w-5 h-5 text-[#1B1B14]" />
       </div>
       <h2 className="mt-4 font-serif text-2xl md:text-3xl font-bold text-[#F0EBDA]">
@@ -368,7 +368,7 @@ export function FaceScanner({ onDone }: Props) {
       <div className="mt-8 relative w-48 h-64">
         {/* Rotating halo */}
         <div
-          className="absolute inset-0 rounded-full border border-[#D4B87A]/30"
+          className="absolute inset-0 rounded-full border border-[#E4CE9A]/30"
           style={{
             animation: 'spin 18s linear infinite',
           }}
@@ -383,7 +383,7 @@ export function FaceScanner({ onDone }: Props) {
         />
         {/* Face */}
         <div
-          className={`absolute left-1/2 top-6 w-16 h-16 -translate-x-1/2 rounded-full overflow-hidden border-2 border-[#D4B87A] shadow-lg transition-all ${
+          className={`absolute left-1/2 top-6 w-16 h-16 -translate-x-1/2 rounded-full overflow-hidden border-2 border-[#E4CE9A] shadow-lg transition-all ${
             animating ? 'opacity-0 scale-50' : 'opacity-100 scale-100'
           }`}
           style={{
@@ -401,7 +401,7 @@ export function FaceScanner({ onDone }: Props) {
       <div className="mt-10 max-w-md mx-auto w-full space-y-3">
         <button
           onClick={finish}
-          className="w-full bg-[#D4B87A] text-[#1B1B14] rounded-xl px-6 py-3.5 font-medium flex items-center justify-center gap-2 hover:bg-[#D4B87A]/90 transition-colors"
+          className="w-full bg-[#E4CE9A] text-[#1B1B14] rounded-xl px-6 py-3.5 font-medium flex items-center justify-center gap-2 hover:bg-[#E4CE9A]/90 transition-colors"
         >
           Primerkani boshlash
         </button>

@@ -188,7 +188,7 @@ export default function PrimerkaClient({ scarves }: Props) {
         >
           <ArrowLeft className="w-4 h-4" />
         </Link>
-        <h1 className="font-serif text-lg font-semibold text-[#D4B87A]">
+        <h1 className="font-serif text-lg font-semibold text-[#E4CE9A]">
           Primerka
         </h1>
         {face.isScanned ? (
@@ -225,7 +225,7 @@ export default function PrimerkaClient({ scarves }: Props) {
     return (
       <Shell>
         <div className="px-5 py-16 text-center">
-          <Sparkles className="w-10 h-10 text-[#D4B87A] mx-auto" />
+          <Sparkles className="w-10 h-10 text-[#E4CE9A] mx-auto" />
           <p className="mt-4 text-[#948E7E]">
             Hozirda ro&apos;mol katalogi bo&apos;sh. Keyinroq urinib ko&apos;ring.
           </p>
@@ -263,7 +263,7 @@ export default function PrimerkaClient({ scarves }: Props) {
 
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm text-[#F0EBDA]">
-              <Loader2 className="w-8 h-8 animate-spin text-[#D4B87A]" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#E4CE9A]" />
               <p className="mt-3 text-sm">AI primerka tayyorlanmoqda…</p>
               <p className="mt-1 text-xs text-[#948E7E]">
                 Yuz landmarks aniqlanib ro&apos;mol joylashtirilmoqda
@@ -291,7 +291,7 @@ export default function PrimerkaClient({ scarves }: Props) {
             </div>
           )}
           <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/50 backdrop-blur rounded-full px-3 py-1.5">
-            <Camera className="w-3.5 h-3.5 text-[#D4B87A]" />
+            <Camera className="w-3.5 h-3.5 text-[#E4CE9A]" />
             <span className="text-xs text-white">
               {face.bodyType === 'slim'
                 ? "Ozg'in"
@@ -321,7 +321,7 @@ export default function PrimerkaClient({ scarves }: Props) {
                   onClick={() => setTyingStyle(s.key)}
                   className={`relative p-3 rounded-2xl border transition-all text-left ${
                     active
-                      ? 'bg-[#D4B87A]/15 border-[#D4B87A]'
+                      ? 'bg-[#E4CE9A]/15 border-[#E4CE9A]'
                       : 'bg-white/5 border-white/10 hover:border-white/20'
                   }`}
                 >
@@ -329,13 +329,13 @@ export default function PrimerkaClient({ scarves }: Props) {
                     <path
                       d={s.iconPath}
                       fill="none"
-                      stroke={active ? '#D4B87A' : '#948E7E'}
+                      stroke={active ? '#E4CE9A' : '#948E7E'}
                       strokeWidth="1.5"
                     />
                   </svg>
                   <p
                     className={`text-xs font-medium ${
-                      active ? 'text-[#D4B87A]' : 'text-[#F0EBDA]'
+                      active ? 'text-[#E4CE9A]' : 'text-[#F0EBDA]'
                     }`}
                   >
                     {s.label}
@@ -344,7 +344,7 @@ export default function PrimerkaClient({ scarves }: Props) {
                     {s.description}
                   </p>
                   {active && (
-                    <Check className="absolute top-2 right-2 w-3.5 h-3.5 text-[#D4B87A]" />
+                    <Check className="absolute top-2 right-2 w-3.5 h-3.5 text-[#E4CE9A]" />
                   )}
                 </button>
               );
@@ -373,7 +373,7 @@ export default function PrimerkaClient({ scarves }: Props) {
                   {activeVariant.color}
                   {activeVariant.size ? ` · ${activeVariant.size}` : ''}
                 </p>
-                <p className="text-sm font-semibold text-[#D4B87A] mt-1">
+                <p className="text-sm font-semibold text-[#E4CE9A] mt-1">
                   {formatPrice(activeProduct.price)} so&apos;m
                 </p>
               </div>
@@ -399,7 +399,7 @@ export default function PrimerkaClient({ scarves }: Props) {
                     onClick={() => setSelectedIdx(i)}
                     className={`relative w-10 h-10 rounded-full shrink-0 transition-all ${
                       i === selectedIdx
-                        ? 'ring-2 ring-[#D4B87A] ring-offset-2 ring-offset-[#1B1B14]'
+                        ? 'ring-2 ring-[#E4CE9A] ring-offset-2 ring-offset-[#1B1B14]'
                         : ''
                     }`}
                     style={{ backgroundColor: v.colorHex }}
@@ -413,7 +413,7 @@ export default function PrimerkaClient({ scarves }: Props) {
             <div className="mt-4 flex gap-2">
               <button
                 onClick={addToCart}
-                className="flex-1 bg-[#D4B87A] text-[#1B1B14] rounded-xl px-5 py-3 flex items-center justify-center gap-2 font-medium hover:bg-[#D4B87A]/90 transition-colors"
+                className="flex-1 bg-[#E4CE9A] text-[#1B1B14] rounded-xl px-5 py-3 flex items-center justify-center gap-2 font-medium hover:bg-[#E4CE9A]/90 transition-colors"
               >
                 <ShoppingBag className="w-4 h-4" />
                 Savatga

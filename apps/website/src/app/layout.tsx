@@ -25,8 +25,9 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Hijob — Ayollar Ro\'mollari',
-  description: 'Premium sifatli ro\'mollar va hijoblar. O\'zbekistonning eng yirik onlayn hijob do\'koni.',
+  title: "24:31 Hijab — Modest kiyimlar marketpleysi",
+  description:
+    "Ro'mollar, abayalar, ko'ylaklar va aksessuarlar. AI virtual primerka bilan onlayn tanlang.",
   icons: {
     icon: [
       { url: '/logo.png', type: 'image/png' },
