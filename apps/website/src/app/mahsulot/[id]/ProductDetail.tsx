@@ -35,17 +35,6 @@ interface Props {
   related: Product[];
 }
 
-const COLOR_HEX: Record<string, string> = {
-  Oq: '#FFFFFF',
-  Qora: '#1a1a1a',
-  Jigarrang: '#7C6354',
-  Kumush: '#C0C0C0',
-  Pushti: '#FFB6C1',
-  Moviy: '#87CEEB',
-  Yashil: '#90EE90',
-  Sariq: '#FFD700',
-};
-
 function Stars({ rating }: { rating: number }) {
   return (
     <span className="inline-flex items-center gap-0.5">
@@ -68,7 +57,7 @@ export default function ProductDetail({ product, reviews, related }: Props) {
   const wl = useWishlist();
   const toast = useToast();
 
-  const [color, setColor] = useState(product.colors[0]);
+  const color = product.colors[0];
   const [size, setSize] = useState(product.sizes[0]);
   const [qty, setQty] = useState(1);
   const [gallery, setGallery] = useState(product.image);
@@ -218,31 +207,6 @@ export default function ProductDetail({ product, reviews, related }: Props) {
             <p className="mt-5 text-ink-muted leading-relaxed">
               {product.description}
             </p>
-
-            {/* Colors */}
-            <div className="mt-6">
-              <p className="text-sm font-medium text-ink mb-2">
-                Rang: <span className="text-ink-muted">{color}</span>
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {product.colors.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setColor(c)}
-                    className={`w-10 h-10 rounded-full transition-all ${
-                      c === 'Oq' ? 'border border-rule' : ''
-                    } ${
-                      color === c
-                        ? 'ring-2 ring-brand ring-offset-2'
-                        : 'hover:ring-2 hover:ring-rule hover:ring-offset-1'
-                    }`}
-                    style={{ backgroundColor: COLOR_HEX[c] ?? '#ddd' }}
-                    aria-label={c}
-                    title={c}
-                  />
-                ))}
-              </div>
-            </div>
 
             {/* Sizes */}
             <div className="mt-6">
