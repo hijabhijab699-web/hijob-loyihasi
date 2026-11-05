@@ -28,17 +28,6 @@ const CATEGORIES: { slug: string; label: string }[] = [
   { slug: 'accessories', label: 'Aksessuarlar' },
 ];
 
-const COLORS: { name: string; hex: string; border?: boolean }[] = [
-  { name: 'Oq', hex: '#FFFFFF', border: true },
-  { name: 'Qora', hex: '#1a1a1a' },
-  { name: 'Jigarrang', hex: '#7C6354' },
-  { name: 'Kumush', hex: '#C0C0C0' },
-  { name: 'Pushti', hex: '#FFB6C1' },
-  { name: 'Moviy', hex: '#87CEEB' },
-  { name: 'Yashil', hex: '#90EE90' },
-  { name: 'Sariq', hex: '#FFD700' },
-];
-
 const FABRICS = [
   { label: 'Ipak' },
   { label: 'Shoyi' },
@@ -80,7 +69,6 @@ export default function KatalogClient() {
     );
     return match?.slug ?? '';
   });
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedFabrics, setSelectedFabrics] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState('');
@@ -102,7 +90,6 @@ export default function KatalogClient() {
     setLoading(true);
     const res = await fetchProducts({
       category: activeCategory || undefined,
-      colors: selectedColors.join(','),
       fabrics: selectedFabrics.join(','),
       sizes: selectedSizes.join(','),
       minPrice: minPrice ? Number(minPrice.replace(/\s/g, '')) : undefined,
@@ -116,7 +103,6 @@ export default function KatalogClient() {
     setLoading(false);
   }, [
     activeCategory,
-    selectedColors,
     selectedFabrics,
     selectedSizes,
     minPrice,
@@ -132,12 +118,8 @@ export default function KatalogClient() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeCategory, selectedColors, selectedFabrics, selectedSizes, minPrice, maxPrice, sortKey]);
+  }, [activeCategory, selectedFabrics, selectedSizes, minPrice, maxPrice, sortKey]);
 
-  const toggleColor = (name: string) =>
-    setSelectedColors((prev) =>
-      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name],
-    );
   const toggleFabric = (label: string) =>
     setSelectedFabrics((prev) =>
       prev.includes(label) ? prev.filter((f) => f !== label) : [...prev, label],
@@ -149,7 +131,6 @@ export default function KatalogClient() {
 
   const clearAll = () => {
     setActiveCategory('');
-    setSelectedColors([]);
     setSelectedFabrics([]);
     setSelectedSizes([]);
     setMinPrice('');
@@ -162,13 +143,12 @@ export default function KatalogClient() {
       const catLabel = CATEGORIES.find((c) => c.slug === activeCategory)?.label ?? activeCategory;
       arr.push({ label: catLabel, clear: () => setActiveCategory('') });
     }
-    selectedColors.forEach((c) => arr.push({ label: c, clear: () => toggleColor(c) }));
     selectedFabrics.forEach((f) => arr.push({ label: f, clear: () => toggleFabric(f) }));
     selectedSizes.forEach((s) => arr.push({ label: `O'lcham: ${s}`, clear: () => toggleSize(s) }));
     if (minPrice) arr.push({ label: `Min: ${minPrice}`, clear: () => setMinPrice('') });
     if (maxPrice) arr.push({ label: `Max: ${maxPrice}`, clear: () => setMaxPrice('') });
     return arr;
-  }, [activeCategory, selectedColors, selectedFabrics, selectedSizes, minPrice, maxPrice]);
+  }, [activeCategory, selectedFabrics, selectedSizes, minPrice, maxPrice]);
 
   const products: Product[] = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
@@ -198,29 +178,6 @@ export default function KatalogClient() {
             />
           </div>
           <p className="text-xs text-ink-muted mt-1.5">so&apos;m</p>
-        </div>
-
-        {/* Colors */}
-        <div>
-          <h4 className="font-sans font-semibold text-ink mb-3">Rang</h4>
-          <div className="grid grid-cols-4 gap-3">
-            {COLORS.map((c) => (
-              <button
-                key={c.name}
-                title={c.name}
-                onClick={() => toggleColor(c.name)}
-                className={`w-8 h-8 rounded-full transition-all ${
-                  c.border ? 'border border-rule' : ''
-                } ${
-                  selectedColors.includes(c.name)
-                    ? 'ring-2 ring-brand ring-offset-2'
-                    : 'hover:ring-2 hover:ring-rule hover:ring-offset-1'
-                }`}
-                style={{ backgroundColor: c.hex }}
-                aria-label={c.name}
-              />
-            ))}
-          </div>
         </div>
 
         {/* Fabric */}

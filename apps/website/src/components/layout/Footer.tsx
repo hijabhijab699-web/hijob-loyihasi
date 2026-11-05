@@ -9,11 +9,11 @@ import { useToast } from '@/components/providers/ToastProvider';
 
 const footerLinks = {
   katalog: [
-    { label: "Ipak ro'mollar", href: '/katalog?category=ipak' },
-    { label: "Shoyi ro'mollar", href: '/katalog?category=shoyi' },
-    { label: "Shifon ro'mollar", href: '/katalog?category=shifon' },
-    { label: 'Pashmina', href: '/katalog?category=pashmina' },
-    { label: 'Yangi kolleksiya', href: '/katalog?sort=newest' },
+    { label: "Ro'mollar", href: '/katalog?category=scarves' },
+    { label: "Ko'ylaklar", href: '/katalog?category=dresses' },
+    { label: 'Abayalar', href: '/katalog?category=abaya' },
+    { label: 'Sumkalar', href: '/katalog?category=bags' },
+    { label: 'Aksessuarlar', href: '/katalog?category=accessories' },
   ],
   kompaniya: [
     { label: 'AI Primerka', href: '/primerka' },
