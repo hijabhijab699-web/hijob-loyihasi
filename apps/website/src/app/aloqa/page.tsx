@@ -76,8 +76,8 @@ export default function ContactPage() {
             <InfoRow
               Icon={Mail}
               title="Email"
-              value="info@hijob.uz"
-              href="mailto:info@hijob.uz"
+              value="hijabhijab699@gmail.com"
+              href="mailto:hijabhijab699@gmail.com"
               hint="24 soat ichida javob"
             />
             <InfoRow
@@ -95,7 +95,7 @@ export default function ContactPage() {
               </div>
               <div className="flex gap-2">
                 <a
-                  href="https://instagram.com"
+                  href="https://www.instagram.com/2431.uz/"
                   target="_blank"
                   rel="noreferrer"
                   className="w-10 h-10 rounded-full bg-brand/10 text-brand flex items-center justify-center hover:bg-brand hover:text-white transition-colors"

@@ -20,7 +20,7 @@ export default function DeleteAccountPage() {
           <p className="mt-4 text-sm text-muted leading-relaxed">
             24:31 (Hijob) ilovasida akkauntingizni o&apos;chirish uchun quyidagi
             yo&apos;riqnomani kuzating. Developer: <strong>Umidjon Looksave Developer</strong>,
-            email: <a href="mailto:info@hijob.uz" className="text-ink underline">info@hijob.uz</a>.
+            email: <a href="mailto:hijabhijab699@gmail.com" className="text-ink underline">hijabhijab699@gmail.com</a>.
           </p>
         </header>
 
@@ -59,8 +59,8 @@ export default function DeleteAccountPage() {
           <div className="rounded-lg border border-rule bg-surface2/50 p-5 space-y-2">
             <p className="text-ink">
               <strong>Email:</strong>{' '}
-              <a href="mailto:info@hijob.uz" className="text-ink underline">
-                info@hijob.uz
+              <a href="mailto:hijabhijab699@gmail.com" className="text-ink underline">
+                hijabhijab699@gmail.com
               </a>
             </p>
             <p className="text-ink">
@@ -141,8 +141,8 @@ export default function DeleteAccountPage() {
           <ul className="space-y-2 text-ink/80">
             <li>
               📧 Email:{' '}
-              <a href="mailto:info@hijob.uz" className="text-ink underline">
-                info@hijob.uz
+              <a href="mailto:hijabhijab699@gmail.com" className="text-ink underline">
+                hijabhijab699@gmail.com
               </a>
             </li>
             <li>

@@ -70,7 +70,7 @@ export function Footer() {
             </p>
             <div className="mt-6 flex gap-3">
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/2431.uz/"
                 target="_blank"
                 rel="noreferrer"
                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
@@ -135,9 +135,9 @@ export function Footer() {
                 <Phone className="w-4 h-4 shrink-0" />
                 <span>+998 90 123 45 67</span>
               </a>
-              <a href="mailto:info@hijob.uz" className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors">
+              <a href="mailto:hijabhijab699@gmail.com" className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors">
                 <Mail className="w-4 h-4 shrink-0" />
-                <span>info@hijob.uz</span>
+                <span>hijabhijab699@gmail.com</span>
               </a>
               <div className="flex items-center gap-2 text-sm text-white/50">
                 <MapPin className="w-4 h-4 shrink-0" />

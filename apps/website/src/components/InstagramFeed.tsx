@@ -23,13 +23,13 @@ export function InstagramFeed({ posts }: Props) {
       <div className="container-main">
         <div className="text-center mb-10">
           <a
-            href="https://instagram.com"
+            href="https://www.instagram.com/2431.uz/"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 text-brand font-medium hover:text-brand-dark"
           >
             <Instagram className="w-5 h-5" />
-            @hijob.uz
+            @2431.uz
           </a>
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-ink mt-3">
             Instagram&apos;dan

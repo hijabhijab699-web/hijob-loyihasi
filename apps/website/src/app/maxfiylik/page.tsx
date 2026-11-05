@@ -149,7 +149,7 @@ export default function PrivacyPage() {
         <>
           <p>Agar Sizda savollar bo&apos;lsa, biz bilan bog&apos;laning:</p>
           <ul>
-            <li>Email: <a href="mailto:info@hijob.uz" className="text-ink underline">info@hijob.uz</a></li>
+            <li>Email: <a href="mailto:hijabhijab699@gmail.com" className="text-ink underline">hijabhijab699@gmail.com</a></li>
             <li>Telefon: <a href="tel:+998901234567" className="text-ink underline">+998 90 123 45 67</a></li>
             <li>Manzil: Toshkent, O&apos;zbekiston</li>
           </ul>
