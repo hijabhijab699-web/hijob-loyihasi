@@ -1,37 +1,52 @@
 'use client';
 
+import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Download, Loader2, Sparkles, Upload, X } from 'lucide-react';
+import {
+  Camera,
+  Download,
+  Loader2,
+  LogIn,
+  RotateCcw,
+  Sparkles,
+  Upload,
+  X,
+} from 'lucide-react';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useAuth } from '@/components/providers/AuthProvider';
+import type { Product } from '@/lib/types';
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  productImage: string;
-  productName: string;
+  product: Product;
+  selectedColor: string;
+  selectedSize: string;
 }
 
-interface Overlay {
-  x: number;
-  y: number;
-  scale: number;
-  opacity: number;
-}
-
-const DEFAULT_OVERLAY: Overlay = {
-  x: 0.5,
-  y: 0.5,
-  scale: 1,
-  opacity: 0.9,
-};
-
-export function TryOnModal({ open, onClose, productImage, productName }: Props) {
+// Real AI try-on — mirrors the mobile app's /tryon/faceswap flow:
+// user picks a selfie, we POST it with the chosen variant id to the Nest
+// backend via a Next proxy, and show the generated render. No overlay
+// slider tricks; the backend does the actual mannequin face-swap.
+export function TryOnModal({
+  open,
+  onClose,
+  product,
+  selectedColor,
+  selectedSize,
+}: Props) {
   const toast = useToast();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [photo, setPhoto] = useState<HTMLImageElement | null>(null);
-  const [overlay, setOverlay] = useState<Overlay>(DEFAULT_OVERLAY);
-  const [loading, setLoading] = useState(false);
-  const scarfRef = useRef<HTMLImageElement | null>(null);
+  const auth = useAuth();
+  const [stage, setStage] = useState<'pick' | 'rendering' | 'done' | 'error'>('pick');
+  const [preview, setPreview] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const variant = product.variants?.find(
+    (v) => v.color === selectedColor && v.size === selectedSize,
+  ) ?? product.variants?.[0];
 
   useEffect(() => {
     if (!open) return;
@@ -45,74 +60,91 @@ export function TryOnModal({ open, onClose, productImage, productName }: Props) 
   }, [open, onClose]);
 
   useEffect(() => {
-    if (!open) {
-      setPhoto(null);
-      setOverlay(DEFAULT_OVERLAY);
-    }
+    if (open) return;
+    setStage('pick');
+    setPreview(null);
+    setResult(null);
+    setErrorMsg(null);
+    abortRef.current?.abort();
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const img = new window.Image();
-    img.crossOrigin = 'anonymous';
-    img.src = productImage;
-    img.onload = () => (scarfRef.current = img);
-  }, [open, productImage]);
+  const reset = () => {
+    abortRef.current?.abort();
+    setStage('pick');
+    setPreview(null);
+    setResult(null);
+    setErrorMsg(null);
+  };
 
-  useEffect(() => {
-    if (!photo || !canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const maxW = 720;
-    const scale = Math.min(1, maxW / photo.width);
-    canvas.width = photo.width * scale;
-    canvas.height = photo.height * scale;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(photo, 0, 0, canvas.width, canvas.height);
-
-    const scarf = scarfRef.current;
-    if (!scarf) return;
-    const w = canvas.width * 0.75 * overlay.scale;
-    const h = (w * scarf.height) / scarf.width;
-    const cx = canvas.width * overlay.x;
-    const cy = canvas.height * overlay.y;
-    ctx.globalAlpha = overlay.opacity;
-    ctx.drawImage(scarf, cx - w / 2, cy - h / 2, w, h);
-    ctx.globalAlpha = 1;
-  }, [photo, overlay]);
-
-  const handleFile = async (file: File) => {
+  const runFaceSwap = async (file: File) => {
+    if (!auth.tokens?.accessToken) {
+      setErrorMsg('Kirish talab qilinadi');
+      setStage('error');
+      return;
+    }
+    if (!variant) {
+      setErrorMsg("Mahsulot variantlari topilmadi");
+      setStage('error');
+      return;
+    }
     if (!file.type.startsWith('image/')) {
       toast.error('Faqat rasm faylini tanlang');
       return;
     }
-    setLoading(true);
+    if (file.size > 12 * 1024 * 1024) {
+      toast.error('Rasm hajmi 12MB dan oshmasligi kerak');
+      return;
+    }
+
+    setPreview(URL.createObjectURL(file));
+    setStage('rendering');
+    setErrorMsg(null);
+
+    const form = new FormData();
+    form.append('face', file);
+    form.append('variantId', variant.id);
+
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     try {
-      const url = URL.createObjectURL(file);
-      const img = new window.Image();
-      img.src = url;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('image load error'));
+      const res = await fetch('/api/tryon/faceswap', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${auth.tokens.accessToken}` },
+        body: form,
+        signal: ctrl.signal,
       });
-      setPhoto(img);
-      setOverlay(DEFAULT_OVERLAY);
-    } catch {
-      toast.error("Rasmni yuklab bo'lmadi");
-    } finally {
-      setLoading(false);
+      const body = await res.json().catch(() => null);
+      if (!res.ok || !body?.sessionId) {
+        const code = body?.error ?? body?.message ?? `HTTP_${res.status}`;
+        throw new Error(String(code));
+      }
+      // Pull the image through our own proxy so we don't leak the API host.
+      setResult(`/api/tryon/preview/${encodeURIComponent(body.sessionId)}/image`);
+      setStage('done');
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return;
+      const msg = e instanceof Error ? e.message : 'TRYON_FAILED';
+      setErrorMsg(humanizeError(msg));
+      setStage('error');
     }
   };
 
-  const download = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const link = document.createElement('a');
-    link.download = `hijob-tryon-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    toast.success('Rasm yuklab olindi');
+  const download = async () => {
+    if (!result) return;
+    try {
+      const r = await fetch(result);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tryon-${Date.now()}.jpg`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Rasm yuklab olindi');
+    } catch {
+      toast.error("Yuklab bo'lmadi");
+    }
   };
 
   if (!open) return null;
@@ -138,7 +170,8 @@ export function TryOnModal({ open, onClose, productImage, productName }: Props) 
                 Virtual sinab ko&apos;rish
               </h2>
               <p className="text-xs text-ink-muted">
-                {productName} ni rasmingizga qo&apos;ying
+                {product.name} — {selectedColor}
+                {variant ? '' : ' (variant topilmadi)'}
               </p>
             </div>
           </div>
@@ -151,141 +184,176 @@ export function TryOnModal({ open, onClose, productImage, productName }: Props) 
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {!photo ? (
-            <label className="block cursor-pointer m-5 border-2 border-dashed border-rule rounded-2xl p-10 text-center hover:border-brand transition-colors">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFile(f);
-                }}
-              />
-              <div className="w-16 h-16 rounded-full bg-brand/10 text-brand mx-auto flex items-center justify-center">
-                {loading ? (
-                  <Loader2 className="w-8 h-8 animate-spin" />
-                ) : (
-                  <Upload className="w-8 h-8" />
-                )}
-              </div>
-              <p className="mt-4 font-medium text-ink">
-                Rasm yuklang
-              </p>
-              <p className="mt-1 text-sm text-ink-muted">
-                O&apos;z selfiengizni tanlang — ro&apos;mol tasvir ustiga joylashtiriladi
-              </p>
-              <p className="mt-4 text-xs text-ink-muted">
-                Fayllar faqat brauzeringizda ishlanadi — serverga yuborilmaydi.
-              </p>
-            </label>
-          ) : (
-            <div className="p-5 space-y-5">
-              <div className="relative mx-auto bg-bg-warm rounded-2xl overflow-hidden">
-                <canvas
-                  ref={canvasRef}
-                  className="w-full h-auto block mx-auto"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <SliderRow
-                  label="Gorizontal"
-                  value={overlay.x}
-                  min={0.2}
-                  max={0.8}
-                  step={0.01}
-                  onChange={(v) => setOverlay({ ...overlay, x: v })}
-                />
-                <SliderRow
-                  label="Vertikal"
-                  value={overlay.y}
-                  min={0.2}
-                  max={0.8}
-                  step={0.01}
-                  onChange={(v) => setOverlay({ ...overlay, y: v })}
-                />
-                <SliderRow
-                  label="Hajm"
-                  value={overlay.scale}
-                  min={0.4}
-                  max={1.8}
-                  step={0.01}
-                  onChange={(v) => setOverlay({ ...overlay, scale: v })}
-                />
-                <SliderRow
-                  label="Shaffoflik"
-                  value={overlay.opacity}
-                  min={0.3}
-                  max={1}
-                  step={0.01}
-                  onChange={(v) => setOverlay({ ...overlay, opacity: v })}
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2">
-                <label className="btn-outline flex-1 flex items-center justify-center gap-2 cursor-pointer">
-                  <Camera className="w-4 h-4" />
-                  Boshqa rasm
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleFile(f);
-                    }}
-                  />
-                </label>
-                <button
-                  onClick={download}
-                  className="btn-primary flex-1 flex items-center justify-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Yuklab olish
-                </button>
-              </div>
-
-              <p className="text-xs text-ink-muted text-center">
-                Bu — teaser demo. Tez orada haqiqiy AI face-fit algoritmi
-                ishga tushadi.
-              </p>
+        <div className="flex-1 overflow-y-auto p-5">
+          {!auth.hydrated ? (
+            <div className="py-16 text-center text-ink-muted">
+              <Loader2 className="w-6 h-6 animate-spin inline-block" />
             </div>
-          )}
+          ) : !auth.user ? (
+            <SignInPrompt />
+          ) : stage === 'pick' ? (
+            <SelfiePicker onPick={runFaceSwap} />
+          ) : stage === 'rendering' ? (
+            <RenderingView preview={preview} />
+          ) : stage === 'done' && result ? (
+            <ResultView
+              result={result}
+              onRetry={reset}
+              onDownload={download}
+            />
+          ) : stage === 'error' ? (
+            <ErrorView message={errorMsg ?? 'Xatolik'} onRetry={reset} />
+          ) : null}
         </div>
       </div>
     </div>
   );
 }
 
-function SliderRow({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (v: number) => void;
-}) {
+function SelfiePicker({ onPick }: { onPick: (f: File) => void }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="w-20 text-xs text-ink-muted">{label}</span>
-      <input
-        type="range"
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="flex-1 accent-brand"
-      />
+    <>
+      <label className="block cursor-pointer border-2 border-dashed border-rule rounded-2xl p-10 text-center hover:border-brand transition-colors">
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onPick(f);
+          }}
+        />
+        <div className="w-16 h-16 rounded-full bg-brand/10 text-brand mx-auto flex items-center justify-center">
+          <Upload className="w-8 h-8" />
+        </div>
+        <p className="mt-4 font-medium text-ink">Selfi rasm yuklang</p>
+        <p className="mt-1 text-sm text-ink-muted max-w-sm mx-auto">
+          Yuzingiz aniq ko&apos;rinadigan, yorug&apos; joyda tushgan oldinga qaragan
+          rasm eng yaxshi natija beradi.
+        </p>
+      </label>
+      <p className="mt-4 text-xs text-ink-muted text-center max-w-md mx-auto">
+        Rasmingiz AI mannequin ustiga aqlli tarzda joylashtiriladi — mobile
+        ilovadagi bilan bir xil algoritm. Natija 24 soat ichida avtomatik
+        o&apos;chiriladi.
+      </p>
+    </>
+  );
+}
+
+function RenderingView({ preview }: { preview: string | null }) {
+  return (
+    <div className="py-10 text-center">
+      {preview && (
+        <div className="relative w-40 h-40 mx-auto rounded-2xl overflow-hidden bg-bg-cream">
+          <Image
+            src={preview}
+            alt=""
+            fill
+            className="object-cover opacity-80"
+            unoptimized
+          />
+        </div>
+      )}
+      <Loader2 className="w-7 h-7 animate-spin inline-block mt-5 text-brand" />
+      <p className="mt-3 font-medium text-ink">AI sizni mannequinga joylayapti…</p>
+      <p className="text-sm text-ink-muted mt-1">
+        Odatda 10–20 soniya oladi. Sahifani yopmang.
+      </p>
     </div>
   );
+}
+
+function ResultView({
+  result,
+  onRetry,
+  onDownload,
+}: {
+  result: string;
+  onRetry: () => void;
+  onDownload: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-bg-cream">
+        <Image
+          src={result}
+          alt="Virtual sinab ko'rish natijasi"
+          fill
+          className="object-contain"
+          unoptimized
+          priority
+        />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <button
+          onClick={onRetry}
+          className="btn-outline flex-1 flex items-center justify-center gap-2"
+        >
+          <RotateCcw className="w-4 h-4" />
+          Boshqa rasm
+        </button>
+        <button
+          onClick={onDownload}
+          className="btn-primary flex-1 flex items-center justify-center gap-2"
+        >
+          <Download className="w-4 h-4" />
+          Yuklab olish
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ErrorView({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="py-12 text-center">
+      <div className="w-14 h-14 rounded-full bg-red-50 text-red-500 mx-auto flex items-center justify-center">
+        <Camera className="w-7 h-7" />
+      </div>
+      <p className="mt-4 font-medium text-ink">Yaratib bo&apos;lmadi</p>
+      <p className="text-sm text-ink-muted mt-1 max-w-sm mx-auto">{message}</p>
+      <button
+        onClick={onRetry}
+        className="btn-outline mt-5 inline-flex items-center gap-2"
+      >
+        <RotateCcw className="w-4 h-4" />
+        Qayta urinish
+      </button>
+    </div>
+  );
+}
+
+function SignInPrompt() {
+  return (
+    <div className="py-12 text-center">
+      <div className="w-14 h-14 rounded-full bg-brand/10 text-brand mx-auto flex items-center justify-center">
+        <LogIn className="w-7 h-7" />
+      </div>
+      <p className="mt-4 font-medium text-ink">Avval kiring</p>
+      <p className="text-sm text-ink-muted mt-1 max-w-sm mx-auto">
+        Virtual sinab ko&apos;rish uchun akauntingizga kiring. Selfi faqat shu
+        buyurtma uchun ishlatiladi.
+      </p>
+      <Link
+        href="/kirish"
+        className="btn-primary mt-5 inline-flex items-center gap-2"
+      >
+        <LogIn className="w-4 h-4" />
+        Kirish
+      </Link>
+    </div>
+  );
+}
+
+function humanizeError(code: string): string {
+  const map: Record<string, string> = {
+    FACE_IMAGE_REQUIRED: 'Selfi yuboring',
+    VARIANT_ID_REQUIRED: 'Mahsulot varianti tanlanmagan',
+    UNAUTHORIZED: 'Avval akauntingizga kiring',
+    NO_MANNEQUIN_FACE: 'Mahsulot uchun mannequin rasm topilmadi',
+    FACESWAP_UNPROCESSABLE: "Rasm yuzni aniq ko'rsatmadi — boshqa selfi bilan urinib ko'ring",
+    IMAGE_EXPIRED: 'Natija muddati tugadi — qayta urinib ko&apos;ring',
+  };
+  return map[code] ?? code;
 }

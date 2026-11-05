@@ -129,8 +129,9 @@ export default function ProductDetail({ product, reviews, related }: Props) {
       <TryOnModal
         open={tryOnOpen}
         onClose={() => setTryOnOpen(false)}
-        productImage={product.image}
-        productName={product.name}
+        product={product}
+        selectedColor={color}
+        selectedSize={size}
       />
       <section className="bg-white py-8 md:py-12">
         <div className="container-main grid md:grid-cols-2 gap-8 md:gap-12">
@@ -138,14 +139,24 @@ export default function ProductDetail({ product, reviews, related }: Props) {
           <div>
             {/* Portrait 3:4 with contain so full-length clothing shots
                 (abayas, dresses) show head-to-hem without cropping. The
-                cream backdrop matches the catalog card so the buyer
-                moves between list and detail without a visual jump. */}
+                hallway backdrop + cream wash matches the catalog card so
+                the buyer moves between list and detail without a visual
+                jump. */}
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-bg-cream">
+              <Image
+                src="/images/card-backdrop.webp"
+                alt=""
+                fill
+                className="object-cover opacity-50"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                aria-hidden
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-bg-cream/40 via-transparent to-bg-cream/60" />
               <Image
                 src={gallery}
                 alt={product.name}
                 fill
-                className="object-contain"
+                className="object-contain relative"
                 sizes="(max-width: 768px) 100vw, 50vw"
                 priority
               />
