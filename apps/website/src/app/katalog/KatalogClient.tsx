@@ -295,7 +295,7 @@ export default function KatalogClient() {
             {search ? (
               <>Qidiruv: &ldquo;{search}&rdquo;</>
             ) : (
-              <>Premium ro&apos;mollar kolleksiyasi</>
+              <>Ro&apos;mollar, abayalar, ko&apos;ylaklar va aksessuarlar</>
             )}
           </p>
         </div>

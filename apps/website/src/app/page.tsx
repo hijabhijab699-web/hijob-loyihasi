@@ -87,7 +87,7 @@ export default async function HomePage() {
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-center mb-10 reveal-up">
             Kategoriyalar
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-5">
             {categories.map((cat, i) => (
               <Link
                 key={cat.slug}
