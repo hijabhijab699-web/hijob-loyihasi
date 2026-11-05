@@ -186,16 +186,14 @@ export function Navbar() {
                           Buyurtmalarim
                         </Link>
                         {auth.user.role === 'seller' && (
-                          <a
-                            href="https://hijab-admin.vercel.app"
-                            target="_blank"
-                            rel="noreferrer"
+                          <Link
+                            href="/sotuvchi"
                             onClick={() => setProfileOpen(false)}
                             className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-bg-warm"
                           >
                             <Store className="w-4 h-4 text-ink-muted" />
                             Sotuvchi paneli
-                          </a>
+                          </Link>
                         )}
                         <button
                           type="button"
@@ -333,16 +331,14 @@ export function Navbar() {
                 Profil
               </Link>
               {auth.user?.role === 'seller' && (
-                <a
-                  href="https://hijab-admin.vercel.app"
-                  target="_blank"
-                  rel="noreferrer"
+                <Link
+                  href="/sotuvchi"
                   onClick={() => setMobileOpen(false)}
                   className="py-3 px-2 text-base font-medium text-ink hover:text-brand hover:bg-bg-warm rounded-lg transition-colors inline-flex items-center gap-2"
                 >
                   <Store className="w-4 h-4" />
                   Sotuvchi paneli
-                </a>
+                </Link>
               )}
             </nav>
           </div>
