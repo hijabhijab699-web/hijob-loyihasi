@@ -46,14 +46,26 @@ export function InstagramFeed({ posts }: Props) {
               <Link
                 key={p.id}
                 href={`/mahsulot/${p.id}`}
-                className="group relative aspect-square rounded-xl overflow-hidden"
+                className="group relative aspect-square rounded-xl overflow-hidden bg-bg-cream"
               >
+                {/* Same marble-arch backdrop as catalog cards so dark
+                    full-length shots don't read as a solid grey block
+                    when cover-cropped. */}
+                <Image
+                  src="/images/card-backdrop.webp"
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 50vw, 16vw"
+                  className="object-cover opacity-50"
+                  aria-hidden
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-bg-cream/40 via-transparent to-bg-cream/60" />
                 <Image
                   src={p.image}
                   alt={p.name}
                   fill
                   sizes="(max-width: 768px) 50vw, 16vw"
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  className="object-contain transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity text-white flex items-center gap-4 text-sm font-medium">

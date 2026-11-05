@@ -3,8 +3,8 @@ import { Loader2 } from 'lucide-react';
 import KirishClient from './KirishClient';
 
 export const metadata = {
-  title: 'Kirish — Hijob',
-  description: "Hijob hisobingizga kiring yoki yangi akkaunt oching.",
+  title: 'Kirish — 24:31 Hijab',
+  description: "24:31 hisobingizga kiring yoki yangi akkaunt oching.",
 };
 
 // useSearchParams in the client component forces a Suspense boundary at

@@ -45,7 +45,7 @@ export function HeroSection() {
               <div className="absolute inset-x-6 top-10 bottom-10 rounded-full bg-gradient-to-br from-accent/25 via-brand/10 to-bg-warm -z-0" />
               <Image
                 src="/images/hero.png"
-                alt="Hijob"
+                alt="24:31"
                 width={1200}
                 height={1200}
                 className="relative z-10 w-full h-auto object-contain"

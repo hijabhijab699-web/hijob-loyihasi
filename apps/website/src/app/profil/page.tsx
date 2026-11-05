@@ -156,7 +156,7 @@ export default function ProfilPage() {
               <Award className="w-6 h-6 text-accent" />
             </div>
             <div>
-              <p className="text-sm text-white/80">Hijob ballari</p>
+              <p className="text-sm text-white/80">24:31 ballari</p>
               <p className="font-serif text-2xl md:text-3xl font-bold mt-0.5">
                 {formatPrice(loyalty.balance)}
               </p>

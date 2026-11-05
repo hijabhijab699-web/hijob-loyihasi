@@ -102,7 +102,7 @@ export const UZ: Dict = {
     emailPh: 'Elektron pochtangiz',
   },
   loyalty: {
-    title: 'Hijob ballari',
+    title: '24:31 ballari',
     balance: 'Balansingiz',
     earned: "Jami yig'ilgan",
     howTo: 'Har xaridda 2% ball oling va keyingi buyurtmada xarajat qiling.',
@@ -155,7 +155,7 @@ export const RU: Dict = {
     emailPh: 'Ваш e-mail',
   },
   loyalty: {
-    title: 'Баллы Hijob',
+    title: 'Баллы 24:31',
     balance: 'Ваш баланс',
     earned: 'Всего накоплено',
     howTo: 'С каждой покупки 2% баллов — тратьте их на следующий заказ.',
@@ -208,7 +208,7 @@ export const EN: Dict = {
     emailPh: 'Your email',
   },
   loyalty: {
-    title: 'Hijob points',
+    title: '24:31 points',
     balance: 'Your balance',
     earned: 'Total earned',
     howTo: 'Earn 2% back on every order and spend it on the next one.',

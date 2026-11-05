@@ -50,7 +50,7 @@ export default function MyOrdersPage() {
                   Hisobga kirgansiz — {auth.user.fullName}
                 </p>
                 <p className="text-emerald-800/80 mt-0.5">
-                  Buyurtmalaringiz Hijob hisobingizga biriktirilgan va boshqa qurilmalarda ham ko&apos;rinadi.
+                  Buyurtmalaringiz 24:31 hisobingizga biriktirilgan va boshqa qurilmalarda ham ko&apos;rinadi.
                 </p>
               </div>
             </div>
