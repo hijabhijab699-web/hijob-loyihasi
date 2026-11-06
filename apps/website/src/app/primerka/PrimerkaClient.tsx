@@ -14,7 +14,6 @@ import {
   ShoppingBag,
   Sparkles,
   Sun,
-  Upload,
   X,
 } from 'lucide-react';
 import type { Product } from '@/lib/types';
@@ -686,42 +685,162 @@ function FaceStep({
   onSubmit: () => void;
   submitting: boolean;
 }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraState, setCameraState] = useState<'idle' | 'starting' | 'live' | 'denied' | 'unavailable'>('idle');
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+  };
+
+  const startCamera = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraState('unavailable');
+      return;
+    }
+    setCameraState('starting');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1080 }, height: { ideal: 1080 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+      setCameraState('live');
+    } catch {
+      setCameraState('denied');
+    }
+  };
+
+  useEffect(() => {
+    if (!preview && cameraState === 'idle') startCamera();
+    return stopCamera;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const capture = () => {
+    const video = videoRef.current;
+    if (!video || cameraState !== 'live') return;
+    const size = Math.min(video.videoWidth, video.videoHeight) || 720;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const sx = (video.videoWidth - size) / 2;
+    const sy = (video.videoHeight - size) / 2;
+    // mirror the capture horizontally so it matches the on-screen preview
+    ctx.translate(size, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        onPick(file);
+        stopCamera();
+      },
+      'image/jpeg',
+      0.92,
+    );
+  };
+
+  const retake = () => {
+    onClear();
+    setCameraState('idle');
+    setTimeout(startCamera, 0);
+  };
+
   return (
     <div className="mt-8">
-      <p className="text-sm font-medium text-ink mb-3">Selfi rasm</p>
-      {preview ? (
-        <div className="relative w-48 h-48 mx-auto rounded-full overflow-hidden border-4 border-brand/20">
-          <Image src={preview} alt="selfi" fill className="object-cover" unoptimized />
-          <button
-            onClick={onClear}
-            className="absolute top-1 right-1 w-7 h-7 rounded-full bg-ink-dark/70 text-white flex items-center justify-center"
-            aria-label="O'chirish"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ) : (
-        <label className="block cursor-pointer border-2 border-dashed border-rule rounded-2xl p-10 text-center hover:border-brand transition-colors bg-white">
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onPick(f);
-            }}
-          />
-          <div className="w-14 h-14 rounded-full bg-brand/10 text-brand mx-auto flex items-center justify-center">
-            <Upload className="w-7 h-7" />
-          </div>
-          <p className="mt-3 font-medium text-ink">Selfi yuklang</p>
-          <p className="mt-1 text-xs text-ink-muted max-w-sm mx-auto">
-            Yorug&apos; joyda, oldinga qaragan, yuzingiz aniq ko&apos;ringan rasm
-            eng yaxshi natija beradi.
-          </p>
-        </label>
+      <p className="text-sm font-medium text-ink mb-3">Yuzni skanerlang</p>
+
+      <div className="relative mx-auto aspect-square w-64 sm:w-72 rounded-full overflow-hidden border-4 border-brand/20 bg-bg-cream">
+        {preview ? (
+          <>
+            <Image src={preview} alt="selfi" fill className="object-cover" unoptimized />
+            <button
+              type="button"
+              onClick={retake}
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-ink-dark/70 text-white flex items-center justify-center"
+              aria-label="Qayta olish"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </>
+        ) : (
+          <>
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              className="w-full h-full object-cover scale-x-[-1]"
+            />
+            {/* face guide overlay */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[70%] h-[85%] border-2 border-dashed border-white/80 rounded-[50%]" />
+            </div>
+            {cameraState === 'starting' && (
+              <div className="absolute inset-0 flex items-center justify-center bg-bg-cream/80">
+                <Loader2 className="w-6 h-6 animate-spin text-brand" />
+              </div>
+            )}
+            {(cameraState === 'denied' || cameraState === 'unavailable') && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-bg-cream/95 text-center px-4">
+                <Camera className="w-8 h-8 text-ink-muted" />
+                <p className="mt-2 text-xs text-ink-muted">
+                  {cameraState === 'denied'
+                    ? "Kameraga ruxsat yo'q"
+                    : "Kamera ishlamaydi"}
+                </p>
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="mt-3 text-xs text-brand font-medium"
+                >
+                  Qayta urinish
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {!preview && cameraState === 'live' && (
+        <p className="mt-3 text-xs text-ink-muted text-center max-w-sm mx-auto">
+          Yuzingizni doira ichiga joylang, yorug&apos; joyda to&apos;g&apos;ri qarang
+        </p>
       )}
-      <div className="mt-8 flex gap-2">
+
+      <div className="mt-6 flex justify-center">
+        {!preview ? (
+          <button
+            type="button"
+            onClick={capture}
+            disabled={cameraState !== 'live'}
+            className="btn-primary px-8 py-3.5 flex items-center gap-2 disabled:opacity-60"
+          >
+            <Camera className="w-5 h-5" />
+            Suratga olish
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={retake}
+            className="btn-outline px-6 py-3.5 flex items-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Qayta olish
+          </button>
+        )}
+      </div>
+
+      <div className="mt-6 flex gap-2">
         <button
           onClick={onBack}
           disabled={submitting}
