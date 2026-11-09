@@ -19,6 +19,7 @@ const footerLinks = {
     { label: 'AI Primerka', href: '/primerka' },
     { label: 'Aloqa', href: '/aloqa' },
     { label: 'Maxfiylik siyosati', href: '/maxfiylik' },
+    { label: 'Foydalanish shartlari', href: '/foydalanish-shartlari' },
   ],
   yordam: [
     { label: 'Yetkazib berish', href: '/aloqa#yetkazish' },
